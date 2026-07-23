@@ -655,7 +655,7 @@ btnGenerate.addEventListener("click", () => {
     if (numCourts > maxMatchesPossible && maxMatchesPossible > 0) {
       elWarning.hidden = false;
       elWarning.textContent =
-        `Vous avez ${players.length} joueurs ; au maximum ${maxMatchesPossible} match(s) peuvent être joués simultanément. ` +
+        `Vous avez ${players.length} joueurs, au maximum ${maxMatchesPossible} match(s) peuvent être joués simultanément. ` +
         `Planification limitée à ce nombre de terrains par tour.`;
     }
 
