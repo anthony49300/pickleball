@@ -17,10 +17,10 @@
 
   <main class="container grid">
     <section class="card">
-      <h2>Données d'entrée</h2>
+      <h2>Configuration de la session</h2>
 
       <label class="label" for="players">Joueurs (un par ligne ou séparés par des virgules)</label>
-      <textarea id="players" rows="8" placeholder="Appi, Basha, Chris, Daryl&#10;Satish&#10;Srini"></textarea>
+      <textarea id="players" rows="8" placeholder="Antoine, Julien, Marc, Thomas&#10;Sophie, Claire&#10;Pierre, Nicolas"></textarea>
 
       <div class="row">
         <div>
@@ -44,26 +44,26 @@
         <summary>Options avancées (optionnel)</summary>
         <div class="row">
           <div>
-            <label class="label" for="wT">wT (poids partenaires répétés)</label>
+            <label class="label" for="wT">Poids des partenaires répétés</label>
             <input id="wT" type="number" min="0" max="20" step="0.5" value="5" />
           </div>
           <div>
-            <label class="label" for="wO">wO (poids adversaires répétés)</label>
+            <label class="label" for="wO">Poids des adversaires répétés</label>
             <input id="wO" type="number" min="0" max="20" step="0.5" value="2" />
           </div>
           <div>
-            <label class="label" for="wP">wP (poids équilibre de jeu)</label>
+            <label class="label" for="wP">Poids d'équilibre de jeu</label>
             <input id="wP" type="number" min="0" max="10" step="0.25" value="1" />
           </div>
         </div>
 
         <div class="row">
           <div>
-            <label class="label" for="beamWidth">Largeur du faisceau (Beam width)</label>
+            <label class="label" for="beamWidth">Largeur du faisceau</label>
             <input id="beamWidth" type="number" min="10" max="500" step="10" value="80" />
           </div>
           <div>
-            <label class="label" for="partnerK">Présélection partenaires (K)</label>
+            <label class="label" for="partnerK">Présélection partenaires</label>
             <input id="partnerK" type="number" min="4" max="30" step="1" value="10" />
           </div>
           <div class="checkbox">
