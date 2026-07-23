@@ -512,14 +512,48 @@ btnGenerate.addEventListener("click", () => {
   }
 });
 
+btnCopy.addEventListener("click", async () => {
+  const result = window.__PB_LAST_RESULT__;
+  if (!result) return;
+  const text = buildCopyText(result);
+  try {
+    await navigator.clipboard.writeText(text);
+    btnCopy.textContent = "Copié !";
+    setTimeout(() => (btnCopy.textContent = "📋 Copier Planning"), 900);
+  } catch {
+    window.prompt("Copier le texte :", text);
+  }
+});
+
 btnCopyLink.addEventListener("click", async () => {
-  // Option simple : copier l'URL actuelle
-  const urlToShare = window.location.href; 
+  // 1. Rassembler tous les paramètres actuels
+  const state = {
+    p: elPlayers.value,
+    c: elCourts.value,
+    r: elRounds.value,
+    s: elSeed.value,
+    wt: elwT.value,
+    wo: elwO.value,
+    wp: elwP.value,
+    bw: elBeamWidth.value,
+    pk: elPartnerK.value,
+    sq: elSquare.checked,
+    b2b: elAvoidB2B.checked
+  };
+
+  // 2. Compresser les données en une chaîne sécurisée pour l'URL
+  const jsonString = JSON.stringify(state);
+  const compressedData = LZString.compressToEncodedURIComponent(jsonString);
   
+  // 3. Créer le lien final (ex: https://tonsite.com/?d=TexteCompressé)
+  const urlBase = window.location.origin + window.location.pathname;
+  const urlToShare = `${urlBase}?d=${compressedData}`;
+
+  // 4. Copier dans le presse-papiers
   try {
     await navigator.clipboard.writeText(urlToShare);
     const originalText = btnCopyLink.textContent;
-    btnCopyLink.textContent = "Lien copié !";
+    btnCopyLink.textContent = "Lien avec données copié !";
     setTimeout(() => (btnCopyLink.textContent = originalText), 1500);
   } catch {
     window.prompt("Copier le lien :", urlToShare);
@@ -529,3 +563,40 @@ btnCopyLink.addEventListener("click", async () => {
 if (!elSeed.value) {
   elSeed.value = generateSeed();
 }
+
+// ----------------------------
+// Chargement depuis l'URL (Lien partagé)
+// ----------------------------
+window.addEventListener("DOMContentLoaded", () => {
+  const params = new URLSearchParams(window.location.search);
+  const sharedData = params.get("d");
+
+  if (sharedData) {
+    try {
+      // Décompresser et analyser les données de l'URL
+      const jsonString = LZString.decompressFromEncodedURIComponent(sharedData);
+      const state = JSON.parse(jsonString);
+
+      // Remplir les champs avec les données partagées
+      if (state.p !== undefined) elPlayers.value = state.p;
+      if (state.c !== undefined) elCourts.value = state.c;
+      if (state.r !== undefined) elRounds.value = state.r;
+      if (state.s !== undefined) elSeed.value = state.s;
+      if (state.wt !== undefined) elwT.value = state.wt;
+      if (state.wo !== undefined) elwO.value = state.wo;
+      if (state.wp !== undefined) elwP.value = state.wp;
+      if (state.bw !== undefined) elBeamWidth.value = state.bw;
+      if (state.pk !== undefined) elPartnerK.value = state.pk;
+      if (state.sq !== undefined) elSquare.checked = state.sq;
+      if (state.b2b !== undefined) elAvoidB2B.checked = state.b2b;
+
+      // Optionnel : Générer automatiquement le tableau en arrivant sur la page
+      btnGenerate.click();
+      
+    } catch (e) {
+      console.error("Erreur lors de la lecture du lien partagé", e);
+      elError.hidden = false;
+      elError.textContent = "Le lien de partage est invalide ou corrompu.";
+    }
+  }
+});
