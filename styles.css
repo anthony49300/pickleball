@@ -1,107 +1,306 @@
+/* --------------------------------------------------
+   THEME PICKLEBALL DYNAMIQUE
+-------------------------------------------------- */
 :root {
-  --bg: #0b0f17;
-  --card: #121a27;
-  --text: #eaf0ff;
-  --subtle: #b8c4e6;
-  --border: rgba(255,255,255,0.10);
-  --accent: #7aa2ff;
-  --danger: #ff6b6b;
-  --warn: #ffd166;
+  --bg-dark: #0a0f18;
+  --bg-card: rgba(18, 26, 43, 0.75);
+  --court-blue: #0f3854;
+  --court-green: #10b981;
+  --pickle-yellow: #ccff00; /* Jaune balle fluo */
+  --pickle-yellow-hover: #b3e600;
+  --text-main: #f8fafc;
+  --text-subtle: #94a3b8;
+  --border-color: rgba(255, 255, 255, 0.12);
+  --danger: #ef4444;
+  --warn: #f59e0b;
 }
 
-* { box-sizing: border-box; }
-html, body { height: 100%; }
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  min-height: 100vh;
+}
+
 body {
   margin: 0;
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-  background: radial-gradient(1200px 800px at 20% 0%, #162245 0%, var(--bg) 55%);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  /* Fond dégradé évoquant un terrain sous les projecteurs */
+  background: radial-gradient(circle at 50% 0%, #17324d 0%, var(--bg-dark) 70%);
   background-attachment: fixed;
-  color: var(--text);
+  color: var(--text-main);
+  line-height: 1.5;
 }
 
-.container { max-width: 1100px; margin: 0 auto; padding: 18px; }
-h1 { margin: 10px 0 4px; font-size: 1.6rem; }
-h2 { margin: 0 0 12px; font-size: 1.1rem; }
-.subtle { color: var(--subtle); }
-.footer { padding-top: 0; padding-bottom: 28px; }
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* En-tête principal */
+header h1 {
+  margin: 10px 0;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  background: linear-gradient(90deg, #ffffff, var(--pickle-yellow));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
 .grid {
   display: grid;
-  grid-template-columns: 1fr 1.2fr;
-  gap: 16px;
+  grid-template-columns: 1fr 1.3fr;
+  gap: 24px;
   align-items: start;
 }
 
-@media (max-width: 920px) {
+@media (max-width: 960px) {
   .grid { grid-template-columns: 1fr; }
 }
 
+/* Cartes (Panneaux) */
 .card {
-  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 16px;
-  backdrop-filter: blur(6px);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 24px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
-.label { display: block; margin: 10px 0 6px; font-size: 0.92rem; color: var(--subtle); }
-textarea, input[type="text"], input[type="number"]{
+h2 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #ffffff;
+  border-bottom: 2px solid rgba(204, 255, 0, 0.2);
+  padding-bottom: 8px;
+}
+
+.subtle { color: var(--text-subtle); }
+
+/* Formulaires et Inputs */
+.label {
+  display: block;
+  margin: 12px 0 6px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-subtle);
+}
+
+textarea, input[type="text"], input[type="number"] {
   width: 100%;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: rgba(0,0,0,0.18);
-  color: var(--text);
-  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text-main);
+  padding: 12px 14px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
   outline: none;
 }
-textarea { resize: vertical; min-height: 140px; }
+
+textarea:focus, input:focus {
+  border-color: var(--pickle-yellow);
+  box-shadow: 0 0 0 3px rgba(204, 255, 0, 0.15);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 120px;
+}
 
 .row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  gap: 12px;
   margin-top: 10px;
 }
+
 @media (max-width: 560px) {
   .row { grid-template-columns: 1fr; }
 }
 
+/* Accordéon Options */
+.details {
+  margin-top: 16px;
+  background: rgba(0,0,0,0.15);
+  border-radius: 12px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
 .details summary {
   cursor: pointer;
-  margin-top: 12px;
-  color: var(--accent);
-}
-
-.checkbox { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
-.checkbox input { width: auto; }
-
-.actions { display: flex; gap: 10px; margin-top: 14px; }
-button {
-  border: 1px solid var(--border);
-  background: rgba(122, 162, 255, 0.18);
-  color: var(--text);
-  padding: 10px 14px;
-  border-radius: 12px;
-  cursor: pointer;
   font-weight: 600;
+  color: var(--pickle-yellow);
+  outline: none;
 }
-button:hover { border-color: rgba(255,255,255,0.18); }
-button.secondary { background: rgba(255,255,255,0.06); }
-button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.warning { color: var(--warn); margin: 10px 0 0; }
-.error { color: var(--danger); margin: 10px 0 0; }
+.checkbox {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 12px;
+  font-size: 0.9rem;
+}
 
-.schedule { display: grid; gap: 12px; }
+.checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--pickle-yellow);
+}
+
+/* Boutons */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+button {
+  border: none;
+  background: var(--pickle-yellow);
+  color: #000;
+  padding: 12px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.95rem;
+  transition: transform 0.1s, background-color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 14px rgba(204, 255, 0, 0.2);
+}
+
+button:hover {
+  background: var(--pickle-yellow-hover);
+  transform: translateY(-1px);
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+button.secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  box-shadow: none;
+}
+
+button.secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.warning { color: var(--warn); margin-top: 12px; font-weight: 600; }
+.error { color: var(--danger); margin-top: 12px; font-weight: 600; }
+
+/* --------------------------------------------------
+   AFFICHAGE DES MATCHS (PLANNING)
+-------------------------------------------------- */
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.schedule {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .round {
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-color);
   border-radius: 14px;
-  padding: 12px;
-  background: rgba(0,0,0,0.14);
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.6);
 }
-.roundTitle { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
-.roundTitle h3 { margin: 0; font-size: 1rem; }
-.roundTitle .bench { color: var(--subtle); font-size: 0.9rem; }
-.headerRow { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
-.diagnostics p { margin: 8px 0; }
-code { color: #d9e6ff; }
+
+.roundTitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+}
+
+.roundTitle h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--pickle-yellow);
+}
+
+.roundTitle .bench {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Liste des Matchs sous forme de Cartes de Terrains */
+.matches-list {
+  display: grid;
+  gap: 10px;
+}
+
+.match-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.03);
+  border-left: 4px solid var(--court-green);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.95rem;
+}
+
+.team {
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.vs {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--pickle-yellow);
+  text-transform: uppercase;
+  padding: 2px 8px;
+  background: rgba(204, 255, 0, 0.1);
+  border-radius: 4px;
+  margin: 0 10px;
+}
+
+/* Diagnostics & Stats */
+.diagnostics p {
+  margin: 8px 0;
+  font-size: 0.9rem;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed rgba(255,255,255,0.05);
+}
+
+.footer {
+  text-align: center;
+  padding: 20px 0;
+  font-size: 0.85rem;
+}

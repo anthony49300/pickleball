@@ -3,111 +3,124 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Pickleball JF</title>
+  <title>JF Pickleball Generator</title>
   
-  <!-- Favicon basée sur l'émoji balle de tennis/pickleball -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎾</text></svg>">
+  <!-- Favicon Balle de Pickleball SVG -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2245%22 fill=%22%23ccff00%22/><circle cx=%2235%22 cy=%2235%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2265%22 cy=%2235%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2250%22 cy=%2250%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2235%22 cy=%2265%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2265%22 cy=%2265%22 r=%226%22 fill=%22%230a0f18%22/></svg>">
   
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <header class="container">
-    <h1>🎾 JF Pickleball</h1>
+    <h1>
+      <!-- Icone SVG Balle Pickleball -->
+      <svg width="32" height="32" viewBox="0 0 100 100" style="vertical-align: middle;">
+        <circle cx="50" cy="50" r="45" fill="#ccff00"/>
+        <circle cx="35" cy="35" r="5" fill="#0a0f18"/>
+        <circle cx="65" cy="35" r="5" fill="#0a0f18"/>
+        <circle cx="50" cy="50" r="5" fill="#0a0f18"/>
+        <circle cx="35" cy="65" r="5" fill="#0a0f18"/>
+        <circle cx="65" cy="65" r="5" fill="#0a0f18"/>
+      </svg>
+      JF Pickleball
+    </h1>
   </header>
 
   <main class="container grid">
+    <!-- SECTION PARAMÈTRES -->
     <section class="card">
-      <h2>Configuration de la session</h2>
+      <h2>⚙️ Configuration de Session</h2>
 
       <label class="label" for="players">Joueurs (un par ligne ou séparés par des virgules)</label>
-      <textarea id="players" rows="8" placeholder="Antoine, Julien, Marc, Thomas&#10;Sophie, Claire&#10;Pierre, Nicolas"></textarea>
+      <textarea id="players" rows="6" placeholder="Antoine, Julien, Marc, Thomas&#10;Sophie, Claire&#10;Pierre, Nicolas"></textarea>
 
       <div class="row">
         <div>
-          <label class="label" for="courts">Terrains</label>
+          <label class="label" for="courts">Terrains 🏟️</label>
           <input id="courts" type="number" min="1" max="10" value="2" />
         </div>
         <div>
-          <label class="label" for="rounds">Tours</label>
+          <label class="label" for="rounds">Tours 🔄</label>
           <input id="rounds" type="number" min="1" max="50" value="8" />
         </div>
         <div>
           <label class="label" for="seed">ID Session</label>
-          <div style="display:flex; gap:8px;">
-            <input id="seed" type="text" placeholder="Génération auto numéro session" />
-            <button id="newSeed" class="secondary" title="Générer une nouvelle ID de session">🔀</button>
+          <div style="display:flex; gap:6px;">
+            <input id="seed" type="text" placeholder="Auto" />
+            <button id="newSeed" class="secondary" title="Nouvelle Seed">🔀</button>
           </div>
         </div>
       </div>
 
       <details class="details">
-        <summary>Options avancées (optionnel)</summary>
+        <summary>⚙️ Options d'Algorithme Avancées</summary>
         <div class="row">
           <div>
-            <label class="label" for="wT">Poids des partenaires répétés</label>
+            <label class="label" for="wT">Poids Partenaires</label>
             <input id="wT" type="number" min="0" max="20" step="0.5" value="5" />
           </div>
           <div>
-            <label class="label" for="wO">Poids des adversaires répétés</label>
+            <label class="label" for="wO">Poids Adversaires</label>
             <input id="wO" type="number" min="0" max="20" step="0.5" value="2" />
           </div>
           <div>
-            <label class="label" for="wP">Poids d'équilibre de jeu</label>
+            <label class="label" for="wP">Équilibre de Jeu</label>
             <input id="wP" type="number" min="0" max="10" step="0.25" value="1" />
           </div>
         </div>
 
         <div class="row">
           <div>
-            <label class="label" for="beamWidth">Largeur du faisceau</label>
+            <label class="label" for="beamWidth">Largeur Faisceau</label>
             <input id="beamWidth" type="number" min="10" max="500" step="10" value="80" />
           </div>
           <div>
-            <label class="label" for="partnerK">Présélection partenaires</label>
+            <label class="label" for="partnerK">Présélection</label>
             <input id="partnerK" type="number" min="4" max="30" step="1" value="10" />
-          </div>
-          <div class="checkbox">
-            <input id="squareRepeats" type="checkbox" checked />
-            <label for="squareRepeats">Pénalités quadratiques pour les répétitions</label>
           </div>
         </div>
 
-        <div class="row">
-          <div class="checkbox">
-            <input id="avoidB2B" type="checkbox" checked />
-            <label for="avoidB2B">Éviter d'être sur le banc deux fois d'affilée</label>
-          </div>
+        <div class="checkbox">
+          <input id="squareRepeats" type="checkbox" checked />
+          <label for="squareRepeats">Pénalités quadratiques pour les répétitions</label>
+        </div>
+
+        <div class="checkbox">
+          <input id="avoidB2B" type="checkbox" checked />
+          <label for="avoidB2B">Éviter le banc deux fois de suite</label>
         </div>
       </details>
 
       <div class="actions">
-        <button id="generate">Générer</button>
-        <button id="copy" class="secondary" disabled>Copier le planning</button>
-        <button id="copyLink" class="secondary" disabled>Copier le lien</button>
+        <button id="generate">⚡ Générer les matchs</button>
+        <button id="copy" class="secondary" disabled>📋 Copier le planning des matchs</button>
+        <button id="copyLink" class="secondary" disabled>🔗 Partager via un lien</button>
       </div>
 
       <p id="warning" class="warning" hidden></p>
       <p id="error" class="error" hidden></p>
     </section>
 
+    <!-- SECTION MATCHS -->
     <section class="card">
       <div class="headerRow">
-        <h2>Matchs</h2>
+        <h2>🎾 Planning des matchs</h2>
         <span id="meta" class="subtle"></span>
       </div>
       <div id="schedule" class="schedule"></div>
     </section>
 
-    <section class="card">
-      <h2>Statistiques</h2>
+    <!-- SECTION STATISTIQUES -->
+    <section class="card" style="grid-column: 1 / -1;">
+      <h2>📊 Statistiques & Équité de Session</h2>
       <div id="diagnostics" class="diagnostics subtle">
-        <p>Générez un planning pour consulter les statistiques.</p>
+        <p>Générez un planning pour analyser les répartitions de temps de jeu, paires et oppositions.</p>
       </div>
     </section>
   </main>
 
   <footer class="container subtle footer">
-    <p>JF Pickleball</p>
+    <p>JF Pickleball — Planificateur de rotation de terrains</p>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
