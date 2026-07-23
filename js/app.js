@@ -512,16 +512,17 @@ btnGenerate.addEventListener("click", () => {
   }
 });
 
-btnCopy.addEventListener("click", async () => {
-  const result = window.__PB_LAST_RESULT__;
-  if (!result) return;
-  const text = buildCopyText(result);
+btnCopyLink.addEventListener("click", async () => {
+  // Option simple : copier l'URL actuelle
+  const urlToShare = window.location.href; 
+  
   try {
-    await navigator.clipboard.writeText(text);
-    btnCopy.textContent = "Copié !";
-    setTimeout(() => (btnCopy.textContent = "📋 Copier Planning"), 900);
+    await navigator.clipboard.writeText(urlToShare);
+    const originalText = btnCopyLink.textContent;
+    btnCopyLink.textContent = "Lien copié !";
+    setTimeout(() => (btnCopyLink.textContent = originalText), 1500);
   } catch {
-    window.prompt("Copier le texte :", text);
+    window.prompt("Copier le lien :", urlToShare);
   }
 });
 
