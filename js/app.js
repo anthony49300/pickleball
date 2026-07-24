@@ -851,7 +851,7 @@ function loadState(state) {
 }
 
 // ----------------------------
-// Historique des Sessions
+// Historique des Sessions (Sans Doublons)
 // ----------------------------
 function getHistory() {
   try {
@@ -862,14 +862,20 @@ function getHistory() {
 }
 
 function saveToHistory() {
-  const history = getHistory();
+  let history = getHistory();
   const state = getCurrentState();
+
+  if (!state.s) return; // Ne rien faire si la seed est vide
+
   const dateStr = new Date().toLocaleDateString("fr-FR", {
     day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"
   });
 
+  // 1. Chercher si une session possède déjà la même Seed (ID)
+  const existingIndex = history.findIndex(item => item.seed === state.s);
+
   const newItem = {
-    id: Date.now(),
+    id: existingIndex !== -1 ? history[existingIndex].id : Date.now(),
     date: dateStr,
     seed: state.s,
     playersCount: parsePlayers(state.p).length,
@@ -877,6 +883,12 @@ function saveToHistory() {
     state: state
   };
 
+  // 2. Si elle existe déjà, on la retire pour la remettre en haut de pile mise à jour
+  if (existingIndex !== -1) {
+    history.splice(existingIndex, 1);
+  }
+
+  // 3. On insère la session au début de l'historique
   history.unshift(newItem);
   localStorage.setItem("pb_history", JSON.stringify(history.slice(0, 20)));
   renderHistory();
