@@ -128,16 +128,24 @@
       <div id="schedule" class="schedule"></div>
     </section>
 
-    <!-- SECTION CLASSEMENT INDIVIDUEL -->
+    <!-- SECTION CLASSEMENT, PODIUM & BADGES -->
     <section class="card" id="rankingSection" style="grid-column: 1 / -1;" hidden>
       <div class="headerRow">
-        <h2>🏆 Classement Individuel</h2>
+        <h2>🏆 Classement & Honneurs</h2>
         <div class="ranking-actions">
           <button id="exportRankingsPng" class="secondary">📷 Exporter PNG</button>
           <button id="copyRankingLink" class="secondary">🔗 Partager le classement</button>
         </div>
       </div>
-      <div id="rankingCaptureArea">
+
+      <div id="rankingCaptureArea" style="padding: 10px;">
+        <!-- PODIUM VISUEL -->
+        <div id="podiumContainer" class="podium-container"></div>
+
+        <!-- BADGES & DISTINCTIONS -->
+        <div id="badgesContainer" class="badges-grid" style="margin-bottom: 24px;"></div>
+
+        <!-- TABLEAU CLASSEMENT -->
         <div style="overflow-x:auto;">
           <table id="rankingTable" class="ranking-table">
             <thead>
@@ -158,6 +166,23 @@
       </div>
     </section>
 
+    <!-- MATRICE D'AFFINITÉ (HEATMAP) -->
+    <section class="card" id="heatmapSection" style="grid-column: 1 / -1;" hidden>
+      <div class="headerRow">
+        <h2>🔥 Matrice d'Affinité & Interactions</h2>
+        <div class="heatmap-mode-selector">
+          <button id="hmModeTeammates" class="secondary active">Coéquipiers 🤝</button>
+          <button id="hmModeOpponents" class="secondary">Adversaires ⚔️</button>
+        </div>
+      </div>
+      <p class="subtle" style="font-size: 0.85rem; margin-bottom: 14px;">
+        Visualisez la répartition des matchs joués ensemble ou l'un contre l'autre. Plus la couleur est vive, plus la fréquence est élevée.
+      </p>
+      <div style="overflow-x: auto;">
+        <div id="heatmapTableContainer"></div>
+      </div>
+    </section>
+
     <!-- SECTION STATISTIQUES -->
     <section class="card" style="grid-column: 1 / -1;">
       <h2>📊 Statistiques & Équité de Session</h2>
@@ -166,7 +191,7 @@
       </div>
     </section>
 
-    <!-- SECTION HISTORIQUE DES SESSIONS -->
+    <!-- HISTORIQUE DES SESSIONS -->
     <section class="card" style="grid-column: 1 / -1;">
       <div class="headerRow">
         <h2>📜 Historique des Sessions</h2>

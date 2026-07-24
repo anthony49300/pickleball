@@ -1,5 +1,5 @@
 // ----------------------------
-// Générateur Aleatoire Seeded
+// Générateur Aléatoire Seeded
 // ----------------------------
 function xmur3(str) {
   let h = 1779033703 ^ str.length;
@@ -141,7 +141,7 @@ function pickBenchesByQueue(availablePlayers, benchesNeeded, benchQueue, lastBen
     guard++;
     const p = benchQueue.shift();
 
-    if (!availableSet.has(p)) continue; // Inactif ce tour
+    if (!availableSet.has(p)) continue;
 
     if (lastBenchedSet.has(p) && benchQueue.length > 0 && benchesNeeded === 1) {
       benchQueue.push(p);
@@ -253,7 +253,7 @@ function beamSearchRound(
 }
 
 // ----------------------------
-// Algorithme principal avec Présences
+// Algorithme principal
 // ----------------------------
 function scheduleRotations(players, numCourts, numRounds, seedText, options, presenceMap) {
   const rng = makeRng(seedText);
@@ -276,7 +276,6 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
   for (let r = 0; r < numRounds; r++) {
     const roundNumber = r + 1;
 
-    // Filtrer les joueurs actifs pour ce tour
     const activePlayers = players.filter(p => {
       const pres = presenceMap[p];
       if (!pres) return true;
@@ -372,8 +371,15 @@ const elMeta = document.getElementById("meta");
 
 const elRankingSection = document.getElementById("rankingSection");
 const elRankingTableBody = document.querySelector("#rankingTable tbody");
+const elPodiumContainer = document.getElementById("podiumContainer");
+const elBadgesContainer = document.getElementById("badgesContainer");
 const btnExportPng = document.getElementById("exportRankingsPng");
 const btnCopyRankingLink = document.getElementById("copyRankingLink");
+
+const elHeatmapSection = document.getElementById("heatmapSection");
+const elHeatmapContainer = document.getElementById("heatmapTableContainer");
+const btnHmModeTeammates = document.getElementById("hmModeTeammates");
+const btnHmModeOpponents = document.getElementById("hmModeOpponents");
 
 const elPresenceList = document.getElementById("presenceList");
 const elAutosaveBadge = document.getElementById("autosaveBadge");
@@ -382,6 +388,7 @@ const btnClearHistory = document.getElementById("clearHistoryBtn");
 
 window.__PB_SCORES__ = {};
 window.__PB_PRESENCE__ = {};
+let currentHeatmapMode = "teammates";
 
 function parsePlayers(text) {
   const lines = text.split(/\n/).flatMap(line => line.split(","));
@@ -394,7 +401,6 @@ function parseCourtNames() {
   return raw.split(",").map(s => s.trim()).filter(Boolean);
 }
 
-// Update UI Arrivées & Départs
 function syncPresenceInputs() {
   const players = parsePlayers(elPlayers.value);
   const totalRounds = parseInt(elRounds.value || "8", 10);
@@ -408,7 +414,6 @@ function syncPresenceInputs() {
 
     const item = document.createElement("div");
     item.className = "presence-item";
-    
     item.innerHTML = `
       <span><strong>${p}</strong></span>
       <div class="presence-inputs">
@@ -538,11 +543,73 @@ function render(result, players, numCourts, numRounds) {
     <p><strong>Ratio individuel (J=Joué, B=Banc) :</strong> ${fairnessLine}</p>
   `;
 
+  renderHeatmap();
+
   btnCopy.disabled = false;
   btnCopyLink.disabled = false;
   btnSaveToHistory.disabled = false;
 }
 
+// ----------------------------
+// Matrice Heatmap
+// ----------------------------
+function renderHeatmap() {
+  const result = window.__PB_LAST_RESULT__;
+  const players = parsePlayers(elPlayers.value);
+  if (!result || players.length === 0) {
+    elHeatmapSection.hidden = true;
+    return;
+  }
+
+  elHeatmapSection.hidden = false;
+  const map = currentHeatmapMode === "teammates" ? result.stats.teammateCount : result.stats.opponentCount;
+
+  let maxVal = 1;
+  map.forEach(val => { if (val > maxVal) maxVal = val; });
+
+  let html = `<table class="heatmap-table"><thead><tr><th></th>`;
+  players.forEach(p => {
+    html += `<th>${p.substring(0, 4)}.</th>`;
+  });
+  html += `</tr></thead><tbody>`;
+
+  players.forEach(p1 => {
+    html += `<tr><th>${p1}</th>`;
+    players.forEach(p2 => {
+      if (p1 === p2) {
+        html += `<td style="background: rgba(0,0,0,0.3); color: #555;">-</td>`;
+      } else {
+        const count = getCount(map, pairKey(p1, p2));
+        const alpha = (count / maxVal) * 0.75 + (count > 0 ? 0.15 : 0);
+        const bg = count > 0 ? `rgba(204, 255, 0, ${alpha})` : "rgba(255, 255, 255, 0.02)";
+        const color = alpha > 0.4 ? "#000" : "#fff";
+        html += `<td class="heatmap-cell" style="background: ${bg}; color: ${color};">${count}</td>`;
+      }
+    });
+    html += `</tr>`;
+  });
+
+  html += `</tbody></table>`;
+  elHeatmapContainer.innerHTML = html;
+}
+
+btnHmModeTeammates.addEventListener("click", () => {
+  currentHeatmapMode = "teammates";
+  btnHmModeTeammates.classList.add("active");
+  btnHmModeOpponents.classList.remove("active");
+  renderHeatmap();
+});
+
+btnHmModeOpponents.addEventListener("click", () => {
+  currentHeatmapMode = "opponents";
+  btnHmModeOpponents.classList.add("active");
+  btnHmModeTeammates.classList.remove("active");
+  renderHeatmap();
+});
+
+// ----------------------------
+// Classement, Podium & Badges
+// ----------------------------
 function updateRankings() {
   const result = window.__PB_LAST_RESULT__;
   if (!result) return;
@@ -555,6 +622,7 @@ function updateRankings() {
   });
   
   let hasAnyScore = false;
+  const pairWins = new Map();
 
   result.rounds.forEach((matches, rIdx) => {
     matches.forEach((match, mIdx) => {
@@ -581,6 +649,9 @@ function updateRankings() {
 
         updateTeamStats(t1, s1, s2);
         updateTeamStats(t2, s2, s1);
+
+        if (s1 > s2) incCount(pairWins, pairKey(t1[0], t1[1]));
+        if (s2 > s1) incCount(pairWins, pairKey(t2[0], t2[1]));
       }
     });
   });
@@ -599,7 +670,14 @@ function updateRankings() {
     if (b.diff !== a.diff) return b.diff - a.diff;
     return b.pf - a.pf;
   });
-  
+
+  // Podium
+  renderPodium(sortedPlayers);
+
+  // Badges
+  renderBadges(sortedPlayers, pairWins);
+
+  // Tableau
   elRankingTableBody.innerHTML = sortedPlayers.map((p, i) => {
     const diffClass = p.diff > 0 ? "diff-positive" : (p.diff < 0 ? "diff-negative" : "");
     const diffSign = p.diff > 0 ? "+" : "";
@@ -618,8 +696,97 @@ function updateRankings() {
   }).join('');
 }
 
+function renderPodium(sorted) {
+  if (sorted.length < 3) {
+    elPodiumContainer.innerHTML = "";
+    return;
+  }
+
+  const p1 = sorted[0];
+  const p2 = sorted[1];
+  const p3 = sorted[2];
+
+  elPodiumContainer.innerHTML = `
+    <div class="podium-step silver">
+      <div class="podium-avatar">🥈</div>
+      <div class="podium-name">${p2.name}</div>
+      <div class="podium-stats">${p2.w}V · ${p2.diff > 0 ? '+' : ''}${p2.diff}</div>
+    </div>
+    <div class="podium-step gold">
+      <div class="podium-avatar">🥇</div>
+      <div class="podium-name">${p1.name}</div>
+      <div class="podium-stats">${p1.w}V · ${p1.diff > 0 ? '+' : ''}${p1.diff}</div>
+    </div>
+    <div class="podium-step bronze">
+      <div class="podium-avatar">🥉</div>
+      <div class="podium-name">${p3.name}</div>
+      <div class="podium-stats">${p3.w}V · ${p3.diff > 0 ? '+' : ''}${p3.diff}</div>
+    </div>
+  `;
+}
+
+function renderBadges(sorted, pairWins) {
+  const badges = [];
+
+  // 💥 Meilleure Attaque (plus de points pour)
+  const bestAttacker = [...sorted].sort((a, b) => b.pf - a.pf)[0];
+  if (bestAttacker && bestAttacker.pf > 0) {
+    badges.push({
+      icon: "💥",
+      title: "Canonnière",
+      player: bestAttacker.name,
+      desc: `${bestAttacker.pf} points inscrits au total`
+    });
+  }
+
+  // 🛡️ Roc Défensif (moins de points contre)
+  const bestDefender = [...sorted].filter(p => p.m > 0).sort((a, b) => a.pa - b.pa)[0];
+  if (bestDefender) {
+    badges.push({
+      icon: "🛡️",
+      title: "Roc Défensif",
+      player: bestDefender.name,
+      desc: `Seulement ${bestDefender.pa} points encaissés`
+    });
+  }
+
+  // 🔥 Incollable en Duo
+  const topDuoEntry = [...pairWins.entries()].sort((a, b) => b[1] - a[1])[0];
+  if (topDuoEntry && topDuoEntry[1] > 0) {
+    const pairName = topDuoEntry[0].replace("||", " & ");
+    badges.push({
+      icon: "🔥",
+      title: "Incollable en Duo",
+      player: pairName,
+      desc: `${topDuoEntry[1]} victoires ensemble`
+    });
+  }
+
+  // ⚡ Roi de la Remontada (meilleur diff)
+  const bestDiff = [...sorted].sort((a, b) => b.diff - a.diff)[0];
+  if (bestDiff && bestDiff.diff > 0) {
+    badges.push({
+      icon: "🚀",
+      title: "Maître du Différentiel",
+      player: bestDiff.name,
+      desc: `Différentiel de +${bestDiff.diff}`
+    });
+  }
+
+  elBadgesContainer.innerHTML = badges.map(b => `
+    <div class="badge-card">
+      <div class="badge-icon">${b.icon}</div>
+      <div>
+        <div class="badge-title">${b.title}</div>
+        <div class="badge-player">${b.player}</div>
+        <div class="badge-desc">${b.desc}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
 // ----------------------------
-// Sauvegarde Automatique (localStorage)
+// Sauvegarde Automatique
 // ----------------------------
 function getCurrentState() {
   return {
@@ -711,7 +878,7 @@ function saveToHistory() {
   };
 
   history.unshift(newItem);
-  localStorage.setItem("pb_history", JSON.stringify(history.slice(0, 20))); // max 20 éléments
+  localStorage.setItem("pb_history", JSON.stringify(history.slice(0, 20)));
   renderHistory();
 }
 
@@ -836,7 +1003,6 @@ elSchedule.addEventListener("input", (e) => {
   }
 });
 
-// Écoute de l'auto-save sur les contrôles
 [elPlayers, elCourts, elRounds, elSeed, elCourtNames, elwT, elwO, elwP, elBeamWidth, elPartnerK, elSquare, elAvoidB2B].forEach(el => {
   el.addEventListener("change", autoSaveState);
 });
@@ -920,7 +1086,7 @@ btnExportPng.addEventListener("click", async () => {
   }
 });
 
-// Initialisation au chargement
+// Initialisation
 window.addEventListener("DOMContentLoaded", () => {
   if (!elSeed.value) elSeed.value = generateSeed();
   renderHistory();
@@ -939,7 +1105,6 @@ window.addEventListener("DOMContentLoaded", () => {
       elError.textContent = "Lien de partage invalide ou corrompu.";
     }
   } else {
-    // Charger la dernière sauvegarde automatique s'il y en a une
     const saved = localStorage.getItem("pb_autosave");
     if (saved) {
       try {
