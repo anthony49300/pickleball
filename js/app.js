@@ -520,7 +520,7 @@ elRounds.addEventListener("input", syncPresenceInputs);
 
 
 // =============================================================================
-// RENDU VISUEL DE DU PLANNING (HTML)
+// RENDU VISUEL DU PLANNING (HTML)
 // =============================================================================
 
 /**
@@ -1113,9 +1113,16 @@ btnNewSeed.addEventListener("click", () => {
   autoSaveState();
 });
 
-// Le bouton "Générer" explicite efface les scores
+// Le bouton "Générer" demande une confirmation, régénère l'ID (seed) et efface les scores
 btnGenerate.addEventListener("click", () => {
-  generateSession(false);
+  const confirmed = confirm(
+    "Attention : La génération d'un nouveau planning va régénérer un nouvel ID (clé) et écraser tous les scores actuellement non sauvegardés.\n\nVoulez-vous continuer ?"
+  );
+
+  if (confirmed) {
+    elSeed.value = generateSeed(); // Génère un nouvel ID / seed
+    generateSession(false);        // Réinitialise les scores et relance la génération
+  }
 });
 
 // Écoute de la saisie des scores en direct dans les cartes
