@@ -433,6 +433,7 @@ const btnNewSeed = document.getElementById("newSeed");
 
 const elSchedule = document.getElementById("schedule");
 const elDiag = document.getElementById("diagnostics");
+const elDiagSection = document.getElementById("diagnosticsSection") || (elDiag ? elDiag.closest("section") || elDiag.parentElement : null);
 const elWarning = document.getElementById("warning");
 const elError = document.getElementById("error");
 const elMeta = document.getElementById("meta");
@@ -555,7 +556,9 @@ function renderEmptyState() {
     </div>
   `;
   
-  elDiag.innerHTML = "";
+  if (elDiag) elDiag.innerHTML = "";
+  if (elDiagSection) elDiagSection.hidden = true;
+  
   elMeta.textContent = "";
   if (elRankingSection) elRankingSection.hidden = true;
   if (elHeatmapSection) elHeatmapSection.hidden = true;
@@ -570,7 +573,7 @@ function renderEmptyState() {
  */
 function render(result, players, numCourts, numRounds) {
   elSchedule.innerHTML = "";
-  elDiag.innerHTML = "";
+  if (elDiag) elDiag.innerHTML = "";
 
   const { rounds, benches, absents, stats } = result;
   const courtCustomNames = parseCourtNames();
@@ -662,13 +665,17 @@ function render(result, players, numCourts, numRounds) {
     .map(p => `<strong>${p}</strong> : ${stats.playsCount.get(p) ?? 0}J / ${stats.benchCount.get(p) ?? 0}B`)
     .join(" · ");
 
-  elDiag.innerHTML = `
-    <p><strong>Équilibre Matchs :</strong> Min ${minPlays} - Max ${maxPlays} joués</p>
-    <p><strong>Équilibre Banc :</strong> Min ${minBen} - Max ${maxBen} passages</p>
-    <p><strong>Paires les plus fréquentes :</strong> ${tmTop || "Aucune"}</p>
-    <p><strong>Oppositions les plus fréquentes :</strong> ${opTop || "Aucune"}</p>
-    <p><strong>Ratio individuel (J=Joué, B=Banc) :</strong> ${fairnessLine}</p>
-  `;
+  if (elDiag) {
+    elDiag.innerHTML = `
+      <p><strong>Équilibre Matchs :</strong> Min ${minPlays} - Max ${maxPlays} joués</p>
+      <p><strong>Équilibre Banc :</strong> Min ${minBen} - Max ${maxBen} passages</p>
+      <p><strong>Paires les plus fréquentes :</strong> ${tmTop || "Aucune"}</p>
+      <p><strong>Oppositions les plus fréquentes :</strong> ${opTop || "Aucune"}</p>
+      <p><strong>Ratio individuel (J=Joué, B=Banc) :</strong> ${fairnessLine}</p>
+    `;
+  }
+
+  if (elDiagSection) elDiagSection.hidden = false;
 
   renderHeatmap();
 
@@ -1156,7 +1163,6 @@ btnNewSeed.addEventListener("click", () => {
   autoSaveState();
 });
 
-// Génère directement la session sans demande de confirmation
 btnGenerate.addEventListener("click", () => {
   generateSession(false);
 });
