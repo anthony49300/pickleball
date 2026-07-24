@@ -532,55 +532,67 @@ button:disabled {
 .footer { text-align: center; padding: 20px 0; font-size: 0.85rem; }
 
 /* ==========================================================================
-   CORRECTIF MOBILE & SAISIE DE SCORES
+   CORRECTIF D'ALIGNEMENT ET DE DÉBORDEMENT MOBILE
    ========================================================================== */
 
-/* 1. Empêcher le défilement horizontal global */
+/* 1. Sécurité globale du conteneur */
 html, body {
+  width: 100%;
   max-width: 100vw;
   overflow-x: hidden;
-}
-
-*, *::before, *::after {
-  box-sizing: border-box;
-}
-
-/* 2. Verrouiller la largeur des champs de score (2 chiffres max) */
-.score-input,
-input[type="number"].score-input {
-  width: 46px !important;
-  min-width: 46px !important;
-  max-width: 46px !important;
-  height: 38px !important;
-  text-align: center !important;
-  font-size: 16px !important; /* Désactive le zoom automatique sur iPhone */
-  font-weight: 700 !important;
-  padding: 2px !important;
-  box-sizing: border-box !important;
-  flex-shrink: 0 !important; /* Empêche le champ de se déformer */
-}
-
-/* Masquer les petites flèches (spinners) haut/bas */
-.score-input::-webkit-outer-spin-button,
-.score-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
   margin: 0;
+  padding: 0;
 }
 
-.score-input[type="number"] {
-  -moz-appearance: textfield;
+/* 2. Empêcher les conteneurs principaux de déborder à gauche */
+body, 
+.container, 
+main, 
+#app, 
+header {
+  max-width: 100% !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  box-sizing: border-box !important;
 }
 
-/* 3. Autoriser les cartes de matchs et les noms de joueurs à rétrécir */
-.match-card {
-  max-width: 100%;
-  box-sizing: border-box;
-}
+/* 3. Ajustements spécifiques aux petits écrans (< 768px) */
+@media (max-width: 768px) {
+  
+  /* Supprime les min-width globales qui poussent les éléments hors champ */
+  .match-card, 
+  .card, 
+  .court, 
+  .terrain,
+  .table-container {
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
 
-.team, 
-.team-score {
-  min-width: 0 !important; /* Indispensable dans un conteneur Flexbox */
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* Padding de sécurité sur les côtés pour ne pas coller aux bords de l'écran */
+  body {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  /* Verrouillage strict des champs de score pour qu'ils ne déforment rien */
+  .score-input, 
+  input[type="number"].score-input {
+    width: 44px !important;
+    min-width: 44px !important;
+    max-width: 44px !important;
+    height: 38px !important;
+    text-align: center !important;
+    font-size: 16px !important; /* Évite le zoom automatique sur iPhone */
+    padding: 2px !important;
+    flex-shrink: 0 !important;
+  }
+  
+  /* Masquer les flèches des inputs number */
+  .score-input::-webkit-outer-spin-button,
+  .score-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
 }
