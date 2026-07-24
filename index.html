@@ -11,9 +11,8 @@
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <header class="container">
+  <header class="container header-bar">
     <h1>
-      <!-- Icone SVG Balle Pickleball -->
       <svg width="32" height="32" viewBox="0 0 100 100" style="vertical-align: middle;">
         <circle cx="50" cy="50" r="45" fill="#ccff00"/>
         <circle cx="35" cy="35" r="5" fill="#0a0f18"/>
@@ -24,6 +23,7 @@
       </svg>
       JF Pickleball
     </h1>
+    <div id="autosaveBadge" class="save-badge">💾 Sauvegardé</div>
   </header>
 
   <main class="container grid">
@@ -32,7 +32,7 @@
       <h2>⚙️ Configuration de Session</h2>
 
       <label class="label" for="players">Joueurs (un par ligne ou séparés par des virgules)</label>
-      <textarea id="players" rows="6" placeholder="Antoine, Julien, Marc, Thomas&#10;Sophie, Claire&#10;Pierre, Nicolas"></textarea>
+      <textarea id="players" rows="5" placeholder="Antoine, Julien, Marc, Thomas&#10;Sophie, Claire&#10;Pierre, Nicolas"></textarea>
 
       <div class="row">
         <div>
@@ -51,6 +51,23 @@
           </div>
         </div>
       </div>
+
+      <!-- Nommage Personnalisé des Terrains -->
+      <div style="margin-top: 12px;">
+        <label class="label" for="courtNames">Noms des Terrains (Optionnel, séparés par virgules)</label>
+        <input id="courtNames" type="text" placeholder="ex: Court Central, Court 1, Terrain B" />
+      </div>
+
+      <!-- Arrivées et Départs -->
+      <details class="details" id="presenceDetails">
+        <summary>⏱️ Arrivées & Départs des Joueurs</summary>
+        <p class="subtle" style="font-size: 0.82rem; margin: 6px 0 12px;">
+          Indiquez à quel tour un joueur arrive ou repart s'il ne joue pas toute la session.
+        </p>
+        <div id="presenceList" class="presence-grid">
+          <!-- Rempli dynamiquement en JS -->
+        </div>
+      </details>
 
       <details class="details">
         <summary>⚙️ Options d'Algorithme Avancées</summary>
@@ -93,8 +110,9 @@
 
       <div class="actions">
         <button id="generate">⚡ Générer les matchs</button>
-        <button id="copy" class="secondary" disabled>📋 Copier le planning des matchs</button>
-        <button id="copyLink" class="secondary" disabled>🔗 Partager via un lien</button>
+        <button id="copy" class="secondary" disabled>📋 Copier</button>
+        <button id="copyLink" class="secondary" disabled>🔗 Partager Lien</button>
+        <button id="saveToHistory" class="secondary" disabled>💾 Enregistrer Session</button>
       </div>
 
       <p id="warning" class="warning" hidden></p>
@@ -145,6 +163,17 @@
       <h2>📊 Statistiques & Équité de Session</h2>
       <div id="diagnostics" class="diagnostics subtle">
         <p>Générez un planning pour analyser les répartitions de temps de jeu, paires et oppositions.</p>
+      </div>
+    </section>
+
+    <!-- SECTION HISTORIQUE DES SESSIONS -->
+    <section class="card" style="grid-column: 1 / -1;">
+      <div class="headerRow">
+        <h2>📜 Historique des Sessions</h2>
+        <button id="clearHistoryBtn" class="secondary" style="font-size: 0.8rem; padding: 6px 12px;">🗑️ Vider l'historique</button>
+      </div>
+      <div id="historyList" class="history-grid">
+        <p class="subtle">Aucune session enregistrée pour le moment.</p>
       </div>
     </section>
   </main>
