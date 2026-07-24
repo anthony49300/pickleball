@@ -1,6 +1,13 @@
-// ----------------------------
-// Générateur Aléatoire Seeded
-// ----------------------------
+// =============================================================================
+// GENERATEUR ALEATOIRE PSEUDO-RANDOM (SEEDED RNG)
+// Permet de reproduire exactement les mêmes tirages à partir d'une même clé (seed)
+// =============================================================================
+
+/**
+ * Génère une fonction de hachage 32-bit à partir d'une chaîne de caractères.
+ * @param {string} str - La clé (seed) sous forme de texte.
+ * @returns {function(): number} - Fonction renvoyant un entier 32-bit.
+ */
 function xmur3(str) {
   let h = 1779033703 ^ str.length;
   for (let i = 0; i < str.length; i++) {
@@ -15,6 +22,9 @@ function xmur3(str) {
   };
 }
 
+/**
+ * Algorithme SFC32 (Simple Fast Counter 32-bit) pour générer des nombres flottants entre 0 et 1.
+ */
 function sfc32(a, b, c, d) {
   return function () {
     a >>>= 0; b >>>= 0; c >>>= 0; d >>>= 0;
@@ -29,6 +39,11 @@ function sfc32(a, b, c, d) {
   };
 }
 
+/**
+ * Crée le générateur de nombres aléatoires basé sur la clé fournie.
+ * @param {string} seedText - La graine de génération.
+ * @returns {function(): number} - Fonction renvoyant un nombre entre 0 et 1.
+ */
 function makeRng(seedText) {
   const seedStr = (seedText ?? "").trim();
   if (!seedStr) return Math.random;
@@ -36,6 +51,9 @@ function makeRng(seedText) {
   return sfc32(seedGen(), seedGen(), seedGen(), seedGen());
 }
 
+/**
+ * Mélange un tableau en place selon l'algorithme de Fisher-Yates et un générateur défini.
+ */
 function shuffleInPlace(arr, rng) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
@@ -43,45 +61,73 @@ function shuffleInPlace(arr, rng) {
   }
 }
 
+/**
+ * Renvoie une copie mélangée d'un tableau sans altérer le tableau d'origine.
+ */
 function shuffled(arr, rng) {
   const copy = [...arr];
   shuffleInPlace(copy, rng);
   return copy;
 }
 
+/**
+ * Génère une clé aléatoire par défaut si aucune clé n'est saisie.
+ */
 function generateSeed() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-// ----------------------------
-// Utilitaires de Matchmaking
-// ----------------------------
+
+// =============================================================================
+// UTILITAIRES DE MATCHMAKING & COMPTAGE DES PAIRS
+// =============================================================================
+
+/**
+ * Crée une clé unique et ordonnée pour représenter une paire de joueurs (ex: "Alice||Bob").
+ */
 function pairKey(a, b) {
   return a < b ? `${a}||${b}` : `${b}||${a}`;
 }
 
+/**
+ * Extrait un compteur depuis un objet Map (renvoie 0 par défaut si absent).
+ */
 function getCount(map, key) {
   return map.get(key) ?? 0;
 }
 
+/**
+ * Incrémente la valeur associée à une clé dans un Map.
+ */
 function incCount(map, key, amt = 1) {
   map.set(key, (map.get(key) ?? 0) + amt);
 }
 
+/**
+ * Formate l'affichage texte d'une rencontre.
+ */
 function fmtMatch(match) {
   const [t1, t2] = match;
   return `${t1[0]} & ${t1[1]} contre ${t2[0]} & ${t2[1]}`;
 }
 
+/**
+ * Extrait les N paires les plus fréquentes à partir d'une Map de statistiques.
+ */
 function topPairs(map, limit = 15) {
   const arr = [...map.entries()].filter(([, v]) => v > 0);
   arr.sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1));
   return arr.slice(0, limit);
 }
 
-// ----------------------------
-// Algorithme Beam Search
-// ----------------------------
+
+// =============================================================================
+// ALGORITHME BEAM SEARCH (OPTIMISATION DES ROTATIONS)
+// =============================================================================
+
+/**
+ * Calcule la pénalité liée au fait de mettre deux joueurs ensemble dans une équipe.
+ */
 function scoreTeam(a, b, teammateCount, playsCount, wT, wP, squareRepeats) {
   const t = getCount(teammateCount, pairKey(a, b));
   const tPen = squareRepeats ? t * t : t;
@@ -89,6 +135,9 @@ function scoreTeam(a, b, teammateCount, playsCount, wT, wP, squareRepeats) {
   return wT * tPen + wP * pPen;
 }
 
+/**
+ * Calcule la pénalité d'affrontement entre deux équipes (4 joueurs).
+ */
 function scoreOpponents(a, b, c, d, opponentCount, wO, squareRepeats) {
   const vals = [
     getCount(opponentCount, pairKey(a, c)),
@@ -100,6 +149,9 @@ function scoreOpponents(a, b, c, d, opponentCount, wO, squareRepeats) {
   return wO * sum;
 }
 
+/**
+ * Trouve la meilleure combinaison d'équipes possible pour un groupe de 4 joueurs.
+ */
 function bestSplitForFour(p4, teammateCount, opponentCount, playsCount, wT, wO, wP, squareRepeats) {
   const [a, b, c, d] = p4;
   const splits = [
@@ -127,6 +179,9 @@ function bestSplitForFour(p4, teammateCount, opponentCount, playsCount, wT, wO, 
   return { match: best, score: bestScore };
 }
 
+/**
+ * Sélectionne équitablement les joueurs qui iront sur le banc pour un tour donné.
+ */
 function pickBenchesByQueue(availablePlayers, benchesNeeded, benchQueue, lastBenchedSet) {
   if (benchesNeeded <= 0) return [];
   const benched = [];
@@ -143,6 +198,7 @@ function pickBenchesByQueue(availablePlayers, benchesNeeded, benchQueue, lastBen
 
     if (!availableSet.has(p)) continue;
 
+    // Évite autant que possible qu'un joueur passe deux fois d'affilée sur le banc
     if (lastBenchedSet.has(p) && benchQueue.length > 0 && benchesNeeded === 1) {
       benchQueue.push(p);
       continue;
@@ -155,6 +211,9 @@ function pickBenchesByQueue(availablePlayers, benchesNeeded, benchQueue, lastBen
   return benched;
 }
 
+/**
+ * Recherche par faisceau (Beam Search) pour composer les rencontres optimales d'un tour.
+ */
 function beamSearchRound(
   playing, targetMatches, teammateCount, opponentCount, playsCount,
   { wT, wO, wP, beamWidth, partnerK, squareRepeats }, rng
@@ -165,6 +224,7 @@ function beamSearchRound(
 
   playing = playing.slice(0, need);
 
+  // Pré-classement des meilleurs partenaires potentiels pour accélérer l'exploration
   const partnerRank = new Map();
   for (const p of playing) {
     const others = playing.filter(q => q !== p);
@@ -252,9 +312,14 @@ function beamSearchRound(
   return beam[0].matches;
 }
 
-// ----------------------------
-// Algorithme principal
-// ----------------------------
+
+// =============================================================================
+// ENCHAINEMENT COMPLET DES ROTATIONS
+// =============================================================================
+
+/**
+ * Moteur principal : génère l'ensemble du planning sur tous les tours demandés.
+ */
 function scheduleRotations(players, numCourts, numRounds, seedText, options, presenceMap) {
   const rng = makeRng(seedText);
   players = players.map(p => p.trim()).filter(Boolean);
@@ -276,6 +341,7 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
   for (let r = 0; r < numRounds; r++) {
     const roundNumber = r + 1;
 
+    // Filtrage des joueurs actifs pour ce tour selon la grille de présence
     const activePlayers = players.filter(p => {
       const pres = presenceMap[p];
       if (!pres) return true;
@@ -340,9 +406,11 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
   return { rounds, benches, absents, stats: { teammateCount, opponentCount, playsCount, benchCount } };
 }
 
-// ----------------------------
-// Éléments UI & Gestionnaires
-// ----------------------------
+
+// =============================================================================
+// IHM & ELEMENTS DU DOM
+// =============================================================================
+
 const elPlayers = document.getElementById("players");
 const elCourts = document.getElementById("courts");
 const elRounds = document.getElementById("rounds");
@@ -386,9 +454,15 @@ const elAutosaveBadge = document.getElementById("autosaveBadge");
 const elHistoryList = document.getElementById("historyList");
 const btnClearHistory = document.getElementById("clearHistoryBtn");
 
+// Variables globales de mémoire
 window.__PB_SCORES__ = {};
 window.__PB_PRESENCE__ = {};
 let currentHeatmapMode = "teammates";
+
+
+// =============================================================================
+// FONCTIONS D'ANALYSE DU FORMULAIRE ET PRESENCE
+// =============================================================================
 
 function parsePlayers(text) {
   const lines = text.split(/\n/).flatMap(line => line.split(","));
@@ -401,6 +475,9 @@ function parseCourtNames() {
   return raw.split(",").map(s => s.trim()).filter(Boolean);
 }
 
+/**
+ * Synchronise l'interface des plages d'arrivée/départ pour chaque joueur.
+ */
 function syncPresenceInputs() {
   const players = parsePlayers(elPlayers.value);
   const totalRounds = parseInt(elRounds.value || "8", 10);
@@ -441,7 +518,14 @@ elPresenceList.addEventListener("change", (e) => {
 elPlayers.addEventListener("input", syncPresenceInputs);
 elRounds.addEventListener("input", syncPresenceInputs);
 
-// Rendu du Planning
+
+// =============================================================================
+// RENDU VISUEL DE DU PLANNING (HTML)
+// =============================================================================
+
+/**
+ * Construit la structure HTML affichant les terrains, matchs, scores et diagnostics.
+ */
 function render(result, players, numCourts, numRounds) {
   elSchedule.innerHTML = "";
   elDiag.innerHTML = "";
@@ -518,6 +602,7 @@ function render(result, players, numCourts, numRounds) {
     elSchedule.appendChild(wrap);
   });
 
+  // Bloc des statistiques et de contrôle d'équité
   const plays = players.map(p => [p, stats.playsCount.get(p) ?? 0]);
   const benchesCount = players.map(p => [p, stats.benchCount.get(p) ?? 0]);
 
@@ -550,9 +635,14 @@ function render(result, players, numCourts, numRounds) {
   btnSaveToHistory.disabled = false;
 }
 
-// ----------------------------
-// Matrice Heatmap
-// ----------------------------
+
+// =============================================================================
+// RENDU DE LA MATRICE (HEATMAP)
+// =============================================================================
+
+/**
+ * Dessine la matrice visuelle des interactions entre partenaires ou adversaires.
+ */
 function renderHeatmap() {
   const result = window.__PB_LAST_RESULT__;
   const players = parsePlayers(elPlayers.value);
@@ -607,9 +697,14 @@ btnHmModeOpponents.addEventListener("click", () => {
   renderHeatmap();
 });
 
-// ----------------------------
-// Classement, Podium & Badges
-// ----------------------------
+
+// =============================================================================
+// CLASSEMENT, PODIUM & BADGES
+// =============================================================================
+
+/**
+ * Calcule et actualise le tableau des scores, le podium et les badges honorifiques.
+ */
 function updateRankings() {
   const result = window.__PB_LAST_RESULT__;
   if (!result) return;
@@ -671,13 +766,9 @@ function updateRankings() {
     return b.pf - a.pf;
   });
 
-  // Podium
   renderPodium(sortedPlayers);
-
-  // Badges
   renderBadges(sortedPlayers, pairWins);
 
-  // Tableau
   elRankingTableBody.innerHTML = sortedPlayers.map((p, i) => {
     const diffClass = p.diff > 0 ? "diff-positive" : (p.diff < 0 ? "diff-negative" : "");
     const diffSign = p.diff > 0 ? "+" : "";
@@ -728,7 +819,6 @@ function renderPodium(sorted) {
 function renderBadges(sorted, pairWins) {
   const badges = [];
 
-  // 💥 Meilleure Attaque (plus de points pour)
   const bestAttacker = [...sorted].sort((a, b) => b.pf - a.pf)[0];
   if (bestAttacker && bestAttacker.pf > 0) {
     badges.push({
@@ -739,7 +829,6 @@ function renderBadges(sorted, pairWins) {
     });
   }
 
-  // 🛡️ Roc Défensif (moins de points contre)
   const bestDefender = [...sorted].filter(p => p.m > 0).sort((a, b) => a.pa - b.pa)[0];
   if (bestDefender) {
     badges.push({
@@ -750,7 +839,6 @@ function renderBadges(sorted, pairWins) {
     });
   }
 
-  // 🔥 Incollable en Duo
   const topDuoEntry = [...pairWins.entries()].sort((a, b) => b[1] - a[1])[0];
   if (topDuoEntry && topDuoEntry[1] > 0) {
     const pairName = topDuoEntry[0].replace("||", " & ");
@@ -762,7 +850,6 @@ function renderBadges(sorted, pairWins) {
     });
   }
 
-  // ⚡ Roi de la Remontada (meilleur diff)
   const bestDiff = [...sorted].sort((a, b) => b.diff - a.diff)[0];
   if (bestDiff && bestDiff.diff > 0) {
     badges.push({
@@ -785,9 +872,14 @@ function renderBadges(sorted, pairWins) {
   `).join('');
 }
 
-// ----------------------------
-// Sauvegarde Automatique
-// ----------------------------
+
+// =============================================================================
+// GESTION DE L'ETAT, SAUVEGARDE ET CHARGEMENT SECURISE
+// =============================================================================
+
+/**
+ * Capture l'intégralité des paramètres et scores courants de l'application.
+ */
 function getCurrentState() {
   return {
     p: elPlayers.value,
@@ -807,6 +899,9 @@ function getCurrentState() {
   };
 }
 
+/**
+ * Sauvegarde la session dans le stockage local (localStorage).
+ */
 function autoSaveState() {
   const state = getCurrentState();
   localStorage.setItem("pb_autosave", JSON.stringify(state));
@@ -815,6 +910,76 @@ function autoSaveState() {
   setTimeout(() => { elAutosaveBadge.style.opacity = "0.5"; }, 1000);
 }
 
+/**
+ * Fonction centrale de génération du planning.
+ * @param {boolean} preserveScores - Si true, conserve les scores déjà saisis lors de l'actualisation.
+ */
+function generateSession(preserveScores = false) {
+  elWarning.hidden = true;
+  elError.hidden = true;
+  btnCopy.disabled = true;
+
+  // Réinitialisation explicite uniquement en cas de génération manuelle
+  if (!preserveScores) {
+    window.__PB_SCORES__ = {};
+    elRankingSection.hidden = true;
+  }
+
+  try {
+    const players = parsePlayers(elPlayers.value);
+    const numCourts = Math.max(1, parseInt(elCourts.value || "1", 10));
+    const numRounds = Math.max(1, parseInt(elRounds.value || "1", 10));
+    let seedText = (elSeed.value || "").trim();
+
+    if (!seedText) {
+      seedText = generateSeed();
+      elSeed.value = seedText;
+    }
+
+    if (players.length < 4) {
+      throw new Error("Veuillez entrer au moins 4 joueurs.");
+    }
+
+    const options = {
+      wT: parseFloat(elwT.value || "5"),
+      wO: parseFloat(elwO.value || "2"),
+      wP: parseFloat(elwP.value || "1"),
+      beamWidth: parseInt(elBeamWidth.value || "80", 10),
+      partnerK: parseInt(elPartnerK.value || "10", 10),
+      squareRepeats: !!elSquare.checked,
+      avoidB2B: !!elAvoidB2B.checked,
+    };
+
+    const result = scheduleRotations(players, numCourts, numRounds, seedText, options, window.__PB_PRESENCE__);
+    render(result, players, numCourts, numRounds);
+
+    window.__PB_LAST_RESULT__ = result;
+
+    // Réinjection automatique des scores enregistrés dans les champs d'entrée HTML
+    if (preserveScores && window.__PB_SCORES__) {
+      document.querySelectorAll(".score-input").forEach(input => {
+        const r = input.dataset.round;
+        const m = input.dataset.match;
+        const t = input.dataset.team;
+        const key = `${r}-${m}`;
+        if (window.__PB_SCORES__[key] && window.__PB_SCORES__[key][t] != null) {
+          input.value = window.__PB_SCORES__[key][t];
+        }
+      });
+      updateRankings();
+    }
+
+    autoSaveState();
+
+  } catch (e) {
+    elError.hidden = false;
+    elError.textContent = e?.message ?? String(e);
+  }
+}
+
+/**
+ * Restaure un état complet préenregistré (depuis l'historique, l'URL ou le stockage).
+ */
 function loadState(state) {
   if (state.p !== undefined) elPlayers.value = state.p;
   if (state.c !== undefined) elCourts.value = state.c;
@@ -832,27 +997,22 @@ function loadState(state) {
 
   syncPresenceInputs();
 
+  if (state.sc) {
+    window.__PB_SCORES__ = state.sc;
+  } else {
+    window.__PB_SCORES__ = {};
+  }
+
   if (state.p && parsePlayers(state.p).length >= 4) {
-    btnGenerate.click();
-    if (state.sc) {
-      window.__PB_SCORES__ = state.sc;
-      document.querySelectorAll(".score-input").forEach(input => {
-        const r = input.dataset.round;
-        const m = input.dataset.match;
-        const t = input.dataset.team;
-        const key = `${r}-${m}`;
-        if (window.__PB_SCORES__[key] && window.__PB_SCORES__[key][t] != null) {
-          input.value = window.__PB_SCORES__[key][t];
-        }
-      });
-      updateRankings();
-    }
+    generateSession(true); // Conserve précieusement les scores restaurés !
   }
 }
 
-// ----------------------------
-// Historique des Sessions (Sans Doublons)
-// ----------------------------
+
+// =============================================================================
+// HISTORIQUE DES SESSIONS
+// =============================================================================
+
 function getHistory() {
   try {
     return JSON.parse(localStorage.getItem("pb_history") || "[]");
@@ -865,13 +1025,12 @@ function saveToHistory() {
   let history = getHistory();
   const state = getCurrentState();
 
-  if (!state.s) return; // Ne rien faire si la seed est vide
+  if (!state.s) return;
 
   const dateStr = new Date().toLocaleDateString("fr-FR", {
     day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"
   });
 
-  // 1. Chercher si une session possède déjà la même Seed (ID)
   const existingIndex = history.findIndex(item => item.seed === state.s);
 
   const newItem = {
@@ -883,12 +1042,10 @@ function saveToHistory() {
     state: state
   };
 
-  // 2. Si elle existe déjà, on la retire pour la remettre en haut de pile mise à jour
   if (existingIndex !== -1) {
     history.splice(existingIndex, 1);
   }
 
-  // 3. On insère la session au début de l'historique
   history.unshift(newItem);
   localStorage.setItem("pb_history", JSON.stringify(history.slice(0, 20)));
   renderHistory();
@@ -946,59 +1103,22 @@ btnSaveToHistory.addEventListener("click", () => {
   setTimeout(() => (btnSaveToHistory.textContent = "💾 Enregistrer Session"), 1200);
 });
 
-// ----------------------------
-// Événements Généraux
-// ----------------------------
+
+// =============================================================================
+// EVENEMENTS GENERALISTES & FONCTIONNALITES EXPORT / PARTAGE
+// =============================================================================
+
 btnNewSeed.addEventListener("click", () => {
   elSeed.value = generateSeed();
   autoSaveState();
 });
 
+// Le bouton "Générer" explicite efface les scores
 btnGenerate.addEventListener("click", () => {
-  elWarning.hidden = true;
-  elError.hidden = true;
-  btnCopy.disabled = true;
-  window.__PB_SCORES__ = {};
-  elRankingSection.hidden = true;
-
-  try {
-    const players = parsePlayers(elPlayers.value);
-    const numCourts = Math.max(1, parseInt(elCourts.value || "1", 10));
-    const numRounds = Math.max(1, parseInt(elRounds.value || "1", 10));
-    let seedText = (elSeed.value || "").trim();
-
-    if (!seedText) {
-      seedText = generateSeed();
-      elSeed.value = seedText;
-    }
-
-    if (players.length < 4) {
-      throw new Error("Veuillez entrer au moins 4 joueurs.");
-    }
-
-    const options = {
-      wT: parseFloat(elwT.value || "5"),
-      wO: parseFloat(elwO.value || "2"),
-      wP: parseFloat(elwP.value || "1"),
-      beamWidth: parseInt(elBeamWidth.value || "80", 10),
-      partnerK: parseInt(elPartnerK.value || "10", 10),
-      squareRepeats: !!elSquare.checked,
-      avoidB2B: !!elAvoidB2B.checked,
-    };
-
-    const result = scheduleRotations(players, numCourts, numRounds, seedText, options, window.__PB_PRESENCE__);
-    render(result, players, numCourts, numRounds);
-
-    window.__PB_LAST_RESULT__ = result;
-    autoSaveState();
-
-  } catch (e) {
-    elError.hidden = false;
-    elError.textContent = e?.message ?? String(e);
-  }
+  generateSession(false);
 });
 
-// Écoute des saisies de scores
+// Écoute de la saisie des scores en direct dans les cartes
 elSchedule.addEventListener("input", (e) => {
   if (e.target.classList.contains("score-input")) {
     const r = e.target.dataset.round;
@@ -1015,11 +1135,12 @@ elSchedule.addEventListener("input", (e) => {
   }
 });
 
+// Auto-sauvegarde lors du changement d'un paramètre
 [elPlayers, elCourts, elRounds, elSeed, elCourtNames, elwT, elwO, elwP, elBeamWidth, elPartnerK, elSquare, elAvoidB2B].forEach(el => {
   el.addEventListener("change", autoSaveState);
 });
 
-// Copie du planning
+// Copier le planning en format Texte Brut
 btnCopy.addEventListener("click", async () => {
   const result = window.__PB_LAST_RESULT__;
   if (!result) return;
@@ -1047,7 +1168,7 @@ btnCopy.addEventListener("click", async () => {
   }
 });
 
-// Partage par URL
+// Génération et partage d'URL compressée
 function buildShareableUrl() {
   const state = getCurrentState();
   const jsonString = JSON.stringify(state);
@@ -1071,7 +1192,7 @@ async function copyShareUrl(btnElement) {
 btnCopyLink.addEventListener("click", () => copyShareUrl(btnCopyLink));
 btnCopyRankingLink.addEventListener("click", () => copyShareUrl(btnCopyRankingLink));
 
-// Export PNG
+// Export visuel du classement en image PNG
 btnExportPng.addEventListener("click", async () => {
   const targetArea = document.getElementById("rankingCaptureArea");
   if (!targetArea) return;
@@ -1098,7 +1219,11 @@ btnExportPng.addEventListener("click", async () => {
   }
 });
 
-// Initialisation
+
+// =============================================================================
+// INITIALISATION AU CHARGEMENT DE LA PAGE
+// =============================================================================
+
 window.addEventListener("DOMContentLoaded", () => {
   if (!elSeed.value) elSeed.value = generateSeed();
   renderHistory();
@@ -1106,6 +1231,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const params = new URLSearchParams(window.location.search);
   const sharedData = params.get("d");
 
+  // Priorité 1 : Chargement depuis un lien URL partagé
   if (sharedData) {
     try {
       const jsonString = LZString.decompressFromEncodedURIComponent(sharedData);
@@ -1117,6 +1243,7 @@ window.addEventListener("DOMContentLoaded", () => {
       elError.textContent = "Lien de partage invalide ou corrompu.";
     }
   } else {
+    // Priorité 2 : Chargement depuis la sauvegarde automatique locale
     const saved = localStorage.getItem("pb_autosave");
     if (saved) {
       try {
