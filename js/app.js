@@ -464,6 +464,14 @@ let currentHeatmapMode = "teammates";
 // FONCTIONS D'ANALYSE DU FORMULAIRE ET PRESENCE
 // =============================================================================
 
+/**
+ * Efface les messages d'erreur et d'avertissement à l'écran.
+ */
+function clearMessages() {
+  if (elError) elError.hidden = true;
+  if (elWarning) elWarning.hidden = true;
+}
+
 function parsePlayers(text) {
   const lines = text.split(/\n/).flatMap(line => line.split(","));
   return lines.map(s => s.trim()).filter(Boolean);
@@ -515,8 +523,15 @@ elPresenceList.addEventListener("change", (e) => {
   }
 });
 
-elPlayers.addEventListener("input", syncPresenceInputs);
-elRounds.addEventListener("input", syncPresenceInputs);
+elPlayers.addEventListener("input", () => {
+  clearMessages();
+  syncPresenceInputs();
+});
+
+elRounds.addEventListener("input", () => {
+  clearMessages();
+  syncPresenceInputs();
+});
 
 
 // =============================================================================
@@ -527,6 +542,9 @@ elRounds.addEventListener("input", syncPresenceInputs);
  * Affiche un visuel neutre lorsqu'aucune session n'est générée ou chargée.
  */
 function renderEmptyState() {
+  clearMessages();
+  window.__PB_LAST_RESULT__ = null;
+
   elSchedule.innerHTML = `
     <div class="empty-state-card" style="text-align: center; padding: 2.5rem 1rem; border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px; margin: 1.5rem 0;">
       <div style="font-size: 2rem; margin-bottom: 0.5rem;">🎾</div>
@@ -939,8 +957,7 @@ function autoSaveState() {
  * @param {boolean} preserveScores - Si true, conserve les scores déjà saisis lors de l'actualisation.
  */
 function generateSession(preserveScores = false) {
-  elWarning.hidden = true;
-  elError.hidden = true;
+  clearMessages();
   btnCopy.disabled = true;
 
   // Réinitialisation explicite uniquement en cas de génération manuelle
@@ -1168,9 +1185,12 @@ elSchedule.addEventListener("input", (e) => {
   }
 });
 
-// Auto-sauvegarde lors du changement d'un paramètre
+// Auto-sauvegarde et nettoyage des erreurs lors du changement d'un paramètre
 [elPlayers, elCourts, elRounds, elSeed, elCourtNames, elwT, elwO, elwP, elBeamWidth, elPartnerK, elSquare, elAvoidB2B].forEach(el => {
-  el.addEventListener("change", autoSaveState);
+  el.addEventListener("change", () => {
+    clearMessages();
+    autoSaveState();
+  });
 });
 
 // Copier le planning en format Texte Brut
