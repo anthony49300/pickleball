@@ -1156,16 +1156,9 @@ btnNewSeed.addEventListener("click", () => {
   autoSaveState();
 });
 
-// Le bouton "Générer" demande une confirmation, régénère l'ID (seed) et efface les scores
+// Génère directement la session sans demande de confirmation
 btnGenerate.addEventListener("click", () => {
-  const confirmed = confirm(
-    "Attention : La génération d'un nouveau planning va régénérer un nouvel ID (clé) et écraser tous les scores actuellement non sauvegardés.\n\nVoulez-vous continuer ?"
-  );
-
-  if (confirmed) {
-    elSeed.value = generateSeed(); // Génère un nouvel ID / seed
-    generateSession(false);        // Réinitialise les scores et relance la génération
-  }
+  generateSession(false);
 });
 
 // Écoute de la saisie des scores en direct dans les cartes
