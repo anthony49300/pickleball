@@ -356,6 +356,13 @@ const elWarning = document.getElementById("warning");
 const elError = document.getElementById("error");
 const elMeta = document.getElementById("meta");
 
+const elRankingSection = document.getElementById("rankingSection");
+const elRankingTableBody = document.querySelector("#rankingTable tbody");
+const btnExportPng = document.getElementById("exportRankingsPng");
+const btnCopyRankingLink = document.getElementById("copyRankingLink");
+
+window.__PB_SCORES__ = {};
+
 function parsePlayers(text) {
   const lines = text.split(/\n/).flatMap(line => line.split(","));
   return lines.map(s => s.trim()).filter(Boolean);
@@ -404,9 +411,15 @@ function render(result, players, numCourts, numRounds, seedText) {
         
         matchCard.innerHTML = `
           <span style="color: var(--text-subtle); font-size: 0.8rem; font-weight: bold;">T${mIdx+1}</span>
-          <span class="team">${t1[0]} & ${t1[1]}</span>
+          <div class="team-score">
+            <span class="team">${t1[0]} & ${t1[1]}</span>
+            <input type="number" class="score-input" data-round="${idx}" data-match="${mIdx}" data-team="1" min="0" placeholder="-" />
+          </div>
           <span class="vs">VS</span>
-          <span class="team">${t2[0]} & ${t2[1]}</span>
+          <div class="team-score">
+            <input type="number" class="score-input" data-round="${idx}" data-match="${mIdx}" data-team="2" min="0" placeholder="-" />
+            <span class="team">${t2[0]} & ${t2[1]}</span>
+          </div>
         `;
         matchesList.appendChild(matchCard);
       });
@@ -467,6 +480,124 @@ function buildCopyText(result) {
   return lines.join("\n").trim();
 }
 
+// ----------------------------
+// Logique de classement
+// ----------------------------
+function updateRankings() {
+  const result = window.__PB_LAST_RESULT__;
+  if (!result) return;
+  
+  const playersStats = {};
+  const allPlayers = parsePlayers(elPlayers.value);
+  
+  allPlayers.forEach(p => {
+    playersStats[p] = { w: 0, l: 0, pf: 0, pa: 0, m: 0 };
+  });
+  
+  let hasAnyScore = false;
+
+  result.rounds.forEach((matches, rIdx) => {
+    matches.forEach((match, mIdx) => {
+      const key = `${rIdx}-${mIdx}`;
+      const scores = window.__PB_SCORES__[key];
+      
+      if (scores && scores['1'] != null && scores['2'] != null) {
+        hasAnyScore = true;
+        const [t1, t2] = match;
+        const s1 = scores['1'];
+        const s2 = scores['2'];
+        
+        const updateTeamStats = (team, ptsFor, ptsAgainst) => {
+          team.forEach(p => {
+            if (playersStats[p]) {
+              playersStats[p].m++;
+              playersStats[p].pf += ptsFor;
+              playersStats[p].pa += ptsAgainst;
+              if (ptsFor > ptsAgainst) playersStats[p].w++;
+              else if (ptsFor < ptsAgainst) playersStats[p].l++;
+            }
+          });
+        };
+
+        updateTeamStats(t1, s1, s2);
+        updateTeamStats(t2, s2, s1);
+      }
+    });
+  });
+  
+  if (!hasAnyScore) {
+    elRankingSection.hidden = true;
+    return;
+  }
+  
+  elRankingSection.hidden = false;
+  
+  const sortedPlayers = Object.entries(playersStats).map(([name, stats]) => {
+    return { name, ...stats, diff: stats.pf - stats.pa };
+  }).sort((a, b) => {
+    if (b.w !== a.w) return b.w - a.w;
+    if (b.diff !== a.diff) return b.diff - a.diff;
+    return b.pf - a.pf;
+  });
+  
+  elRankingTableBody.innerHTML = sortedPlayers.map((p, i) => {
+    const diffClass = p.diff > 0 ? "diff-positive" : (p.diff < 0 ? "diff-negative" : "");
+    const diffSign = p.diff > 0 ? "+" : "";
+    return `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${p.name}</td>
+        <td>${p.m}</td>
+        <td>${p.w}</td>
+        <td>${p.l}</td>
+        <td>${p.pf}</td>
+        <td>${p.pa}</td>
+        <td class="${diffClass}">${diffSign}${p.diff}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// ----------------------------
+// Génération de l'URL avec scores
+// ----------------------------
+function buildShareableUrl() {
+  const state = {
+    p: elPlayers.value,
+    c: elCourts.value,
+    r: elRounds.value,
+    s: elSeed.value,
+    wt: elwT.value,
+    wo: elwO.value,
+    wp: elwP.value,
+    bw: elBeamWidth.value,
+    pk: elPartnerK.value,
+    sq: elSquare.checked,
+    b2b: elAvoidB2B.checked,
+    sc: window.__PB_SCORES__ || {}
+  };
+
+  const jsonString = JSON.stringify(state);
+  const compressedData = LZString.compressToEncodedURIComponent(jsonString);
+  const urlBase = window.location.origin + window.location.pathname;
+  return `${urlBase}?d=${compressedData}`;
+}
+
+async function copyShareUrl(btnElement) {
+  const urlToShare = buildShareableUrl();
+  try {
+    await navigator.clipboard.writeText(urlToShare);
+    const originalText = btnElement.textContent;
+    btnElement.textContent = "Lien copié !";
+    setTimeout(() => (btnElement.textContent = originalText), 1500);
+  } catch {
+    window.prompt("Copier le lien :", urlToShare);
+  }
+}
+
+// ----------------------------
+// Événements
+// ----------------------------
 btnNewSeed.addEventListener("click", () => {
   elSeed.value = generateSeed();
 });
@@ -475,6 +606,8 @@ btnGenerate.addEventListener("click", () => {
   elWarning.hidden = true;
   elError.hidden = true;
   btnCopy.disabled = true;
+  window.__PB_SCORES__ = {};
+  elRankingSection.hidden = true;
 
   try {
     const players = parsePlayers(elPlayers.value);
@@ -512,6 +645,21 @@ btnGenerate.addEventListener("click", () => {
   }
 });
 
+elSchedule.addEventListener("input", (e) => {
+  if (e.target.classList.contains("score-input")) {
+    const r = e.target.dataset.round;
+    const m = e.target.dataset.match;
+    const t = e.target.dataset.team;
+    const val = parseInt(e.target.value, 10);
+    
+    const key = `${r}-${m}`;
+    if (!window.__PB_SCORES__[key]) window.__PB_SCORES__[key] = {};
+    window.__PB_SCORES__[key][t] = isNaN(val) ? null : val;
+    
+    updateRankings();
+  }
+});
+
 btnCopy.addEventListener("click", async () => {
   const result = window.__PB_LAST_RESULT__;
   if (!result) return;
@@ -525,38 +673,33 @@ btnCopy.addEventListener("click", async () => {
   }
 });
 
-btnCopyLink.addEventListener("click", async () => {
-  // 1. Rassembler tous les paramètres actuels
-  const state = {
-    p: elPlayers.value,
-    c: elCourts.value,
-    r: elRounds.value,
-    s: elSeed.value,
-    wt: elwT.value,
-    wo: elwO.value,
-    wp: elwP.value,
-    bw: elBeamWidth.value,
-    pk: elPartnerK.value,
-    sq: elSquare.checked,
-    b2b: elAvoidB2B.checked
-  };
+btnCopyLink.addEventListener("click", () => copyShareUrl(btnCopyLink));
+btnCopyRankingLink.addEventListener("click", () => copyShareUrl(btnCopyRankingLink));
 
-  // 2. Compresser les données en une chaîne sécurisée pour l'URL
-  const jsonString = JSON.stringify(state);
-  const compressedData = LZString.compressToEncodedURIComponent(jsonString);
-  
-  // 3. Créer le lien final (ex: https://tonsite.com/?d=TexteCompressé)
-  const urlBase = window.location.origin + window.location.pathname;
-  const urlToShare = `${urlBase}?d=${compressedData}`;
+// Exportation du classement en PNG
+btnExportPng.addEventListener("click", async () => {
+  const targetArea = document.getElementById("rankingCaptureArea");
+  if (!targetArea) return;
 
-  // 4. Copier dans le presse-papiers
+  const originalBtnText = btnExportPng.textContent;
+  btnExportPng.textContent = "⏳ Génération...";
+
   try {
-    await navigator.clipboard.writeText(urlToShare);
-    const originalText = btnCopyLink.textContent;
-    btnCopyLink.textContent = "Lien avec données copié !";
-    setTimeout(() => (btnCopyLink.textContent = originalText), 1500);
-  } catch {
-    window.prompt("Copier le lien :", urlToShare);
+    const canvas = await html2canvas(targetArea, {
+      backgroundColor: "#0a0f18",
+      scale: 2
+    });
+    
+    const imageUri = canvas.toDataURL("image/png");
+    const link = document.createElement("a");
+    link.download = `Classement-Pickleball-${elSeed.value || "session"}.png`;
+    link.href = imageUri;
+    link.click();
+  } catch (err) {
+    console.error("Erreur lors de l'exportation en PNG:", err);
+    alert("Une erreur est survenue lors de la création de l'image.");
+  } finally {
+    btnExportPng.textContent = originalBtnText;
   }
 });
 
@@ -565,7 +708,7 @@ if (!elSeed.value) {
 }
 
 // ----------------------------
-// Chargement depuis l'URL (Lien partagé)
+// Chargement depuis l'URL
 // ----------------------------
 window.addEventListener("DOMContentLoaded", () => {
   const params = new URLSearchParams(window.location.search);
@@ -573,11 +716,9 @@ window.addEventListener("DOMContentLoaded", () => {
 
   if (sharedData) {
     try {
-      // Décompresser et analyser les données de l'URL
       const jsonString = LZString.decompressFromEncodedURIComponent(sharedData);
       const state = JSON.parse(jsonString);
 
-      // Remplir les champs avec les données partagées
       if (state.p !== undefined) elPlayers.value = state.p;
       if (state.c !== undefined) elCourts.value = state.c;
       if (state.r !== undefined) elRounds.value = state.r;
@@ -590,8 +731,27 @@ window.addEventListener("DOMContentLoaded", () => {
       if (state.sq !== undefined) elSquare.checked = state.sq;
       if (state.b2b !== undefined) elAvoidB2B.checked = state.b2b;
 
-      // Optionnel : Générer automatiquement le tableau en arrivant sur la page
+      // 1. Générer les matchs
       btnGenerate.click();
+
+      // 2. Si des scores sont enregistrés dans l'URL, les réinsérer
+      if (state.sc) {
+        window.__PB_SCORES__ = state.sc;
+        
+        document.querySelectorAll(".score-input").forEach(input => {
+          const r = input.dataset.round;
+          const m = input.dataset.match;
+          const t = input.dataset.team;
+          const key = `${r}-${m}`;
+          
+          if (window.__PB_SCORES__[key] && window.__PB_SCORES__[key][t] != null) {
+            input.value = window.__PB_SCORES__[key][t];
+          }
+        });
+
+        // 3. Mettre à jour le classement
+        updateRankings();
+      }
       
     } catch (e) {
       console.error("Erreur lors de la lecture du lien partagé", e);
