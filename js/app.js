@@ -182,7 +182,7 @@ function bestSplitForFour(p4, teammateCount, opponentCount, playsCount, wT, wO, 
 /**
  * Sélectionne équitablement les joueurs qui iront sur le banc pour un tour donné.
  */
-function pickBenchesByQueue(availablePlayers, benchesNeeded, benchQueue, lastBenchedSet) {
+function pickBenchesByQueue(availablePlayers, benchesNeeded, benchQueue, lastBenchedSet, avoidB2B = true) {
   if (benchesNeeded <= 0) return [];
   const benched = [];
   const availableSet = new Set(availablePlayers);
@@ -198,8 +198,12 @@ function pickBenchesByQueue(availablePlayers, benchesNeeded, benchQueue, lastBen
 
     if (!availableSet.has(p)) continue;
 
-    // Évite autant que possible qu'un joueur passe deux fois d'affilée sur le banc
-    if (lastBenchedSet.has(p) && benchQueue.length > 0 && benchesNeeded === 1) {
+    const canAvoidB2B = avoidB2B && lastBenchedSet.has(p);
+    const hasOtherCandidates = benchQueue.some(
+      candidate => availableSet.has(candidate) && !lastBenchedSet.has(candidate) && !benched.includes(candidate)
+    );
+
+    if (canAvoidB2B && hasOtherCandidates) {
       benchQueue.push(p);
       continue;
     }
@@ -224,7 +228,6 @@ function beamSearchRound(
 
   playing = playing.slice(0, need);
 
-  // Pré-classement des meilleurs partenaires potentiels pour accélérer l'exploration
   const partnerRank = new Map();
   for (const p of playing) {
     const others = playing.filter(q => q !== p);
@@ -341,7 +344,6 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
   for (let r = 0; r < numRounds; r++) {
     const roundNumber = r + 1;
 
-    // Filtrage des joueurs actifs pour ce tour selon la grille de présence
     const activePlayers = players.filter(p => {
       const pres = presenceMap[p];
       if (!pres) return true;
@@ -355,7 +357,7 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
     const need = 4 * targetMatches;
     const benchesNeeded = activePlayers.length - need;
 
-    let benched = pickBenchesByQueue(activePlayers, benchesNeeded, benchQueue, lastBenched);
+    let benched = pickBenchesByQueue(activePlayers, benchesNeeded, benchQueue, lastBenched, options.avoidB2B);
     let playing = activePlayers.filter(p => !benched.includes(p));
 
     const matches = beamSearchRound(
@@ -647,7 +649,6 @@ function render(result, players, numCourts, numRounds) {
     elSchedule.appendChild(wrap);
   });
 
-  // Bloc des statistiques et de contrôle d'équité
   const plays = players.map(p => [p, stats.playsCount.get(p) ?? 0]);
   const benchesCount = players.map(p => [p, stats.benchCount.get(p) ?? 0]);
 
@@ -807,17 +808,19 @@ function updateRankings() {
   
   elRankingSection.hidden = false;
   
+  // Tri selon les règles de départage (Victoires -> Différentiel -> Points marqués)
   const sortedPlayers = Object.entries(playersStats).map(([name, stats]) => {
     return { name, ...stats, diff: stats.pf - stats.pa };
   }).sort((a, b) => {
-    if (b.w !== a.w) return b.w - a.w;
-    if (b.diff !== a.diff) return b.diff - a.diff;
-    return b.pf - a.pf;
+    if (b.w !== a.w) return b.w - a.w;        // 1. Victoires
+    if (b.diff !== a.diff) return b.diff - a.diff; // 2. Différentiel (+/-)
+    return b.pf - a.pf;                         // 3. Points marqués (PF)
   });
 
   renderPodium(sortedPlayers);
   renderBadges(sortedPlayers, pairWins);
 
+  // Rendu du tableau de classement
   elRankingTableBody.innerHTML = sortedPlayers.map((p, i) => {
     const diffClass = p.diff > 0 ? "diff-positive" : (p.diff < 0 ? "diff-negative" : "");
     const diffSign = p.diff > 0 ? "+" : "";
@@ -834,6 +837,22 @@ function updateRankings() {
       </tr>
     `;
   }).join('');
+
+  // Ajout / Mise à jour de la note de départage explicative sous le tableau
+  let noteEl = document.getElementById("rankingTieBreakNote");
+  if (!noteEl) {
+    noteEl = document.createElement("p");
+    noteEl.id = "rankingTieBreakNote";
+    noteEl.className = "subtle";
+    noteEl.style.marginTop = "0.75rem";
+    noteEl.style.fontSize = "0.8rem";
+    const rankingTable = document.getElementById("rankingTable");
+    if (rankingTable && rankingTable.parentElement) {
+      rankingTable.parentElement.appendChild(noteEl);
+    }
+  }
+
+  noteEl.innerHTML = `💡 <strong>Règle de départage en cas d'égalité :</strong> 1. Nombre de victoires (V) &nbsp;➔&nbsp; 2. Différentiel de points (+/-) &nbsp;➔&nbsp; 3. Points marqués (PF).`;
 }
 
 function renderPodium(sorted) {
@@ -955,8 +974,10 @@ function autoSaveState() {
   const state = getCurrentState();
   localStorage.setItem("pb_autosave", JSON.stringify(state));
   
-  elAutosaveBadge.style.opacity = "1";
-  setTimeout(() => { elAutosaveBadge.style.opacity = "0.5"; }, 1000);
+  if (elAutosaveBadge) {
+    elAutosaveBadge.style.opacity = "1";
+    setTimeout(() => { elAutosaveBadge.style.opacity = "0.5"; }, 1000);
+  }
 }
 
 /**
@@ -967,10 +988,9 @@ function generateSession(preserveScores = false) {
   clearMessages();
   btnCopy.disabled = true;
 
-  // Réinitialisation explicite uniquement en cas de génération manuelle
   if (!preserveScores) {
     window.__PB_SCORES__ = {};
-    elRankingSection.hidden = true;
+    if (elRankingSection) elRankingSection.hidden = true;
   }
 
   try {
@@ -988,6 +1008,12 @@ function generateSession(preserveScores = false) {
       throw new Error("Veuillez entrer au moins 4 joueurs.");
     }
 
+    const maxUsableCourts = Math.floor(players.length / 4);
+    if (numCourts > maxUsableCourts && maxUsableCourts > 0 && elWarning) {
+      elWarning.hidden = false;
+      elWarning.textContent = `Attention : ${numCourts} terrain(s) demandé(s), mais seulement ${maxUsableCourts} utilisé(s) pour ${players.length} joueur(s).`;
+    }
+
     const options = {
       wT: parseFloat(elwT.value || "5"),
       wO: parseFloat(elwO.value || "2"),
@@ -1003,7 +1029,6 @@ function generateSession(preserveScores = false) {
 
     window.__PB_LAST_RESULT__ = result;
 
-    // Réinjection automatique des scores enregistrés dans les champs d'entrée HTML
     if (preserveScores && window.__PB_SCORES__) {
       document.querySelectorAll(".score-input").forEach(input => {
         const r = input.dataset.round;
@@ -1020,8 +1045,10 @@ function generateSession(preserveScores = false) {
     autoSaveState();
 
   } catch (e) {
-    elError.hidden = false;
-    elError.textContent = e?.message ?? String(e);
+    if (elError) {
+      elError.hidden = false;
+      elError.textContent = e?.message ?? String(e);
+    }
   }
 }
 
@@ -1052,7 +1079,7 @@ function loadState(state) {
   }
 
   if (state.p && parsePlayers(state.p).length >= 4) {
-    generateSession(true); // Conserve précieusement les scores restaurés !
+    generateSession(true);
   } else {
     renderEmptyState();
   }
@@ -1102,6 +1129,7 @@ function saveToHistory() {
 }
 
 function renderHistory() {
+  if (!elHistoryList) return;
   const history = getHistory();
   if (!history.length) {
     elHistoryList.innerHTML = `<p class="subtle">Aucune session enregistrée dans l'historique.</p>`;
@@ -1124,34 +1152,40 @@ function renderHistory() {
   `).join('');
 }
 
-elHistoryList.addEventListener("click", (e) => {
-  const id = parseInt(e.target.dataset.id, 10);
-  if (!id) return;
+if (elHistoryList) {
+  elHistoryList.addEventListener("click", (e) => {
+    const id = parseInt(e.target.dataset.id, 10);
+    if (!id) return;
 
-  let history = getHistory();
+    let history = getHistory();
 
-  if (e.target.classList.contains("load-hist-btn")) {
-    const item = history.find(x => x.id === id);
-    if (item) loadState(item.state);
-  } else if (e.target.classList.contains("del-hist-btn")) {
-    history = history.filter(x => x.id !== id);
-    localStorage.setItem("pb_history", JSON.stringify(history));
-    renderHistory();
-  }
-});
+    if (e.target.classList.contains("load-hist-btn")) {
+      const item = history.find(x => x.id === id);
+      if (item) loadState(item.state);
+    } else if (e.target.classList.contains("del-hist-btn")) {
+      history = history.filter(x => x.id !== id);
+      localStorage.setItem("pb_history", JSON.stringify(history));
+      renderHistory();
+    }
+  });
+}
 
-btnClearHistory.addEventListener("click", () => {
-  if (confirm("Voulez-vous vraiment effacer tout l'historique ?")) {
-    localStorage.removeItem("pb_history");
-    renderHistory();
-  }
-});
+if (btnClearHistory) {
+  btnClearHistory.addEventListener("click", () => {
+    if (confirm("Voulez-vous vraiment effacer tout l'historique ?")) {
+      localStorage.removeItem("pb_history");
+      renderHistory();
+    }
+  });
+}
 
-btnSaveToHistory.addEventListener("click", () => {
-  saveToHistory();
-  btnSaveToHistory.textContent = "Session Sauvegardée !";
-  setTimeout(() => (btnSaveToHistory.textContent = "💾 Enregistrer Session"), 1200);
-});
+if (btnSaveToHistory) {
+  btnSaveToHistory.addEventListener("click", () => {
+    saveToHistory();
+    btnSaveToHistory.textContent = "Session Sauvegardée !";
+    setTimeout(() => (btnSaveToHistory.textContent = "💾 Enregistrer Session"), 1200);
+  });
+}
 
 
 // =============================================================================
@@ -1167,7 +1201,6 @@ btnGenerate.addEventListener("click", () => {
   generateSession(false);
 });
 
-// Écoute de la saisie des scores en direct dans les cartes
 elSchedule.addEventListener("input", (e) => {
   if (e.target.classList.contains("score-input")) {
     const r = e.target.dataset.round;
@@ -1184,15 +1217,15 @@ elSchedule.addEventListener("input", (e) => {
   }
 });
 
-// Auto-sauvegarde et nettoyage des erreurs lors du changement d'un paramètre
 [elPlayers, elCourts, elRounds, elSeed, elCourtNames, elwT, elwO, elwP, elBeamWidth, elPartnerK, elSquare, elAvoidB2B].forEach(el => {
-  el.addEventListener("change", () => {
-    clearMessages();
-    autoSaveState();
-  });
+  if (el) {
+    el.addEventListener("change", () => {
+      clearMessages();
+      autoSaveState();
+    });
+  }
 });
 
-// Copier le planning en format Texte Brut
 btnCopy.addEventListener("click", async () => {
   const result = window.__PB_LAST_RESULT__;
   if (!result) return;
@@ -1220,7 +1253,6 @@ btnCopy.addEventListener("click", async () => {
   }
 });
 
-// Génération et partage d'URL compressée
 function buildShareableUrl() {
   const state = getCurrentState();
   const jsonString = JSON.stringify(state);
@@ -1241,35 +1273,36 @@ async function copyShareUrl(btnElement) {
   }
 }
 
-btnCopyLink.addEventListener("click", () => copyShareUrl(btnCopyLink));
-btnCopyRankingLink.addEventListener("click", () => copyShareUrl(btnCopyRankingLink));
+if (btnCopyLink) btnCopyLink.addEventListener("click", () => copyShareUrl(btnCopyLink));
+if (btnCopyRankingLink) btnCopyRankingLink.addEventListener("click", () => copyShareUrl(btnCopyRankingLink));
 
-// Export visuel du classement en image PNG
-btnExportPng.addEventListener("click", async () => {
-  const targetArea = document.getElementById("rankingCaptureArea");
-  if (!targetArea) return;
+if (btnExportPng) {
+  btnExportPng.addEventListener("click", async () => {
+    const targetArea = document.getElementById("rankingCaptureArea");
+    if (!targetArea) return;
 
-  const originalBtnText = btnExportPng.textContent;
-  btnExportPng.textContent = "⏳ Génération...";
+    const originalBtnText = btnExportPng.textContent;
+    btnExportPng.textContent = "⏳ Génération...";
 
-  try {
-    const canvas = await html2canvas(targetArea, {
-      backgroundColor: "#0a0f18",
-      scale: 2
-    });
-    
-    const imageUri = canvas.toDataURL("image/png");
-    const link = document.createElement("a");
-    link.download = `Classement-Pickleball-${elSeed.value || "session"}.png`;
-    link.href = imageUri;
-    link.click();
-  } catch (err) {
-    console.error(err);
-    alert("Erreur lors de l'export PNG.");
-  } finally {
-    btnExportPng.textContent = originalBtnText;
-  }
-});
+    try {
+      const canvas = await html2canvas(targetArea, {
+        backgroundColor: "#0a0f18",
+        scale: 2
+      });
+      
+      const imageUri = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.download = `Classement-Pickleball-${elSeed.value || "session"}.png`;
+      link.href = imageUri;
+      link.click();
+    } catch (err) {
+      console.error(err);
+      alert("Erreur lors de l'export PNG.");
+    } finally {
+      btnExportPng.textContent = originalBtnText;
+    }
+  });
+}
 
 
 // =============================================================================
@@ -1283,7 +1316,6 @@ window.addEventListener("DOMContentLoaded", () => {
   const params = new URLSearchParams(window.location.search);
   const sharedData = params.get("d");
 
-  // Priorité 1 : Chargement depuis un lien URL partagé
   if (sharedData) {
     try {
       const jsonString = LZString.decompressFromEncodedURIComponent(sharedData);
@@ -1291,12 +1323,13 @@ window.addEventListener("DOMContentLoaded", () => {
       loadState(state);
     } catch (e) {
       console.error(e);
-      elError.hidden = false;
-      elError.textContent = "Lien de partage invalide ou corrompu.";
+      if (elError) {
+        elError.hidden = false;
+        elError.textContent = "Lien de partage invalide ou corrompu.";
+      }
       renderEmptyState();
     }
   } else {
-    // Priorité 2 : Chargement depuis la sauvegarde automatique locale
     const saved = localStorage.getItem("pb_autosave");
     if (saved) {
       try {
