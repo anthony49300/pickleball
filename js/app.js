@@ -520,8 +520,32 @@ elRounds.addEventListener("input", syncPresenceInputs);
 
 
 // =============================================================================
-// RENDU VISUEL DU PLANNING (HTML)
+// RENDU VISUEL DU PLANNING (HTML) ET ETAT VIDE
 // =============================================================================
+
+/**
+ * Affiche un visuel neutre lorsqu'aucune session n'est générée ou chargée.
+ */
+function renderEmptyState() {
+  elSchedule.innerHTML = `
+    <div class="empty-state-card" style="text-align: center; padding: 2.5rem 1rem; border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px; margin: 1.5rem 0;">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem;">🎾</div>
+      <h3 style="margin-bottom: 0.5rem;">Aucune session active</h3>
+      <p class="subtle" style="max-width: 400px; margin: 0 auto;">
+        Renseignez vos joueurs et vos paramètres, puis cliquez sur <strong>Générer</strong> pour créer un nouveau planning.
+      </p>
+    </div>
+  `;
+  
+  elDiag.innerHTML = "";
+  elMeta.textContent = "";
+  if (elRankingSection) elRankingSection.hidden = true;
+  if (elHeatmapSection) elHeatmapSection.hidden = true;
+  
+  btnCopy.disabled = true;
+  btnCopyLink.disabled = true;
+  btnSaveToHistory.disabled = true;
+}
 
 /**
  * Construit la structure HTML affichant les terrains, matchs, scores et diagnostics.
@@ -1005,6 +1029,8 @@ function loadState(state) {
 
   if (state.p && parsePlayers(state.p).length >= 4) {
     generateSession(true); // Conserve précieusement les scores restaurés !
+  } else {
+    renderEmptyState();
   }
 }
 
@@ -1248,6 +1274,7 @@ window.addEventListener("DOMContentLoaded", () => {
       console.error(e);
       elError.hidden = false;
       elError.textContent = "Lien de partage invalide ou corrompu.";
+      renderEmptyState();
     }
   } else {
     // Priorité 2 : Chargement depuis la sauvegarde automatique locale
@@ -1255,9 +1282,14 @@ window.addEventListener("DOMContentLoaded", () => {
     if (saved) {
       try {
         loadState(JSON.parse(saved));
-      } catch (e) { console.error("Erreur lecture autosave", e); }
+      } catch (e) { 
+        console.error("Erreur lecture autosave", e); 
+        syncPresenceInputs();
+        renderEmptyState();
+      }
     } else {
       syncPresenceInputs();
+      renderEmptyState();
     }
   }
 });
