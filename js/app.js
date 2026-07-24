@@ -358,6 +358,8 @@ const elMeta = document.getElementById("meta");
 
 const elRankingSection = document.getElementById("rankingSection");
 const elRankingTableBody = document.querySelector("#rankingTable tbody");
+const btnExportPng = document.getElementById("exportRankingsPng");
+const btnCopyRankingLink = document.getElementById("copyRankingLink");
 
 window.__PB_SCORES__ = {};
 
@@ -557,6 +559,43 @@ function updateRankings() {
 }
 
 // ----------------------------
+// Génération de l'URL avec scores
+// ----------------------------
+function buildShareableUrl() {
+  const state = {
+    p: elPlayers.value,
+    c: elCourts.value,
+    r: elRounds.value,
+    s: elSeed.value,
+    wt: elwT.value,
+    wo: elwO.value,
+    wp: elwP.value,
+    bw: elBeamWidth.value,
+    pk: elPartnerK.value,
+    sq: elSquare.checked,
+    b2b: elAvoidB2B.checked,
+    sc: window.__PB_SCORES__ || {}
+  };
+
+  const jsonString = JSON.stringify(state);
+  const compressedData = LZString.compressToEncodedURIComponent(jsonString);
+  const urlBase = window.location.origin + window.location.pathname;
+  return `${urlBase}?d=${compressedData}`;
+}
+
+async function copyShareUrl(btnElement) {
+  const urlToShare = buildShareableUrl();
+  try {
+    await navigator.clipboard.writeText(urlToShare);
+    const originalText = btnElement.textContent;
+    btnElement.textContent = "Lien copié !";
+    setTimeout(() => (btnElement.textContent = originalText), 1500);
+  } catch {
+    window.prompt("Copier le lien :", urlToShare);
+  }
+}
+
+// ----------------------------
 // Événements
 // ----------------------------
 btnNewSeed.addEventListener("click", () => {
@@ -634,34 +673,33 @@ btnCopy.addEventListener("click", async () => {
   }
 });
 
-btnCopyLink.addEventListener("click", async () => {
-  const state = {
-    p: elPlayers.value,
-    c: elCourts.value,
-    r: elRounds.value,
-    s: elSeed.value,
-    wt: elwT.value,
-    wo: elwO.value,
-    wp: elwP.value,
-    bw: elBeamWidth.value,
-    pk: elPartnerK.value,
-    sq: elSquare.checked,
-    b2b: elAvoidB2B.checked
-  };
+btnCopyLink.addEventListener("click", () => copyShareUrl(btnCopyLink));
+btnCopyRankingLink.addEventListener("click", () => copyShareUrl(btnCopyRankingLink));
 
-  const jsonString = JSON.stringify(state);
-  const compressedData = LZString.compressToEncodedURIComponent(jsonString);
-  
-  const urlBase = window.location.origin + window.location.pathname;
-  const urlToShare = `${urlBase}?d=${compressedData}`;
+// Exportation du classement en PNG
+btnExportPng.addEventListener("click", async () => {
+  const targetArea = document.getElementById("rankingCaptureArea");
+  if (!targetArea) return;
+
+  const originalBtnText = btnExportPng.textContent;
+  btnExportPng.textContent = "⏳ Génération...";
 
   try {
-    await navigator.clipboard.writeText(urlToShare);
-    const originalText = btnCopyLink.textContent;
-    btnCopyLink.textContent = "Lien avec données copié !";
-    setTimeout(() => (btnCopyLink.textContent = originalText), 1500);
-  } catch {
-    window.prompt("Copier le lien :", urlToShare);
+    const canvas = await html2canvas(targetArea, {
+      backgroundColor: "#0a0f18",
+      scale: 2
+    });
+    
+    const imageUri = canvas.toDataURL("image/png");
+    const link = document.createElement("a");
+    link.download = `Classement-Pickleball-${elSeed.value || "session"}.png`;
+    link.href = imageUri;
+    link.click();
+  } catch (err) {
+    console.error("Erreur lors de l'exportation en PNG:", err);
+    alert("Une erreur est survenue lors de la création de l'image.");
+  } finally {
+    btnExportPng.textContent = originalBtnText;
   }
 });
 
@@ -693,7 +731,27 @@ window.addEventListener("DOMContentLoaded", () => {
       if (state.sq !== undefined) elSquare.checked = state.sq;
       if (state.b2b !== undefined) elAvoidB2B.checked = state.b2b;
 
+      // 1. Générer les matchs
       btnGenerate.click();
+
+      // 2. Si des scores sont enregistrés dans l'URL, les réinsérer
+      if (state.sc) {
+        window.__PB_SCORES__ = state.sc;
+        
+        document.querySelectorAll(".score-input").forEach(input => {
+          const r = input.dataset.round;
+          const m = input.dataset.match;
+          const t = input.dataset.team;
+          const key = `${r}-${m}`;
+          
+          if (window.__PB_SCORES__[key] && window.__PB_SCORES__[key][t] != null) {
+            input.value = window.__PB_SCORES__[key][t];
+          }
+        });
+
+        // 3. Mettre à jour le classement
+        updateRankings();
+      }
       
     } catch (e) {
       console.error("Erreur lors de la lecture du lien partagé", e);

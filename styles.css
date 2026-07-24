@@ -218,6 +218,8 @@ button:disabled {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .schedule {
@@ -324,6 +326,18 @@ button:disabled {
   border-color: var(--pickle-yellow);
   box-shadow: 0 0 0 2px rgba(204, 255, 0, 0.15);
   outline: none;
+}
+
+.ranking-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+#rankingCaptureArea {
+  padding: 12px;
+  border-radius: 12px;
+  background: transparent;
 }
 
 .ranking-table {

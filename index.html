@@ -112,23 +112,31 @@
 
     <!-- SECTION CLASSEMENT INDIVIDUEL -->
     <section class="card" id="rankingSection" style="grid-column: 1 / -1;" hidden>
-      <h2>🏆 Classement Individuel</h2>
-      <div style="overflow-x:auto;">
-        <table id="rankingTable" class="ranking-table">
-          <thead>
-            <tr>
-              <th>Rang</th>
-              <th>Joueur</th>
-              <th>Matchs Joués</th>
-              <th>Victoires (V)</th>
-              <th>Défaites (D)</th>
-              <th>Points Pour (PP)</th>
-              <th>Points Contre (PC)</th>
-              <th>Différence (Diff)</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+      <div class="headerRow">
+        <h2>🏆 Classement Individuel</h2>
+        <div class="ranking-actions">
+          <button id="exportRankingsPng" class="secondary">📷 Exporter PNG</button>
+          <button id="copyRankingLink" class="secondary">🔗 Partager le classement</button>
+        </div>
+      </div>
+      <div id="rankingCaptureArea">
+        <div style="overflow-x:auto;">
+          <table id="rankingTable" class="ranking-table">
+            <thead>
+              <tr>
+                <th>Rang</th>
+                <th>Joueur</th>
+                <th>Matchs Joués</th>
+                <th>Victoires (V)</th>
+                <th>Défaites (D)</th>
+                <th>Points Pour (PP)</th>
+                <th>Points Contre (PC)</th>
+                <th>Différence (Diff)</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
     </section>
 
@@ -146,6 +154,7 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script type="module" src="js/app.js"></script>
 </body>
 </html>
