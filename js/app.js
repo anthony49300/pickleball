@@ -852,7 +852,7 @@ function updateRankings() {
     }
   }
 
-  noteEl.innerHTML = `💡 <strong>Règle de départage en cas d'égalité :</strong> 1. Nombre de victoires (V) &nbsp;➔&nbsp; 2. Différentiel de points (+/-) &nbsp;➔&nbsp; 3. Points pour (PP).`;
+  noteEl.innerHTML = `💡 <strong>Règle de départage en cas d'égalité :</strong> 1. Nombre de victoires (V) &nbsp;➔&nbsp; 2. Différentiel de points (+/-) &nbsp;➔&nbsp; 3. Points marqués (PF).`;
 }
 
 function renderPodium(sorted) {
@@ -1087,7 +1087,7 @@ function loadState(state) {
 
 
 // =============================================================================
-// HISTORIQUE DES SESSIONS
+// HISTORIQUE ET REINITIALISATION COMPLETE DU CACHE
 // =============================================================================
 
 function getHistory() {
@@ -1170,11 +1170,20 @@ if (elHistoryList) {
   });
 }
 
+// BOUTON DE SUPPRESSION ET REINITIALISATION TOTALE DU CACHE
 if (btnClearHistory) {
   btnClearHistory.addEventListener("click", () => {
-    if (confirm("Voulez-vous vraiment effacer tout l'historique ?")) {
-      localStorage.removeItem("pb_history");
-      renderHistory();
+    if (confirm("Voulez-vous vraiment TOUT réinitialiser ? Cela effacera l'historique, la sauvegarde automatique et remettra l'application entièrement à zéro.")) {
+      // 1. Vider totalement le stockage local du navigateur
+      localStorage.clear();
+
+      // 2. Vider la mémoire vive JS
+      window.__PB_SCORES__ = {};
+      window.__PB_PRESENCE__ = {};
+      window.__PB_LAST_RESULT__ = null;
+
+      // 3. Recharger la page sans paramètres URL pour repartir de zéro absolu
+      window.location.href = window.location.pathname;
     }
   });
 }
