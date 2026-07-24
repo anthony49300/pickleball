@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>JF Pickleball Generator</title>
+  <title>JF Pickleball Générateur</title>
   
   <!-- Favicon Balle de Pickleball SVG -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2245%22 fill=%22%23ccff00%22/><circle cx=%2235%22 cy=%2235%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2265%22 cy=%2235%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2250%22 cy=%2250%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2235%22 cy=%2265%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2265%22 cy=%2265%22 r=%226%22 fill=%22%230a0f18%22/></svg>">
@@ -34,7 +34,7 @@
       <h2>⚙️ Configuration de Session</h2>
 
       <label class="label" for="players">Joueurs (un par ligne ou séparés par des virgules)</label>
-      <textarea id="players" rows="5" placeholder="Antoine, Julien, Marc, Thomas&#10;Sophie, Claire&#10;Pierre, Nicolas"></textarea>
+      <textarea id="players" rows="5" placeholder="Antoine, Julien, Marc"></textarea>
 
       <div class="row">
         <div>
@@ -57,7 +57,7 @@
       <!-- Nommage Personnalisé des Terrains -->
       <div style="margin-top: 12px;">
         <label class="label" for="courtNames">Noms des Terrains (Optionnel, séparés par virgules)</label>
-        <input id="courtNames" type="text" placeholder="ex: Court Central, Court 1, Terrain B" />
+        <input id="courtNames" type="text" placeholder="ex: Court Central, Court 1, Terrain A" />
       </div>
 
       <!-- Arrivées et Départs -->
@@ -112,9 +112,9 @@
 
       <div class="actions">
         <button id="generate">⚡ Générer les matchs</button>
-        <button id="copy" class="secondary" disabled>📋 Copier</button>
-        <button id="copyLink" class="secondary" disabled>🔗 Partager Lien</button>
-        <button id="saveToHistory" class="secondary" disabled>💾 Enregistrer Session</button>
+        <button id="copy" class="secondary" disabled>📋 Copier les matchs</button>
+        <button id="copyLink" class="secondary" disabled>🔗 Partager via un lien</button>
+        <button id="saveToHistory" class="secondary" disabled>💾 Enregistrer les modifications</button>
       </div>
 
       <p id="warning" class="warning" hidden></p>
@@ -135,7 +135,7 @@
       <div class="headerRow">
         <h2>🏆 Classement</h2>
         <div class="ranking-actions">
-          <button id="exportRankingsPng" class="secondary">📷 Exporter PNG</button>
+          <button id="exportRankingsPng" class="secondary">📷 Exporter le classement</button>
           <button id="copyRankingLink" class="secondary">🔗 Partager le classement</button>
         </div>
       </div>
@@ -196,7 +196,7 @@
     <!-- HISTORIQUE DES SESSIONS -->
     <section class="card" style="grid-column: 1 / -1;">
       <div class="headerRow">
-        <h2>📜 Historique des Sessions</h2>
+        <h2>📜 Historique des sessions</h2>
         <button id="clearHistoryBtn" class="secondary" style="font-size: 0.8rem; padding: 6px 12px;">🗑️ Vider l'historique</button>
       </div>
       <div id="historyList" class="history-grid">
