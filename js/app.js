@@ -1,5 +1,5 @@
 // ----------------------------
-// Générateur de nombres aléatoires à seed (déterministe)
+// Générateur Aléatoire Seeded
 // ----------------------------
 function xmur3(str) {
   let h = 1779033703 ^ str.length;
@@ -54,7 +54,7 @@ function generateSeed() {
 }
 
 // ----------------------------
-// Fonctions utilitaires
+// Utilitaires de Matchmaking
 // ----------------------------
 function pairKey(a, b) {
   return a < b ? `${a}||${b}` : `${b}||${a}`;
@@ -73,14 +73,14 @@ function fmtMatch(match) {
   return `${t1[0]} & ${t1[1]} contre ${t2[0]} & ${t2[1]}`;
 }
 
-function topPairs(map, limit = 20) {
+function topPairs(map, limit = 15) {
   const arr = [...map.entries()].filter(([, v]) => v > 0);
   arr.sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1));
   return arr.slice(0, limit);
 }
 
 // ----------------------------
-// Algorithme de Matchmaking
+// Algorithme Beam Search
 // ----------------------------
 function scoreTeam(a, b, teammateCount, playsCount, wT, wP, squareRepeats) {
   const t = getCount(teammateCount, pairKey(a, b));
@@ -127,19 +127,21 @@ function bestSplitForFour(p4, teammateCount, opponentCount, playsCount, wT, wO, 
   return { match: best, score: bestScore };
 }
 
-function pickBenchesByQueue(players, benchesNeeded, benchQueue, lastBenchedSet) {
+function pickBenchesByQueue(availablePlayers, benchesNeeded, benchQueue, lastBenchedSet) {
   if (benchesNeeded <= 0) return [];
   const benched = [];
-  const inQueue = new Set(benchQueue);
+  const availableSet = new Set(availablePlayers);
 
-  for (const p of players) {
-    if (!inQueue.has(p)) benchQueue.push(p);
+  for (const p of availablePlayers) {
+    if (!benchQueue.includes(p)) benchQueue.push(p);
   }
 
   let guard = 0;
   while (benched.length < benchesNeeded && guard < benchQueue.length * 3) {
     guard++;
     const p = benchQueue.shift();
+
+    if (!availableSet.has(p)) continue;
 
     if (lastBenchedSet.has(p) && benchQueue.length > 0 && benchesNeeded === 1) {
       benchQueue.push(p);
@@ -161,12 +163,7 @@ function beamSearchRound(
   if (targetMatches <= 0 || playing.length < 4) return [];
   if (!rng) rng = Math.random;
 
-  const seen = new Set();
-  const uniq = [];
-  for (const p of playing) {
-    if (!seen.has(p)) { seen.add(p); uniq.push(p); }
-  }
-  playing = uniq.slice(0, need);
+  playing = playing.slice(0, need);
 
   const partnerRank = new Map();
   for (const p of playing) {
@@ -255,7 +252,10 @@ function beamSearchRound(
   return beam[0].matches;
 }
 
-function scheduleRotations(players, numCourts, numRounds, seedText, options) {
+// ----------------------------
+// Algorithme principal
+// ----------------------------
+function scheduleRotations(players, numCourts, numRounds, seedText, options, presenceMap) {
   const rng = makeRng(seedText);
   players = players.map(p => p.trim()).filter(Boolean);
   if (players.length < 4) throw new Error("Il faut au moins 4 joueurs.");
@@ -270,16 +270,27 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options) {
 
   const rounds = [];
   const benches = [];
+  const absents = [];
   let lastBenched = new Set();
-  const lastBenchedRound = new Map();
 
   for (let r = 0; r < numRounds; r++) {
-    const targetMatches = Math.min(numCourts, Math.floor(players.length / 4));
-    const need = 4 * targetMatches;
-    const benchesNeeded = players.length - need;
+    const roundNumber = r + 1;
 
-    let benched = pickBenchesByQueue(players, benchesNeeded, benchQueue, lastBenched);
-    let playing = players.filter(p => !new Set(benched).has(p));
+    const activePlayers = players.filter(p => {
+      const pres = presenceMap[p];
+      if (!pres) return true;
+      return roundNumber >= pres.start && roundNumber <= pres.end;
+    });
+
+    const inactivePlayers = players.filter(p => !activePlayers.includes(p));
+    absents.push(inactivePlayers);
+
+    const targetMatches = Math.min(numCourts, Math.floor(activePlayers.length / 4));
+    const need = 4 * targetMatches;
+    const benchesNeeded = activePlayers.length - need;
+
+    let benched = pickBenchesByQueue(activePlayers, benchesNeeded, benchQueue, lastBenched);
+    let playing = activePlayers.filter(p => !benched.includes(p));
 
     const matches = beamSearchRound(
       playing, targetMatches, teammateCount, opponentCount, playsCount,
@@ -290,7 +301,7 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options) {
       rng
     );
 
-    const activePlayers = new Set();
+    const activeInMatch = new Set();
     for (const match of matches) {
       const [t1, t2] = match;
       const [a, b] = t1;
@@ -301,7 +312,7 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options) {
 
       for (const p of [a, b, c, d]) {
         playsCount.set(p, (playsCount.get(p) ?? 0) + 1);
-        activePlayers.add(p);
+        activeInMatch.add(p);
       }
 
       for (const x of [a, b]) {
@@ -312,30 +323,31 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options) {
     }
 
     for (const p of playing) {
-      if (!activePlayers.has(p)) benched.push(p);
+      if (!activeInMatch.has(p) && !benched.includes(p)) benched.push(p);
     }
 
     benched = [...new Set(benched)];
     benches.push(benched);
+
     for (const b of benched) {
       benchCount.set(b, (benchCount.get(b) ?? 0) + 1);
-      lastBenchedRound.set(b, r);
     }
 
     lastBenched = new Set(benched);
     rounds.push(matches);
   }
 
-  return { rounds, benches, stats: { teammateCount, opponentCount, playsCount, benchCount } };
+  return { rounds, benches, absents, stats: { teammateCount, opponentCount, playsCount, benchCount } };
 }
 
 // ----------------------------
-// Éléments UI & Événements
+// Éléments UI & Gestionnaires
 // ----------------------------
 const elPlayers = document.getElementById("players");
 const elCourts = document.getElementById("courts");
 const elRounds = document.getElementById("rounds");
 const elSeed = document.getElementById("seed");
+const elCourtNames = document.getElementById("courtNames");
 
 const elwT = document.getElementById("wT");
 const elwO = document.getElementById("wO");
@@ -348,6 +360,7 @@ const elAvoidB2B = document.getElementById("avoidB2B");
 const btnGenerate = document.getElementById("generate");
 const btnCopy = document.getElementById("copy");
 const btnCopyLink = document.getElementById("copyLink");
+const btnSaveToHistory = document.getElementById("saveToHistory");
 const btnNewSeed = document.getElementById("newSeed");
 
 const elSchedule = document.getElementById("schedule");
@@ -358,21 +371,83 @@ const elMeta = document.getElementById("meta");
 
 const elRankingSection = document.getElementById("rankingSection");
 const elRankingTableBody = document.querySelector("#rankingTable tbody");
+const elPodiumContainer = document.getElementById("podiumContainer");
+const elBadgesContainer = document.getElementById("badgesContainer");
 const btnExportPng = document.getElementById("exportRankingsPng");
 const btnCopyRankingLink = document.getElementById("copyRankingLink");
 
+const elHeatmapSection = document.getElementById("heatmapSection");
+const elHeatmapContainer = document.getElementById("heatmapTableContainer");
+const btnHmModeTeammates = document.getElementById("hmModeTeammates");
+const btnHmModeOpponents = document.getElementById("hmModeOpponents");
+
+const elPresenceList = document.getElementById("presenceList");
+const elAutosaveBadge = document.getElementById("autosaveBadge");
+const elHistoryList = document.getElementById("historyList");
+const btnClearHistory = document.getElementById("clearHistoryBtn");
+
 window.__PB_SCORES__ = {};
+window.__PB_PRESENCE__ = {};
+let currentHeatmapMode = "teammates";
 
 function parsePlayers(text) {
   const lines = text.split(/\n/).flatMap(line => line.split(","));
   return lines.map(s => s.trim()).filter(Boolean);
 }
 
-function render(result, players, numCourts, numRounds, seedText) {
+function parseCourtNames() {
+  const raw = elCourtNames.value.trim();
+  if (!raw) return [];
+  return raw.split(",").map(s => s.trim()).filter(Boolean);
+}
+
+function syncPresenceInputs() {
+  const players = parsePlayers(elPlayers.value);
+  const totalRounds = parseInt(elRounds.value || "8", 10);
+  
+  elPresenceList.innerHTML = "";
+
+  players.forEach(p => {
+    if (!window.__PB_PRESENCE__[p]) {
+      window.__PB_PRESENCE__[p] = { start: 1, end: totalRounds };
+    }
+
+    const item = document.createElement("div");
+    item.className = "presence-item";
+    item.innerHTML = `
+      <span><strong>${p}</strong></span>
+      <div class="presence-inputs">
+        <label style="font-size: 0.75rem;">De</label>
+        <input type="number" min="1" max="${totalRounds}" value="${window.__PB_PRESENCE__[p].start}" data-player="${p}" data-type="start" />
+        <label style="font-size: 0.75rem;">à</label>
+        <input type="number" min="1" max="${totalRounds}" value="${window.__PB_PRESENCE__[p].end}" data-player="${p}" data-type="end" />
+      </div>
+    `;
+    elPresenceList.appendChild(item);
+  });
+}
+
+elPresenceList.addEventListener("change", (e) => {
+  const p = e.target.dataset.player;
+  const type = e.target.dataset.type;
+  const val = parseInt(e.target.value, 10);
+  
+  if (p && type && window.__PB_PRESENCE__[p]) {
+    window.__PB_PRESENCE__[p][type] = isNaN(val) ? 1 : val;
+    autoSaveState();
+  }
+});
+
+elPlayers.addEventListener("input", syncPresenceInputs);
+elRounds.addEventListener("input", syncPresenceInputs);
+
+// Rendu du Planning
+function render(result, players, numCourts, numRounds) {
   elSchedule.innerHTML = "";
   elDiag.innerHTML = "";
 
-  const { rounds, benches, stats } = result;
+  const { rounds, benches, absents, stats } = result;
+  const courtCustomNames = parseCourtNames();
 
   elMeta.textContent = `${players.length} Joueurs · ${numCourts} Terrain(s) · ${numRounds} Tours`;
 
@@ -386,19 +461,32 @@ function render(result, players, numCourts, numRounds, seedText) {
     const h3 = document.createElement("h3");
     h3.textContent = `Tour ${idx + 1}`;
     
-    const bench = document.createElement("div");
-    bench.className = "bench";
-    bench.textContent = benches[idx].length ? `🪑 Banc: ${benches[idx].join(", ")}` : "🪑 Banc: Aucun";
+    const tagsDiv = document.createElement("div");
+    tagsDiv.className = "round-tags";
+
+    if (benches[idx]?.length) {
+      const bench = document.createElement("span");
+      bench.className = "bench";
+      bench.textContent = `🪑 Banc: ${benches[idx].join(", ")}`;
+      tagsDiv.appendChild(bench);
+    }
+
+    if (absents[idx]?.length) {
+      const absent = document.createElement("span");
+      absent.className = "absent-tag";
+      absent.textContent = `⏸️ Inactifs: ${absents[idx].join(", ")}`;
+      tagsDiv.appendChild(absent);
+    }
 
     titleRow.appendChild(h3);
-    titleRow.appendChild(bench);
+    titleRow.appendChild(tagsDiv);
     wrap.appendChild(titleRow);
 
     if (!matches.length) {
       const p = document.createElement("div");
       p.className = "subtle";
       p.style.marginTop = "8px";
-      p.textContent = "Pas assez de joueurs pour un match ce tour-ci.";
+      p.textContent = "Pas assez de joueurs disponibles pour un match ce tour-ci.";
       wrap.appendChild(p);
     } else {
       const matchesList = document.createElement("div");
@@ -406,11 +494,12 @@ function render(result, players, numCourts, numRounds, seedText) {
 
       matches.forEach((m, mIdx) => {
         const [t1, t2] = m;
+        const courtLabel = courtCustomNames[mIdx] || `Terrain ${mIdx + 1}`;
         const matchCard = document.createElement("div");
         matchCard.className = "match-card";
         
         matchCard.innerHTML = `
-          <span style="color: var(--text-subtle); font-size: 0.8rem; font-weight: bold;">T${mIdx+1}</span>
+          <span class="court-badge">${courtLabel}</span>
           <div class="team-score">
             <span class="team">${t1[0]} & ${t1[1]}</span>
             <input type="number" class="score-input" data-round="${idx}" data-match="${mIdx}" data-team="1" min="0" placeholder="-" />
@@ -437,17 +526,13 @@ function render(result, players, numCourts, numRounds, seedText) {
   const minBen = Math.min(...benchesCount.map(x => x[1]));
   const maxBen = Math.max(...benchesCount.map(x => x[1]));
 
-  const tmTop = topPairs(stats.teammateCount, 15).map(([k, v]) => `${k.replace("||", " & ")} (${v})`).join(", ");
-  const opTop = topPairs(stats.opponentCount, 15).map(([k, v]) => `${k.replace("||", " vs ")} (${v})`).join(", ");
+  const tmTop = topPairs(stats.teammateCount).map(([k, v]) => `${k.replace("||", " & ")} (${v})`).join(", ");
+  const opTop = topPairs(stats.opponentCount).map(([k, v]) => `${k.replace("||", " vs ")} (${v})`).join(", ");
 
   const fairnessLine = players
     .slice()
     .sort((a, b) => a < b ? -1 : 1)
-    .map(p => {
-      const pl = stats.playsCount.get(p) ?? 0;
-      const bn = stats.benchCount.get(p) ?? 0;
-      return `<strong>${p}</strong> : ${pl}J / ${bn}B`;
-    })
+    .map(p => `<strong>${p}</strong> : ${stats.playsCount.get(p) ?? 0}J / ${stats.benchCount.get(p) ?? 0}B`)
     .join(" · ");
 
   elDiag.innerHTML = `
@@ -458,30 +543,72 @@ function render(result, players, numCourts, numRounds, seedText) {
     <p><strong>Ratio individuel (J=Joué, B=Banc) :</strong> ${fairnessLine}</p>
   `;
 
+  renderHeatmap();
+
   btnCopy.disabled = false;
   btnCopyLink.disabled = false;
-}
-
-function buildCopyText(result) {
-  const { rounds, benches } = result;
-  const lines = [];
-  rounds.forEach((matches, i) => {
-    lines.push(`Tour ${i + 1}`);
-    if (!matches.length) {
-      lines.push(`  (Aucun match)`);
-    } else {
-      matches.forEach((m, j) => {
-        lines.push(`  ${j+1}. ${fmtMatch(m)}`);
-      });
-    }
-    if (benches[i]?.length) lines.push(`  Banc : ${benches[i].join(", ")}`);
-    lines.push("");
-  });
-  return lines.join("\n").trim();
+  btnSaveToHistory.disabled = false;
 }
 
 // ----------------------------
-// Logique de classement
+// Matrice Heatmap
+// ----------------------------
+function renderHeatmap() {
+  const result = window.__PB_LAST_RESULT__;
+  const players = parsePlayers(elPlayers.value);
+  if (!result || players.length === 0) {
+    elHeatmapSection.hidden = true;
+    return;
+  }
+
+  elHeatmapSection.hidden = false;
+  const map = currentHeatmapMode === "teammates" ? result.stats.teammateCount : result.stats.opponentCount;
+
+  let maxVal = 1;
+  map.forEach(val => { if (val > maxVal) maxVal = val; });
+
+  let html = `<table class="heatmap-table"><thead><tr><th></th>`;
+  players.forEach(p => {
+    html += `<th>${p.substring(0, 4)}.</th>`;
+  });
+  html += `</tr></thead><tbody>`;
+
+  players.forEach(p1 => {
+    html += `<tr><th>${p1}</th>`;
+    players.forEach(p2 => {
+      if (p1 === p2) {
+        html += `<td style="background: rgba(0,0,0,0.3); color: #555;">-</td>`;
+      } else {
+        const count = getCount(map, pairKey(p1, p2));
+        const alpha = (count / maxVal) * 0.75 + (count > 0 ? 0.15 : 0);
+        const bg = count > 0 ? `rgba(204, 255, 0, ${alpha})` : "rgba(255, 255, 255, 0.02)";
+        const color = alpha > 0.4 ? "#000" : "#fff";
+        html += `<td class="heatmap-cell" style="background: ${bg}; color: ${color};">${count}</td>`;
+      }
+    });
+    html += `</tr>`;
+  });
+
+  html += `</tbody></table>`;
+  elHeatmapContainer.innerHTML = html;
+}
+
+btnHmModeTeammates.addEventListener("click", () => {
+  currentHeatmapMode = "teammates";
+  btnHmModeTeammates.classList.add("active");
+  btnHmModeOpponents.classList.remove("active");
+  renderHeatmap();
+});
+
+btnHmModeOpponents.addEventListener("click", () => {
+  currentHeatmapMode = "opponents";
+  btnHmModeOpponents.classList.add("active");
+  btnHmModeTeammates.classList.remove("active");
+  renderHeatmap();
+});
+
+// ----------------------------
+// Classement, Podium & Badges
 // ----------------------------
 function updateRankings() {
   const result = window.__PB_LAST_RESULT__;
@@ -495,6 +622,7 @@ function updateRankings() {
   });
   
   let hasAnyScore = false;
+  const pairWins = new Map();
 
   result.rounds.forEach((matches, rIdx) => {
     matches.forEach((match, mIdx) => {
@@ -521,6 +649,9 @@ function updateRankings() {
 
         updateTeamStats(t1, s1, s2);
         updateTeamStats(t2, s2, s1);
+
+        if (s1 > s2) incCount(pairWins, pairKey(t1[0], t1[1]));
+        if (s2 > s1) incCount(pairWins, pairKey(t2[0], t2[1]));
       }
     });
   });
@@ -539,7 +670,14 @@ function updateRankings() {
     if (b.diff !== a.diff) return b.diff - a.diff;
     return b.pf - a.pf;
   });
-  
+
+  // Podium
+  renderPodium(sortedPlayers);
+
+  // Badges
+  renderBadges(sortedPlayers, pairWins);
+
+  // Tableau
   elRankingTableBody.innerHTML = sortedPlayers.map((p, i) => {
     const diffClass = p.diff > 0 ? "diff-positive" : (p.diff < 0 ? "diff-negative" : "");
     const diffSign = p.diff > 0 ? "+" : "";
@@ -558,15 +696,105 @@ function updateRankings() {
   }).join('');
 }
 
+function renderPodium(sorted) {
+  if (sorted.length < 3) {
+    elPodiumContainer.innerHTML = "";
+    return;
+  }
+
+  const p1 = sorted[0];
+  const p2 = sorted[1];
+  const p3 = sorted[2];
+
+  elPodiumContainer.innerHTML = `
+    <div class="podium-step silver">
+      <div class="podium-avatar">🥈</div>
+      <div class="podium-name">${p2.name}</div>
+      <div class="podium-stats">${p2.w}V · ${p2.diff > 0 ? '+' : ''}${p2.diff}</div>
+    </div>
+    <div class="podium-step gold">
+      <div class="podium-avatar">🥇</div>
+      <div class="podium-name">${p1.name}</div>
+      <div class="podium-stats">${p1.w}V · ${p1.diff > 0 ? '+' : ''}${p1.diff}</div>
+    </div>
+    <div class="podium-step bronze">
+      <div class="podium-avatar">🥉</div>
+      <div class="podium-name">${p3.name}</div>
+      <div class="podium-stats">${p3.w}V · ${p3.diff > 0 ? '+' : ''}${p3.diff}</div>
+    </div>
+  `;
+}
+
+function renderBadges(sorted, pairWins) {
+  const badges = [];
+
+  // 💥 Meilleure Attaque (plus de points pour)
+  const bestAttacker = [...sorted].sort((a, b) => b.pf - a.pf)[0];
+  if (bestAttacker && bestAttacker.pf > 0) {
+    badges.push({
+      icon: "💥",
+      title: "Canonnière",
+      player: bestAttacker.name,
+      desc: `${bestAttacker.pf} points inscrits au total`
+    });
+  }
+
+  // 🛡️ Roc Défensif (moins de points contre)
+  const bestDefender = [...sorted].filter(p => p.m > 0).sort((a, b) => a.pa - b.pa)[0];
+  if (bestDefender) {
+    badges.push({
+      icon: "🛡️",
+      title: "Roc Défensif",
+      player: bestDefender.name,
+      desc: `Seulement ${bestDefender.pa} points encaissés`
+    });
+  }
+
+  // 🔥 Incollable en Duo
+  const topDuoEntry = [...pairWins.entries()].sort((a, b) => b[1] - a[1])[0];
+  if (topDuoEntry && topDuoEntry[1] > 0) {
+    const pairName = topDuoEntry[0].replace("||", " & ");
+    badges.push({
+      icon: "🔥",
+      title: "Incollable en Duo",
+      player: pairName,
+      desc: `${topDuoEntry[1]} victoires ensemble`
+    });
+  }
+
+  // ⚡ Roi de la Remontada (meilleur diff)
+  const bestDiff = [...sorted].sort((a, b) => b.diff - a.diff)[0];
+  if (bestDiff && bestDiff.diff > 0) {
+    badges.push({
+      icon: "🚀",
+      title: "Maître du Différentiel",
+      player: bestDiff.name,
+      desc: `Différentiel de +${bestDiff.diff}`
+    });
+  }
+
+  elBadgesContainer.innerHTML = badges.map(b => `
+    <div class="badge-card">
+      <div class="badge-icon">${b.icon}</div>
+      <div>
+        <div class="badge-title">${b.title}</div>
+        <div class="badge-player">${b.player}</div>
+        <div class="badge-desc">${b.desc}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
 // ----------------------------
-// Génération de l'URL avec scores
+// Sauvegarde Automatique
 // ----------------------------
-function buildShareableUrl() {
-  const state = {
+function getCurrentState() {
+  return {
     p: elPlayers.value,
     c: elCourts.value,
     r: elRounds.value,
     s: elSeed.value,
+    cn: elCourtNames.value,
     wt: elwT.value,
     wo: elwO.value,
     wp: elwP.value,
@@ -574,32 +802,144 @@ function buildShareableUrl() {
     pk: elPartnerK.value,
     sq: elSquare.checked,
     b2b: elAvoidB2B.checked,
-    sc: window.__PB_SCORES__ || {}
+    sc: window.__PB_SCORES__ || {},
+    pr: window.__PB_PRESENCE__ || {}
   };
-
-  const jsonString = JSON.stringify(state);
-  const compressedData = LZString.compressToEncodedURIComponent(jsonString);
-  const urlBase = window.location.origin + window.location.pathname;
-  return `${urlBase}?d=${compressedData}`;
 }
 
-async function copyShareUrl(btnElement) {
-  const urlToShare = buildShareableUrl();
-  try {
-    await navigator.clipboard.writeText(urlToShare);
-    const originalText = btnElement.textContent;
-    btnElement.textContent = "Lien copié !";
-    setTimeout(() => (btnElement.textContent = originalText), 1500);
-  } catch {
-    window.prompt("Copier le lien :", urlToShare);
+function autoSaveState() {
+  const state = getCurrentState();
+  localStorage.setItem("pb_autosave", JSON.stringify(state));
+  
+  elAutosaveBadge.style.opacity = "1";
+  setTimeout(() => { elAutosaveBadge.style.opacity = "0.5"; }, 1000);
+}
+
+function loadState(state) {
+  if (state.p !== undefined) elPlayers.value = state.p;
+  if (state.c !== undefined) elCourts.value = state.c;
+  if (state.r !== undefined) elRounds.value = state.r;
+  if (state.s !== undefined) elSeed.value = state.s;
+  if (state.cn !== undefined) elCourtNames.value = state.cn;
+  if (state.wt !== undefined) elwT.value = state.wt;
+  if (state.wo !== undefined) elwO.value = state.wo;
+  if (state.wp !== undefined) elwP.value = state.wp;
+  if (state.bw !== undefined) elBeamWidth.value = state.bw;
+  if (state.pk !== undefined) elPartnerK.value = state.pk;
+  if (state.sq !== undefined) elSquare.checked = state.sq;
+  if (state.b2b !== undefined) elAvoidB2B.checked = state.b2b;
+  if (state.pr) window.__PB_PRESENCE__ = state.pr;
+
+  syncPresenceInputs();
+
+  if (state.p && parsePlayers(state.p).length >= 4) {
+    btnGenerate.click();
+    if (state.sc) {
+      window.__PB_SCORES__ = state.sc;
+      document.querySelectorAll(".score-input").forEach(input => {
+        const r = input.dataset.round;
+        const m = input.dataset.match;
+        const t = input.dataset.team;
+        const key = `${r}-${m}`;
+        if (window.__PB_SCORES__[key] && window.__PB_SCORES__[key][t] != null) {
+          input.value = window.__PB_SCORES__[key][t];
+        }
+      });
+      updateRankings();
+    }
   }
 }
 
 // ----------------------------
-// Événements
+// Historique des Sessions
+// ----------------------------
+function getHistory() {
+  try {
+    return JSON.parse(localStorage.getItem("pb_history") || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveToHistory() {
+  const history = getHistory();
+  const state = getCurrentState();
+  const dateStr = new Date().toLocaleDateString("fr-FR", {
+    day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"
+  });
+
+  const newItem = {
+    id: Date.now(),
+    date: dateStr,
+    seed: state.s,
+    playersCount: parsePlayers(state.p).length,
+    roundsCount: state.r,
+    state: state
+  };
+
+  history.unshift(newItem);
+  localStorage.setItem("pb_history", JSON.stringify(history.slice(0, 20)));
+  renderHistory();
+}
+
+function renderHistory() {
+  const history = getHistory();
+  if (!history.length) {
+    elHistoryList.innerHTML = `<p class="subtle">Aucune session enregistrée dans l'historique.</p>`;
+    return;
+  }
+
+  elHistoryList.innerHTML = history.map(item => `
+    <div class="history-card">
+      <div>
+        <h4>Session #${item.seed}</h4>
+        <div class="subtle" style="font-size: 0.8rem; margin-top: 4px;">
+          📅 ${item.date} · 👥 ${item.playersCount} Joueurs · 🔄 ${item.roundsCount} Tours
+        </div>
+      </div>
+      <div class="history-actions">
+        <button class="secondary load-hist-btn" data-id="${item.id}">Charger</button>
+        <button class="secondary del-hist-btn" data-id="${item.id}" style="color: var(--danger);">Supprimer</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+elHistoryList.addEventListener("click", (e) => {
+  const id = parseInt(e.target.dataset.id, 10);
+  if (!id) return;
+
+  let history = getHistory();
+
+  if (e.target.classList.contains("load-hist-btn")) {
+    const item = history.find(x => x.id === id);
+    if (item) loadState(item.state);
+  } else if (e.target.classList.contains("del-hist-btn")) {
+    history = history.filter(x => x.id !== id);
+    localStorage.setItem("pb_history", JSON.stringify(history));
+    renderHistory();
+  }
+});
+
+btnClearHistory.addEventListener("click", () => {
+  if (confirm("Voulez-vous vraiment effacer tout l'historique ?")) {
+    localStorage.removeItem("pb_history");
+    renderHistory();
+  }
+});
+
+btnSaveToHistory.addEventListener("click", () => {
+  saveToHistory();
+  btnSaveToHistory.textContent = "Session Sauvegardée !";
+  setTimeout(() => (btnSaveToHistory.textContent = "💾 Enregistrer Session"), 1200);
+});
+
+// ----------------------------
+// Événements Généraux
 // ----------------------------
 btnNewSeed.addEventListener("click", () => {
   elSeed.value = generateSeed();
+  autoSaveState();
 });
 
 btnGenerate.addEventListener("click", () => {
@@ -634,10 +974,11 @@ btnGenerate.addEventListener("click", () => {
       avoidB2B: !!elAvoidB2B.checked,
     };
 
-    const result = scheduleRotations(players, numCourts, numRounds, seedText, options);
-    render(result, players, numCourts, numRounds, seedText);
+    const result = scheduleRotations(players, numCourts, numRounds, seedText, options, window.__PB_PRESENCE__);
+    render(result, players, numCourts, numRounds);
 
     window.__PB_LAST_RESULT__ = result;
+    autoSaveState();
 
   } catch (e) {
     elError.hidden = false;
@@ -645,6 +986,7 @@ btnGenerate.addEventListener("click", () => {
   }
 });
 
+// Écoute des saisies de scores
 elSchedule.addEventListener("input", (e) => {
   if (e.target.classList.contains("score-input")) {
     const r = e.target.dataset.round;
@@ -657,26 +999,67 @@ elSchedule.addEventListener("input", (e) => {
     window.__PB_SCORES__[key][t] = isNaN(val) ? null : val;
     
     updateRankings();
+    autoSaveState();
   }
 });
 
+[elPlayers, elCourts, elRounds, elSeed, elCourtNames, elwT, elwO, elwP, elBeamWidth, elPartnerK, elSquare, elAvoidB2B].forEach(el => {
+  el.addEventListener("change", autoSaveState);
+});
+
+// Copie du planning
 btnCopy.addEventListener("click", async () => {
   const result = window.__PB_LAST_RESULT__;
   if (!result) return;
-  const text = buildCopyText(result);
+  const lines = [];
+  const courtCustomNames = parseCourtNames();
+
+  result.rounds.forEach((matches, i) => {
+    lines.push(`Tour ${i + 1}`);
+    matches.forEach((m, j) => {
+      const label = courtCustomNames[j] || `Terrain ${j + 1}`;
+      lines.push(`  [${label}] ${fmtMatch(m)}`);
+    });
+    if (result.benches[i]?.length) lines.push(`  Banc : ${result.benches[i].join(", ")}`);
+    if (result.absents[i]?.length) lines.push(`  Inactifs : ${result.absents[i].join(", ")}`);
+    lines.push("");
+  });
+
+  const text = lines.join("\n").trim();
   try {
     await navigator.clipboard.writeText(text);
     btnCopy.textContent = "Copié !";
-    setTimeout(() => (btnCopy.textContent = "📋 Copier Planning"), 900);
+    setTimeout(() => (btnCopy.textContent = "📋 Copier"), 900);
   } catch {
     window.prompt("Copier le texte :", text);
   }
 });
 
+// Partage par URL
+function buildShareableUrl() {
+  const state = getCurrentState();
+  const jsonString = JSON.stringify(state);
+  const compressedData = LZString.compressToEncodedURIComponent(jsonString);
+  const urlBase = window.location.origin + window.location.pathname;
+  return `${urlBase}?d=${compressedData}`;
+}
+
+async function copyShareUrl(btnElement) {
+  const urlToShare = buildShareableUrl();
+  try {
+    await navigator.clipboard.writeText(urlToShare);
+    const originalText = btnElement.textContent;
+    btnElement.textContent = "Lien copié !";
+    setTimeout(() => (btnElement.textContent = originalText), 1500);
+  } catch {
+    window.prompt("Copier le lien :", urlToShare);
+  }
+}
+
 btnCopyLink.addEventListener("click", () => copyShareUrl(btnCopyLink));
 btnCopyRankingLink.addEventListener("click", () => copyShareUrl(btnCopyRankingLink));
 
-// Exportation du classement en PNG
+// Export PNG
 btnExportPng.addEventListener("click", async () => {
   const targetArea = document.getElementById("rankingCaptureArea");
   if (!targetArea) return;
@@ -696,21 +1079,18 @@ btnExportPng.addEventListener("click", async () => {
     link.href = imageUri;
     link.click();
   } catch (err) {
-    console.error("Erreur lors de l'exportation en PNG:", err);
-    alert("Une erreur est survenue lors de la création de l'image.");
+    console.error(err);
+    alert("Erreur lors de l'export PNG.");
   } finally {
     btnExportPng.textContent = originalBtnText;
   }
 });
 
-if (!elSeed.value) {
-  elSeed.value = generateSeed();
-}
-
-// ----------------------------
-// Chargement depuis l'URL
-// ----------------------------
+// Initialisation
 window.addEventListener("DOMContentLoaded", () => {
+  if (!elSeed.value) elSeed.value = generateSeed();
+  renderHistory();
+
   const params = new URLSearchParams(window.location.search);
   const sharedData = params.get("d");
 
@@ -718,45 +1098,20 @@ window.addEventListener("DOMContentLoaded", () => {
     try {
       const jsonString = LZString.decompressFromEncodedURIComponent(sharedData);
       const state = JSON.parse(jsonString);
-
-      if (state.p !== undefined) elPlayers.value = state.p;
-      if (state.c !== undefined) elCourts.value = state.c;
-      if (state.r !== undefined) elRounds.value = state.r;
-      if (state.s !== undefined) elSeed.value = state.s;
-      if (state.wt !== undefined) elwT.value = state.wt;
-      if (state.wo !== undefined) elwO.value = state.wo;
-      if (state.wp !== undefined) elwP.value = state.wp;
-      if (state.bw !== undefined) elBeamWidth.value = state.bw;
-      if (state.pk !== undefined) elPartnerK.value = state.pk;
-      if (state.sq !== undefined) elSquare.checked = state.sq;
-      if (state.b2b !== undefined) elAvoidB2B.checked = state.b2b;
-
-      // 1. Générer les matchs
-      btnGenerate.click();
-
-      // 2. Si des scores sont enregistrés dans l'URL, les réinsérer
-      if (state.sc) {
-        window.__PB_SCORES__ = state.sc;
-        
-        document.querySelectorAll(".score-input").forEach(input => {
-          const r = input.dataset.round;
-          const m = input.dataset.match;
-          const t = input.dataset.team;
-          const key = `${r}-${m}`;
-          
-          if (window.__PB_SCORES__[key] && window.__PB_SCORES__[key][t] != null) {
-            input.value = window.__PB_SCORES__[key][t];
-          }
-        });
-
-        // 3. Mettre à jour le classement
-        updateRankings();
-      }
-      
+      loadState(state);
     } catch (e) {
-      console.error("Erreur lors de la lecture du lien partagé", e);
+      console.error(e);
       elError.hidden = false;
-      elError.textContent = "Le lien de partage est invalide ou corrompu.";
+      elError.textContent = "Lien de partage invalide ou corrompu.";
+    }
+  } else {
+    const saved = localStorage.getItem("pb_autosave");
+    if (saved) {
+      try {
+        loadState(JSON.parse(saved));
+      } catch (e) { console.error("Erreur lecture autosave", e); }
+    } else {
+      syncPresenceInputs();
     }
   }
 });
