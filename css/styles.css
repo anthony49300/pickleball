@@ -315,6 +315,9 @@ button:disabled {
   gap: 10px;
 }
 
+/* ==========================================================================
+   AFFICHAGE DE LA CARTE DE MATCH (CORRIGÉ & CENTRÉ)
+   ========================================================================== */
 .match-card {
   display: flex;
   align-items: center;
@@ -324,6 +327,7 @@ button:disabled {
   border-radius: 8px;
   padding: 10px 14px;
   font-size: 0.95rem;
+  gap: 8px;
 }
 
 .court-badge {
@@ -334,9 +338,14 @@ button:disabled {
   padding: 2px 8px;
   border-radius: 6px;
   border: 1px solid rgba(204, 255, 0, 0.2);
+  margin-right: auto;
+  flex-shrink: 0;
 }
 
-.team { font-weight: 600; color: #ffffff; }
+.team { 
+  font-weight: 600; 
+  color: #ffffff; 
+}
 
 .vs {
   font-size: 0.75rem;
@@ -346,27 +355,27 @@ button:disabled {
   padding: 2px 8px;
   background: rgba(204, 255, 0, 0.1);
   border-radius: 4px;
-  margin: 0 8px;
+  margin: 0 6px;
+  flex-shrink: 0;
 }
 
-.team-score { display: flex; align-items: center; gap: 8px; }
-
-.score-input {
-  width: 45px !important;
-  text-align: center;
-  padding: 6px !important;
-  border-radius: 6px;
-  border: 1px solid var(--border-color);
-  background: rgba(0, 0, 0, 0.4);
-  color: #fff;
-  font-weight: bold;
-  font-size: 1rem;
+/* Alignement équilibré des deux blocs d'équipes */
+.team-score { 
+  display: flex; 
+  align-items: center; 
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
 }
 
-.score-input:focus {
-  border-color: var(--pickle-yellow);
-  box-shadow: 0 0 0 2px rgba(204, 255, 0, 0.15);
-  outline: none;
+.team-score:first-of-type {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.team-score:last-of-type {
+  justify-content: flex-start;
+  text-align: left;
 }
 
 /* Podium & Badges */
@@ -535,19 +544,19 @@ button:disabled {
    MOBILE : CARTES DE MATCH & SCORES
    ========================================================================== */
 
-/* 1. Taille fixe pour l'input de score (évite d'élargir la carte) */
+/* 1. Taille fixe pour l'input de score */
 .score-input {
   width: 40px !important;
   min-width: 40px !important;
   max-width: 40px !important;
   height: 36px !important;
-  font-size: 16px !important; /* Empêche le zoom auto sur iPhone */
+  font-size: 16px !important;
   padding: 2px !important;
   text-align: center !important;
-  flex-shrink: 0 !important; /* Empêche Flexbox de le déformer */
+  flex-shrink: 0 !important;
 }
 
-/* Suppression des petites flèches haut/bas des nombres */
+/* Suppression des flèches d'input type number */
 .score-input::-webkit-outer-spin-button,
 .score-input::-webkit-inner-spin-button {
   -webkit-appearance: none;
@@ -557,24 +566,23 @@ button:disabled {
   -moz-appearance: textfield;
 }
 
-/* 2. Permet aux noms d'équipes de passer à la ligne plutôt que de pousser les bords */
-.team-score {
-  min-width: 0;
-  flex: 1;
-}
-
 .team {
-  word-break: break-word; /* Autorise le texte ("Alice & Bob") à passer sur 2 lignes si besoin */
+  word-break: break-word;
   font-size: 0.85rem;
 }
 
-/* 3. Adaptation pour les écrans mobiles (< 500px) */
+/* 2. Adaptation pour mobiles (< 500px) */
 @media (max-width: 500px) {
   .match-card {
-    flex-wrap: wrap; /* Permet aux éléments de se placer naturellement sans déborder */
+    flex-wrap: wrap;
     justify-content: center;
     padding: 8px;
     gap: 6px;
+  }
+
+  .team-score:first-of-type,
+  .team-score:last-of-type {
+    justify-content: center;
   }
 
   .vs {
