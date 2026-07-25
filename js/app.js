@@ -515,25 +515,30 @@ function syncPresenceInputs() {
   });
 }
 
-elPresenceList.addEventListener("change", (e) => {
-  const p = e.target.dataset.player;
-  const type = e.target.dataset.type;
-  const val = parseInt(e.target.value, 10);
-  
-  if (p && type && window.__PB_PRESENCE__[p]) {
-    window.__PB_PRESENCE__[p][type] = isNaN(val) ? 1 : val;
-    autoSaveState();
-  }
+// Écoute dynamique sur la présence (instantanée sur input et change)
+["change", "input"].forEach(evt => {
+  elPresenceList.addEventListener(evt, (e) => {
+    const p = e.target.dataset.player;
+    const type = e.target.dataset.type;
+    const val = parseInt(e.target.value, 10);
+    
+    if (p && type && window.__PB_PRESENCE__[p]) {
+      window.__PB_PRESENCE__[p][type] = isNaN(val) ? 1 : val;
+      autoSaveState();
+    }
+  });
 });
 
 elPlayers.addEventListener("input", () => {
   clearMessages();
   syncPresenceInputs();
+  autoSaveState();
 });
 
 elRounds.addEventListener("input", () => {
   clearMessages();
   syncPresenceInputs();
+  autoSaveState();
 });
 
 
@@ -1210,27 +1215,33 @@ btnGenerate.addEventListener("click", () => {
   generateSession(false);
 });
 
-elSchedule.addEventListener("input", (e) => {
-  if (e.target.classList.contains("score-input")) {
-    const r = e.target.dataset.round;
-    const m = e.target.dataset.match;
-    const t = e.target.dataset.team;
-    const val = parseInt(e.target.value, 10);
-    
-    const key = `${r}-${m}`;
-    if (!window.__PB_SCORES__[key]) window.__PB_SCORES__[key] = {};
-    window.__PB_SCORES__[key][t] = isNaN(val) ? null : val;
-    
-    updateRankings();
-    autoSaveState();
-  }
+// Écoute instantanée sur la saisie des scores (input + change)
+["input", "change"].forEach(evt => {
+  elSchedule.addEventListener(evt, (e) => {
+    if (e.target.classList.contains("score-input")) {
+      const r = e.target.dataset.round;
+      const m = e.target.dataset.match;
+      const t = e.target.dataset.team;
+      const val = parseInt(e.target.value, 10);
+      
+      const key = `${r}-${m}`;
+      if (!window.__PB_SCORES__[key]) window.__PB_SCORES__[key] = {};
+      window.__PB_SCORES__[key][t] = isNaN(val) ? null : val;
+      
+      updateRankings();
+      autoSaveState();
+    }
+  });
 });
 
+// Écoute instantanée de tous les paramètres du formulaire (input + change)
 [elPlayers, elCourts, elRounds, elSeed, elCourtNames, elwT, elwO, elwP, elBeamWidth, elPartnerK, elSquare, elAvoidB2B].forEach(el => {
   if (el) {
-    el.addEventListener("change", () => {
-      clearMessages();
-      autoSaveState();
+    ["change", "input"].forEach(evt => {
+      el.addEventListener(evt, () => {
+        clearMessages();
+        autoSaveState();
+      });
     });
   }
 });
@@ -1315,8 +1326,13 @@ if (btnExportPng) {
 
 
 // =============================================================================
-// INITIALISATION AU CHARGEMENT DE LA PAGE
+// INITIALISATION ET SAUVEGARDE ULTIME A LA FERMETURE DE PAGE
 // =============================================================================
+
+// Forcer la sauvegarde instantanée avant toute recharge ou fermeture de la page
+window.addEventListener("beforeunload", () => {
+  autoSaveState();
+});
 
 window.addEventListener("DOMContentLoaded", () => {
   if (!elSeed.value) elSeed.value = generateSeed();
