@@ -754,15 +754,20 @@ function render(result, players, numCourts, numRounds) {
         const matchCard = document.createElement("div");
         matchCard.className = "match-card";
         
+        // Récupération des scores sauvegardés en mémoire pour réinjection direct
+        const key = `${idx}-${mIdx}`;
+        const savedScore1 = window.__PB_SCORES__[key]?.['1'] ?? "";
+        const savedScore2 = window.__PB_SCORES__[key]?.['2'] ?? "";
+
         matchCard.innerHTML = `
           <span class="court-badge">${courtLabel}</span>
           <div class="team-score">
             <span class="team">${t1.join(" & ")}</span>
-            <input type="number" class="score-input" data-round="${idx}" data-match="${mIdx}" data-team="1" min="0" placeholder="-" />
+            <input type="number" class="score-input" data-round="${idx}" data-match="${mIdx}" data-team="1" min="0" placeholder="-" value="${savedScore1}" />
           </div>
           <span class="vs">VS</span>
           <div class="team-score">
-            <input type="number" class="score-input" data-round="${idx}" data-match="${mIdx}" data-team="2" min="0" placeholder="-" />
+            <input type="number" class="score-input" data-round="${idx}" data-match="${mIdx}" data-team="2" min="0" placeholder="-" value="${savedScore2}" />
             <span class="team">${t2.join(" & ")}</span>
           </div>
         `;
@@ -817,6 +822,7 @@ function render(result, players, numCourts, numRounds) {
   if (elDiagSection) elDiagSection.hidden = false;
 
   renderHeatmap();
+  updateRankings();
 
   btnCopy.disabled = false;
   btnCopyLink.disabled = false;
@@ -1122,7 +1128,7 @@ function autoSaveState() {
  * Fonction centrale de génération du planning.
  * @param {boolean} preserveScores - Si true, conserve les scores déjà saisis lors de l'actualisation.
  */
-function generateSession(preserveScores = false) {
+function generateSession(preserveScores = true) {
   clearMessages();
   btnCopy.disabled = true;
 
@@ -1164,22 +1170,9 @@ function generateSession(preserveScores = false) {
     };
 
     const result = scheduleRotations(players, numCourts, numRounds, seedText, options, window.__PB_PRESENCE__);
-    render(result, players, numCourts, numRounds);
-
     window.__PB_LAST_RESULT__ = result;
 
-    if (preserveScores && window.__PB_SCORES__) {
-      document.querySelectorAll(".score-input").forEach(input => {
-        const r = input.dataset.round;
-        const m = input.dataset.match;
-        const t = input.dataset.team;
-        const key = `${r}-${m}`;
-        if (window.__PB_SCORES__[key] && window.__PB_SCORES__[key][t] != null) {
-          input.value = window.__PB_SCORES__[key][t];
-        }
-      });
-      updateRankings();
-    }
+    render(result, players, numCourts, numRounds);
 
     autoSaveState();
 
@@ -1346,7 +1339,8 @@ btnNewSeed.addEventListener("click", () => {
 });
 
 btnGenerate.addEventListener("click", () => {
-  generateSession(false);
+  const hasScores = Object.keys(window.__PB_SCORES__).length > 0;
+  generateSession(hasScores);
 });
 
 // Écoute instantanée sur la saisie des scores (input + change)
