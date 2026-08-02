@@ -370,6 +370,7 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
   const benchCount = new Map();
   const singlesCount = new Map();
   const singlesPairCounts = new Map();
+  const benchPairCounts = new Map();
 
   const rounds = [];
   const benches = [];
@@ -1145,7 +1146,8 @@ function generateSession(preserveScores = false) {
       throw new Error("Veuillez entrer au moins 4 joueurs.");
     }
 
-    const maxUsableCourts = Math.floor(players.length / 4);
+    // Prendre en compte les 2 terrains possibles à 6 joueurs (1 double + 1 simple)
+    const maxUsableCourts = (players.length === 6 && numCourts >= 2) ? 2 : Math.floor(players.length / 4);
     if (numCourts > maxUsableCourts && maxUsableCourts > 0 && elWarning) {
       elWarning.hidden = false;
       elWarning.textContent = `Attention : ${numCourts} terrain(s) demandé(s), mais seulement ${maxUsableCourts} utilisé(s) pour ${players.length} joueur(s).`;
