@@ -28,6 +28,24 @@
     <div id="autosaveBadge" class="save-badge">💾 Sauvegardé</div>
   </header>
 
+  <!-- STEPPER DE SESSION -->
+  <div class="session-stepper container">
+    <div class="step active" id="step1">
+      <span class="step-num">1</span>
+      <span class="step-label">Configuration</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step" id="step2">
+      <span class="step-num">2</span>
+      <span class="step-label">Matchs & Scores</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step" id="step3">
+      <span class="step-num">3</span>
+      <span class="step-label">Classement</span>
+    </div>
+  </div>
+
   <main class="container grid">
     <!-- SECTION PARAMÈTRES -->
     <section class="card">
@@ -71,7 +89,7 @@
         </div>
       </details>
 
-      <!-- OPTIONS D'ALGORITHME AVANCÉES (AVEC INFOBULLES) -->
+      <!-- OPTIONS D'ALGORITHME AVANCÉES -->
       <details class="details">
         <summary>⚙️ Options d'Algorithme Avancées</summary>
         <div class="row">
@@ -115,19 +133,30 @@
           </div>
         </div>
 
-        <div class="checkbox">
-          <input id="squareRepeats" type="checkbox" checked />
-          <label for="squareRepeats">
-            Pénalités quadratiques pour les répétitions
-            <span class="tooltip" data-tooltip="Interdit quasi totalement qu'un duo rejoue une 3e fois ensemble">ℹ️</span>
+        <!-- SWITCHES BASCULES -->
+        <div class="switch-row">
+          <label class="switch-container">
+            <span class="switch-text">
+              Pénalités quadratiques pour les répétitions
+              <span class="tooltip" data-tooltip="Interdit quasi totalement qu'un duo rejoue une 3e fois ensemble">ℹ️</span>
+            </span>
+            <span class="switch">
+              <input id="squareRepeats" type="checkbox" checked />
+              <span class="slider"></span>
+            </span>
           </label>
         </div>
 
-        <div class="checkbox">
-          <input id="avoidB2B" type="checkbox" checked />
-          <label for="avoidB2B">
-            Éviter le banc deux fois de suite
-            <span class="tooltip" data-tooltip="Empêche un joueur de passer 2 fois de suite sur le banc">ℹ️</span>
+        <div class="switch-row">
+          <label class="switch-container">
+            <span class="switch-text">
+              Éviter le banc deux fois de suite
+              <span class="tooltip" data-tooltip="Empêche un joueur de passer 2 fois de suite sur le banc">ℹ️</span>
+            </span>
+            <span class="switch">
+              <input id="avoidB2B" type="checkbox" checked />
+              <span class="slider"></span>
+            </span>
           </label>
         </div>
       </details>
