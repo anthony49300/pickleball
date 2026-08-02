@@ -363,13 +363,14 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
 
   shuffleInPlace(players, rng);
   const benchQueue = [...players];
-  const singlesQueue = [...players];
 
   const teammateCount = new Map();
   const opponentCount = new Map();
   const playsCount = new Map();
   const benchCount = new Map();
   const benchPairCounts = new Map();
+  const singlesCount = new Map();
+  const singlesPairCounts = new Map();
 
   const rounds = [];
   const benches = [];
@@ -401,35 +402,60 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
       benchesNeeded = 0;
       benched = [];
 
-      // Sélectionner équitablement les 2 joueurs pour le simple via une file dédiée
-      const singlesPlayers = [];
-      for (const p of activePlayers) {
-        if (!singlesQueue.includes(p)) singlesQueue.push(p);
+      // Évaluation des 15 duos possibles en simple pour éviter le blocage en duos fixes
+      // et varier à la fois le simple et la composition du terrain de double.
+      const candidatePairs = [];
+      for (let i = 0; i < activePlayers.length; i++) {
+        for (let j = i + 1; j < activePlayers.length; j++) {
+          candidatePairs.push([activePlayers[i], activePlayers[j]]);
+        }
       }
 
-      const activeSet = new Set(activePlayers);
-      let guard = 0;
+      let bestPair = null;
+      let minPairCost = Infinity;
 
-      while (singlesPlayers.length < 2 && guard < singlesQueue.length * 3) {
-        guard++;
-        const p = singlesQueue.shift();
-        if (!activeSet.has(p)) continue;
+      const shuffledPairs = shuffled(candidatePairs, rng);
 
-        const avoidB2B = options.avoidB2B && lastSingles.has(p);
-        const hasOtherCandidates = singlesQueue.some(
-          candidate => activeSet.has(candidate) && !lastSingles.has(candidate) && !singlesPlayers.includes(candidate)
-        );
+      for (const [p1, p2] of shuffledPairs) {
+        let cost = 0;
 
-        if (avoidB2B && hasOtherCandidates) {
-          singlesQueue.push(p);
-          continue;
+        // 1. Éviter le passage consécutif en simple (B2B) si activé
+        if (options.avoidB2B) {
+          if (lastSingles.has(p1)) cost += 1000;
+          if (lastSingles.has(p2)) cost += 1000;
         }
 
-        singlesPlayers.push(p);
-        singlesQueue.push(p);
+        // 2. Équilibrer les passages globaux en simple pour chaque joueur
+        const c1 = singlesCount.get(p1) ?? 0;
+        const c2 = singlesCount.get(p2) ?? 0;
+        cost += (c1 + c2) * 100;
+
+        // 3. Pénaliser la répétition de la MÊME affiche de simple
+        const pairRepeats = getCount(singlesPairCounts, pairKey(p1, p2));
+        cost += pairRepeats * 500;
+
+        // 4. Évaluer la qualité de la rencontre de double générée pour les 4 autres joueurs
+        const doublesPlayers = activePlayers.filter(p => p !== p1 && p !== p2);
+        const { score: doubleScore } = bestSplitForFour(
+          doublesPlayers,
+          teammateCount, opponentCount, playsCount,
+          options.wT, options.wO, options.wP, options.squareRepeats
+        );
+        cost += doubleScore;
+
+        if (cost < minPairCost) {
+          minPairCost = cost;
+          bestPair = [p1, p2];
+        }
       }
 
+      const singlesPlayers = bestPair;
       lastSingles = new Set(singlesPlayers);
+
+      // Mettre à jour les compteurs spécifiques au simple
+      incCount(singlesCount, singlesPlayers[0]);
+      incCount(singlesCount, singlesPlayers[1]);
+      incCount(singlesPairCounts, pairKey(singlesPlayers[0], singlesPlayers[1]));
 
       // Les 4 autres joueurs sont envoyés en double
       const doublesPlayers = activePlayers.filter(p => !singlesPlayers.includes(p));
@@ -500,7 +526,7 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
     rounds.push(matches);
   }
 
-  return { rounds, benches, absents, stats: { teammateCount, opponentCount, playsCount, benchCount } };
+  return { rounds, benches, absents, stats: { teammateCount, opponentCount, playsCount, benchCount, singlesCount } };
 }
 
 
