@@ -71,42 +71,64 @@
         </div>
       </details>
 
+      <!-- OPTIONS D'ALGORITHME AVANCÉES (AVEC INFOBULLES) -->
       <details class="details">
         <summary>⚙️ Options d'Algorithme Avancées</summary>
         <div class="row">
           <div>
-            <label class="label" for="wT">Poids Partenaires</label>
+            <label class="label" for="wT">
+              Poids Partenaires
+              <span class="tooltip" data-tooltip="Évite de rejouer avec la même personne dans son équipe">ℹ️</span>
+            </label>
             <input id="wT" type="number" min="0" max="20" step="0.5" value="5" />
           </div>
           <div>
-            <label class="label" for="wO">Poids Adversaires</label>
+            <label class="label" for="wO">
+              Poids Adversaires
+              <span class="tooltip" data-tooltip="Pénalise la répétition des mêmes affrontements en face-à-face">ℹ️</span>
+            </label>
             <input id="wO" type="number" min="0" max="20" step="0.5" value="2" />
           </div>
           <div>
-            <label class="label" for="wP">Équilibre de Jeu</label>
+            <label class="label" for="wP">
+              Équilibre de Jeu
+              <span class="tooltip" data-tooltip="Priorise les joueurs qui ont le moins joué pour égaliser le temps de jeu">ℹ️</span>
+            </label>
             <input id="wP" type="number" min="0" max="10" step="0.25" value="1" />
           </div>
         </div>
 
         <div class="row">
           <div>
-            <label class="label" for="beamWidth">Largeur Faisceau</label>
+            <label class="label" for="beamWidth">
+              Largeur Faisceau
+              <span class="tooltip" data-tooltip="80 = Recherche très précise. 10 = Calcul ultra rapide">ℹ️</span>
+            </label>
             <input id="beamWidth" type="number" min="10" max="500" step="10" value="80" />
           </div>
           <div>
-            <label class="label" for="partnerK">Présélection</label>
+            <label class="label" for="partnerK">
+              Présélection
+              <span class="tooltip" data-tooltip="Nombre de partenaires potentiels testés par joueur pour accélérer le calcul">ℹ️</span>
+            </label>
             <input id="partnerK" type="number" min="4" max="30" step="1" value="10" />
           </div>
         </div>
 
         <div class="checkbox">
           <input id="squareRepeats" type="checkbox" checked />
-          <label for="squareRepeats">Pénalités quadratiques pour les répétitions</label>
+          <label for="squareRepeats">
+            Pénalités quadratiques pour les répétitions
+            <span class="tooltip" data-tooltip="Interdit quasi totalement qu'un duo rejoue une 3e fois ensemble">ℹ️</span>
+          </label>
         </div>
 
         <div class="checkbox">
           <input id="avoidB2B" type="checkbox" checked />
-          <label for="avoidB2B">Éviter le banc deux fois de suite</label>
+          <label for="avoidB2B">
+            Éviter le banc deux fois de suite
+            <span class="tooltip" data-tooltip="Empêche un joueur de passer 2 fois de suite sur le banc">ℹ️</span>
+          </label>
         </div>
       </details>
 
