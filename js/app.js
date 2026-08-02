@@ -108,7 +108,7 @@ function incCount(map, key, amt = 1) {
  */
 function fmtMatch(match) {
   const [t1, t2] = match;
-  return `${t1[0]} & ${t1[1]} contre ${t2[0]} & ${t2[1]}`;
+  return `${t1.join(" & ")} contre ${t2.join(" & ")}`;
 }
 
 /**
@@ -181,8 +181,9 @@ function bestSplitForFour(p4, teammateCount, opponentCount, playsCount, wT, wO, 
 
 /**
  * Sélectionne équitablement les joueurs qui iront sur le banc pour un tour donné.
+ * Évite les passages consécutifs et réduit la répétition des mêmes duos sur le banc.
  */
-function pickBenchesByQueue(availablePlayers, benchesNeeded, benchQueue, lastBenchedSet, avoidB2B = true) {
+function pickBenchesByQueue(availablePlayers, benchesNeeded, benchQueue, lastBenchedSet, avoidB2B = true, benchPairCounts = new Map()) {
   if (benchesNeeded <= 0) return [];
   const benched = [];
   const availableSet = new Set(availablePlayers);
@@ -208,8 +209,40 @@ function pickBenchesByQueue(availablePlayers, benchesNeeded, benchQueue, lastBen
       continue;
     }
 
+    // Évite d'associer deux joueurs qui ont déjà partagé le banc ensemble
+    let pairConflict = false;
+    if (benched.length > 0 && benchPairCounts) {
+      for (const existing of benched) {
+        if ((benchPairCounts.get(pairKey(p, existing)) ?? 0) > 0) {
+          const hasOtherPairCandidates = benchQueue.some(c => 
+            availableSet.has(c) && 
+            !benched.includes(c) && 
+            (!avoidB2B || !lastBenchedSet.has(c)) &&
+            !benched.some(b => (benchPairCounts.get(pairKey(c, b)) ?? 0) > 0)
+          );
+          if (hasOtherPairCandidates) {
+            pairConflict = true;
+            break;
+          }
+        }
+      }
+    }
+
+    if (pairConflict) {
+      benchQueue.push(p);
+      continue;
+    }
+
     benched.push(p);
     benchQueue.push(p);
+  }
+
+  if (benchPairCounts) {
+    for (let i = 0; i < benched.length; i++) {
+      for (let j = i + 1; j < benched.length; j++) {
+        incCount(benchPairCounts, pairKey(benched[i], benched[j]));
+      }
+    }
   }
 
   return benched;
@@ -335,11 +368,15 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
   const opponentCount = new Map();
   const playsCount = new Map();
   const benchCount = new Map();
+  const singlesCount = new Map();
+  const singlesPairCounts = new Map();
+  const benchPairCounts = new Map();
 
   const rounds = [];
   const benches = [];
   const absents = [];
   let lastBenched = new Set();
+  let lastSingles = new Set();
 
   for (let r = 0; r < numRounds; r++) {
     const roundNumber = r + 1;
@@ -353,44 +390,127 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
     const inactivePlayers = players.filter(p => !activePlayers.includes(p));
     absents.push(inactivePlayers);
 
-    const targetMatches = Math.min(numCourts, Math.floor(activePlayers.length / 4));
-    const need = 4 * targetMatches;
-    const benchesNeeded = activePlayers.length - need;
+    let targetMatches = Math.min(numCourts, Math.floor(activePlayers.length / 4));
+    let need = 4 * targetMatches;
+    let benchesNeeded = activePlayers.length - need;
 
-    let benched = pickBenchesByQueue(activePlayers, benchesNeeded, benchQueue, lastBenched, options.avoidB2B);
-    let playing = activePlayers.filter(p => !benched.includes(p));
+    let matches = [];
+    let benched = [];
 
-    const matches = beamSearchRound(
-      playing, targetMatches, teammateCount, opponentCount, playsCount,
-      {
-        wT: options.wT, wO: options.wO, wP: options.wP,
-        beamWidth: options.beamWidth, partnerK: options.partnerK, squareRepeats: options.squareRepeats
-      },
-      rng
-    );
+    // Cas spécifique : 6 joueurs et au moins 2 terrains -> 1 Double (4 j.) + 1 Simple (2 j.) = 0 personne sur le banc
+    if (numCourts >= 2 && activePlayers.length === 6) {
+      benchesNeeded = 0;
+      benched = [];
+
+      // Évaluation des 15 duos possibles en simple pour éviter le blocage en duos fixes
+      const candidatePairs = [];
+      for (let i = 0; i < activePlayers.length; i++) {
+        for (let j = i + 1; j < activePlayers.length; j++) {
+          candidatePairs.push([activePlayers[i], activePlayers[j]]);
+        }
+      }
+
+      let bestPair = null;
+      let minPairCost = Infinity;
+
+      const shuffledPairs = shuffled(candidatePairs, rng);
+
+      for (const [p1, p2] of shuffledPairs) {
+        let cost = 0;
+
+        // 1. Éviter le passage consécutif en simple (B2B) si activé
+        if (options.avoidB2B) {
+          if (lastSingles.has(p1)) cost += 1000;
+          if (lastSingles.has(p2)) cost += 1000;
+        }
+
+        // 2. Équilibrer les passages globaux en simple pour chaque joueur
+        const c1 = singlesCount.get(p1) ?? 0;
+        const c2 = singlesCount.get(p2) ?? 0;
+        cost += (c1 + c2) * 100;
+
+        // 3. Pénaliser la répétition de la MÊME affiche de simple
+        const pairRepeats = getCount(singlesPairCounts, pairKey(p1, p2));
+        cost += pairRepeats * 500;
+
+        // 4. Évaluer la qualité de la rencontre de double générée pour les 4 autres joueurs
+        const doublesPlayers = activePlayers.filter(p => p !== p1 && p !== p2);
+        const { score: doubleScore } = bestSplitForFour(
+          doublesPlayers,
+          teammateCount, opponentCount, playsCount,
+          options.wT, options.wO, options.wP, options.squareRepeats
+        );
+        cost += doubleScore;
+
+        if (cost < minPairCost) {
+          minPairCost = cost;
+          bestPair = [p1, p2];
+        }
+      }
+
+      const singlesPlayers = bestPair;
+      lastSingles = new Set(singlesPlayers);
+
+      // Mettre à jour les compteurs spécifiques au simple
+      incCount(singlesCount, singlesPlayers[0]);
+      incCount(singlesCount, singlesPlayers[1]);
+      incCount(singlesPairCounts, pairKey(singlesPlayers[0], singlesPlayers[1]));
+
+      // Les 4 autres joueurs sont envoyés en double
+      const doublesPlayers = activePlayers.filter(p => !singlesPlayers.includes(p));
+      const doublesMatches = beamSearchRound(
+        doublesPlayers, 1, teammateCount, opponentCount, playsCount,
+        {
+          wT: options.wT, wO: options.wO, wP: options.wP,
+          beamWidth: options.beamWidth, partnerK: options.partnerK, squareRepeats: options.squareRepeats
+        },
+        rng
+      );
+
+      matches = [...doublesMatches, [[singlesPlayers[0]], [singlesPlayers[1]]]];
+    } else {
+      benched = pickBenchesByQueue(activePlayers, benchesNeeded, benchQueue, lastBenched, options.avoidB2B, benchPairCounts);
+      let playing = activePlayers.filter(p => !benched.includes(p));
+
+      matches = beamSearchRound(
+        playing, targetMatches, teammateCount, opponentCount, playsCount,
+        {
+          wT: options.wT, wO: options.wO, wP: options.wP,
+          beamWidth: options.beamWidth, partnerK: options.partnerK, squareRepeats: options.squareRepeats
+        },
+        rng
+      );
+    }
 
     const activeInMatch = new Set();
     for (const match of matches) {
       const [t1, t2] = match;
-      const [a, b] = t1;
-      const [c, d] = t2;
 
-      incCount(teammateCount, pairKey(a, b));
-      incCount(teammateCount, pairKey(c, d));
+      if (t1.length === 2 && t2.length === 2) {
+        const [a, b] = t1;
+        const [c, d] = t2;
 
-      for (const p of [a, b, c, d]) {
+        incCount(teammateCount, pairKey(a, b));
+        incCount(teammateCount, pairKey(c, d));
+
+        for (const x of [a, b]) {
+          for (const y of [c, d]) {
+            incCount(opponentCount, pairKey(x, y));
+          }
+        }
+      } else if (t1.length === 1 && t2.length === 1) {
+        const a = t1[0];
+        const b = t2[0];
+        incCount(opponentCount, pairKey(a, b));
+      }
+
+      for (const p of [...t1, ...t2]) {
         playsCount.set(p, (playsCount.get(p) ?? 0) + 1);
         activeInMatch.add(p);
       }
-
-      for (const x of [a, b]) {
-        for (const y of [c, d]) {
-          incCount(opponentCount, pairKey(x, y));
-        }
-      }
     }
 
-    for (const p of playing) {
+    for (const p of activePlayers) {
       if (!activeInMatch.has(p) && !benched.includes(p)) benched.push(p);
     }
 
@@ -405,7 +525,7 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
     rounds.push(matches);
   }
 
-  return { rounds, benches, absents, stats: { teammateCount, opponentCount, playsCount, benchCount } };
+  return { rounds, benches, absents, stats: { teammateCount, opponentCount, playsCount, benchCount, singlesCount } };
 }
 
 
@@ -637,13 +757,13 @@ function render(result, players, numCourts, numRounds) {
         matchCard.innerHTML = `
           <span class="court-badge">${courtLabel}</span>
           <div class="team-score">
-            <span class="team">${t1[0]} & ${t1[1]}</span>
+            <span class="team">${t1.join(" & ")}</span>
             <input type="number" class="score-input" data-round="${idx}" data-match="${mIdx}" data-team="1" min="0" placeholder="-" />
           </div>
           <span class="vs">VS</span>
           <div class="team-score">
             <input type="number" class="score-input" data-round="${idx}" data-match="${mIdx}" data-team="2" min="0" placeholder="-" />
-            <span class="team">${t2[0]} & ${t2[1]}</span>
+            <span class="team">${t2.join(" & ")}</span>
           </div>
         `;
         matchesList.appendChild(matchCard);
@@ -665,10 +785,23 @@ function render(result, players, numCourts, numRounds) {
   const tmTop = topPairs(stats.teammateCount).map(([k, v]) => `${k.replace("||", " & ")} (${v})`).join(", ");
   const opTop = topPairs(stats.opponentCount).map(([k, v]) => `${k.replace("||", " vs ")} (${v})`).join(", ");
 
+  // Détection de la présence de matchs en simple dans la session
+  const hasSingles = stats.singlesCount && Array.from(stats.singlesCount.values()).some(v => v > 0);
+  const ratioLabel = hasSingles
+    ? "Ratio individuel (J=Joué, S=Simple, B=Banc)"
+    : "Ratio individuel (J=Joué, B=Banc)";
+
   const fairnessLine = players
     .slice()
     .sort((a, b) => a < b ? -1 : 1)
-    .map(p => `<strong>${p}</strong> : ${stats.playsCount.get(p) ?? 0}J / ${stats.benchCount.get(p) ?? 0}B`)
+    .map(p => {
+      const j = stats.playsCount.get(p) ?? 0;
+      const b = stats.benchCount.get(p) ?? 0;
+      const s = stats.singlesCount?.get(p) ?? 0;
+      return hasSingles
+        ? `<strong>${p}</strong> : ${j}J / ${s}S / ${b}B`
+        : `<strong>${p}</strong> : ${j}J / ${b}B`;
+    })
     .join(" · ");
 
   if (elDiag) {
@@ -677,7 +810,7 @@ function render(result, players, numCourts, numRounds) {
       <p><strong>Équilibre Banc :</strong> Min ${minBen} - Max ${maxBen} passages</p>
       <p><strong>Paires les plus fréquentes :</strong> ${tmTop || "Aucune"}</p>
       <p><strong>Oppositions les plus fréquentes :</strong> ${opTop || "Aucune"}</p>
-      <p><strong>Ratio individuel (J=Joué, B=Banc) :</strong> ${fairnessLine}</p>
+      <p><strong>${ratioLabel} :</strong> ${fairnessLine}</p>
     `;
   }
 
@@ -800,8 +933,8 @@ function updateRankings() {
         updateTeamStats(t1, s1, s2);
         updateTeamStats(t2, s2, s1);
 
-        if (s1 > s2) incCount(pairWins, pairKey(t1[0], t1[1]));
-        if (s2 > s1) incCount(pairWins, pairKey(t2[0], t2[1]));
+        if (s1 > s2 && t1.length > 1) incCount(pairWins, pairKey(t1[0], t1[1]));
+        if (s2 > s1 && t2.length > 1) incCount(pairWins, pairKey(t2[0], t2[1]));
       }
     });
   });
@@ -1013,7 +1146,8 @@ function generateSession(preserveScores = false) {
       throw new Error("Veuillez entrer au moins 4 joueurs.");
     }
 
-    const maxUsableCourts = Math.floor(players.length / 4);
+    // Prendre en compte les 2 terrains possibles à 6 joueurs (1 double + 1 simple)
+    const maxUsableCourts = (players.length === 6 && numCourts >= 2) ? 2 : Math.floor(players.length / 4);
     if (numCourts > maxUsableCourts && maxUsableCourts > 0 && elWarning) {
       elWarning.hidden = false;
       elWarning.textContent = `Attention : ${numCourts} terrain(s) demandé(s), mais seulement ${maxUsableCourts} utilisé(s) pour ${players.length} joueur(s).`;
