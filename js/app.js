@@ -363,6 +363,7 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
 
   shuffleInPlace(players, rng);
   const benchQueue = [...players];
+  const singlesQueue = [...players];
 
   const teammateCount = new Map();
   const opponentCount = new Map();
@@ -374,6 +375,7 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
   const benches = [];
   const absents = [];
   let lastBenched = new Set();
+  let lastSingles = new Set();
 
   for (let r = 0; r < numRounds; r++) {
     const roundNumber = r + 1;
@@ -398,20 +400,49 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
     if (numCourts >= 2 && activePlayers.length === 6) {
       benchesNeeded = 0;
       benched = [];
+
+      // Sélectionner équitablement les 2 joueurs pour le simple via une file dédiée
+      const singlesPlayers = [];
+      for (const p of activePlayers) {
+        if (!singlesQueue.includes(p)) singlesQueue.push(p);
+      }
+
+      const activeSet = new Set(activePlayers);
+      let guard = 0;
+
+      while (singlesPlayers.length < 2 && guard < singlesQueue.length * 3) {
+        guard++;
+        const p = singlesQueue.shift();
+        if (!activeSet.has(p)) continue;
+
+        const avoidB2B = options.avoidB2B && lastSingles.has(p);
+        const hasOtherCandidates = singlesQueue.some(
+          candidate => activeSet.has(candidate) && !lastSingles.has(candidate) && !singlesPlayers.includes(candidate)
+        );
+
+        if (avoidB2B && hasOtherCandidates) {
+          singlesQueue.push(p);
+          continue;
+        }
+
+        singlesPlayers.push(p);
+        singlesQueue.push(p);
+      }
+
+      lastSingles = new Set(singlesPlayers);
+
+      // Les 4 autres joueurs sont envoyés en double
+      const doublesPlayers = activePlayers.filter(p => !singlesPlayers.includes(p));
       const doublesMatches = beamSearchRound(
-        activePlayers, 1, teammateCount, opponentCount, playsCount,
+        doublesPlayers, 1, teammateCount, opponentCount, playsCount,
         {
           wT: options.wT, wO: options.wO, wP: options.wP,
           beamWidth: options.beamWidth, partnerK: options.partnerK, squareRepeats: options.squareRepeats
         },
         rng
       );
-      matches = [...doublesMatches];
-      const usedInDoubles = new Set(doublesMatches.flatMap(m => [...m[0], ...m[1]]));
-      const singlesPlayers = activePlayers.filter(p => !usedInDoubles.has(p));
-      if (singlesPlayers.length === 2) {
-        matches.push([[singlesPlayers[0]], [singlesPlayers[1]]]);
-      }
+
+      matches = [...doublesMatches, [[singlesPlayers[0]], [singlesPlayers[1]]]];
     } else {
       benched = pickBenchesByQueue(activePlayers, benchesNeeded, benchQueue, lastBenched, options.avoidB2B, benchPairCounts);
       let playing = activePlayers.filter(p => !benched.includes(p));
