@@ -108,7 +108,7 @@ function incCount(map, key, amt = 1) {
  */
 function fmtMatch(match) {
   const [t1, t2] = match;
-  return `${t1[0]} & ${t1[1]} contre ${t2[0]} & ${t2[1]}`;
+  return `${t1.join(" & ")} contre ${t2.join(" & ")}`;
 }
 
 /**
@@ -181,8 +181,9 @@ function bestSplitForFour(p4, teammateCount, opponentCount, playsCount, wT, wO, 
 
 /**
  * Sélectionne équitablement les joueurs qui iront sur le banc pour un tour donné.
+ * Évite les passages consécutifs et réduit la répétition des mêmes duos sur le banc.
  */
-function pickBenchesByQueue(availablePlayers, benchesNeeded, benchQueue, lastBenchedSet, avoidB2B = true) {
+function pickBenchesByQueue(availablePlayers, benchesNeeded, benchQueue, lastBenchedSet, avoidB2B = true, benchPairCounts = new Map()) {
   if (benchesNeeded <= 0) return [];
   const benched = [];
   const availableSet = new Set(availablePlayers);
@@ -208,8 +209,40 @@ function pickBenchesByQueue(availablePlayers, benchesNeeded, benchQueue, lastBen
       continue;
     }
 
+    // Évite d'associer deux joueurs qui ont déjà partagé le banc ensemble
+    let pairConflict = false;
+    if (benched.length > 0 && benchPairCounts) {
+      for (const existing of benched) {
+        if ((benchPairCounts.get(pairKey(p, existing)) ?? 0) > 0) {
+          const hasOtherPairCandidates = benchQueue.some(c => 
+            availableSet.has(c) && 
+            !benched.includes(c) && 
+            (!avoidB2B || !lastBenchedSet.has(c)) &&
+            !benched.some(b => (benchPairCounts.get(pairKey(c, b)) ?? 0) > 0)
+          );
+          if (hasOtherPairCandidates) {
+            pairConflict = true;
+            break;
+          }
+        }
+      }
+    }
+
+    if (pairConflict) {
+      benchQueue.push(p);
+      continue;
+    }
+
     benched.push(p);
     benchQueue.push(p);
+  }
+
+  if (benchPairCounts) {
+    for (let i = 0; i < benched.length; i++) {
+      for (let j = i + 1; j < benched.length; j++) {
+        incCount(benchPairCounts, pairKey(benched[i], benched[j]));
+      }
+    }
   }
 
   return benched;
@@ -335,6 +368,7 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
   const opponentCount = new Map();
   const playsCount = new Map();
   const benchCount = new Map();
+  const benchPairCounts = new Map();
 
   const rounds = [];
   const benches = [];
@@ -353,44 +387,74 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
     const inactivePlayers = players.filter(p => !activePlayers.includes(p));
     absents.push(inactivePlayers);
 
-    const targetMatches = Math.min(numCourts, Math.floor(activePlayers.length / 4));
-    const need = 4 * targetMatches;
-    const benchesNeeded = activePlayers.length - need;
+    let targetMatches = Math.min(numCourts, Math.floor(activePlayers.length / 4));
+    let need = 4 * targetMatches;
+    let benchesNeeded = activePlayers.length - need;
 
-    let benched = pickBenchesByQueue(activePlayers, benchesNeeded, benchQueue, lastBenched, options.avoidB2B);
-    let playing = activePlayers.filter(p => !benched.includes(p));
+    let matches = [];
+    let benched = [];
 
-    const matches = beamSearchRound(
-      playing, targetMatches, teammateCount, opponentCount, playsCount,
-      {
-        wT: options.wT, wO: options.wO, wP: options.wP,
-        beamWidth: options.beamWidth, partnerK: options.partnerK, squareRepeats: options.squareRepeats
-      },
-      rng
-    );
+    // Cas spécifique : 6 joueurs et au moins 2 terrains -> 1 Double (4 j.) + 1 Simple (2 j.) = 0 personne sur le banc
+    if (numCourts >= 2 && activePlayers.length === 6) {
+      benchesNeeded = 0;
+      benched = [];
+      const doublesMatches = beamSearchRound(
+        activePlayers, 1, teammateCount, opponentCount, playsCount,
+        {
+          wT: options.wT, wO: options.wO, wP: options.wP,
+          beamWidth: options.beamWidth, partnerK: options.partnerK, squareRepeats: options.squareRepeats
+        },
+        rng
+      );
+      matches = [...doublesMatches];
+      const usedInDoubles = new Set(doublesMatches.flatMap(m => [...m[0], ...m[1]]));
+      const singlesPlayers = activePlayers.filter(p => !usedInDoubles.has(p));
+      if (singlesPlayers.length === 2) {
+        matches.push([[singlesPlayers[0]], [singlesPlayers[1]]]);
+      }
+    } else {
+      benched = pickBenchesByQueue(activePlayers, benchesNeeded, benchQueue, lastBenched, options.avoidB2B, benchPairCounts);
+      let playing = activePlayers.filter(p => !benched.includes(p));
+
+      matches = beamSearchRound(
+        playing, targetMatches, teammateCount, opponentCount, playsCount,
+        {
+          wT: options.wT, wO: options.wO, wP: options.wP,
+          beamWidth: options.beamWidth, partnerK: options.partnerK, squareRepeats: options.squareRepeats
+        },
+        rng
+      );
+    }
 
     const activeInMatch = new Set();
     for (const match of matches) {
       const [t1, t2] = match;
-      const [a, b] = t1;
-      const [c, d] = t2;
 
-      incCount(teammateCount, pairKey(a, b));
-      incCount(teammateCount, pairKey(c, d));
+      if (t1.length === 2 && t2.length === 2) {
+        const [a, b] = t1;
+        const [c, d] = t2;
 
-      for (const p of [a, b, c, d]) {
+        incCount(teammateCount, pairKey(a, b));
+        incCount(teammateCount, pairKey(c, d));
+
+        for (const x of [a, b]) {
+          for (const y of [c, d]) {
+            incCount(opponentCount, pairKey(x, y));
+          }
+        }
+      } else if (t1.length === 1 && t2.length === 1) {
+        const a = t1[0];
+        const b = t2[0];
+        incCount(opponentCount, pairKey(a, b));
+      }
+
+      for (const p of [...t1, ...t2]) {
         playsCount.set(p, (playsCount.get(p) ?? 0) + 1);
         activeInMatch.add(p);
       }
-
-      for (const x of [a, b]) {
-        for (const y of [c, d]) {
-          incCount(opponentCount, pairKey(x, y));
-        }
-      }
     }
 
-    for (const p of playing) {
+    for (const p of activePlayers) {
       if (!activeInMatch.has(p) && !benched.includes(p)) benched.push(p);
     }
 
@@ -637,13 +701,13 @@ function render(result, players, numCourts, numRounds) {
         matchCard.innerHTML = `
           <span class="court-badge">${courtLabel}</span>
           <div class="team-score">
-            <span class="team">${t1[0]} & ${t1[1]}</span>
+            <span class="team">${t1.join(" & ")}</span>
             <input type="number" class="score-input" data-round="${idx}" data-match="${mIdx}" data-team="1" min="0" placeholder="-" />
           </div>
           <span class="vs">VS</span>
           <div class="team-score">
             <input type="number" class="score-input" data-round="${idx}" data-match="${mIdx}" data-team="2" min="0" placeholder="-" />
-            <span class="team">${t2[0]} & ${t2[1]}</span>
+            <span class="team">${t2.join(" & ")}</span>
           </div>
         `;
         matchesList.appendChild(matchCard);
@@ -800,8 +864,8 @@ function updateRankings() {
         updateTeamStats(t1, s1, s2);
         updateTeamStats(t2, s2, s1);
 
-        if (s1 > s2) incCount(pairWins, pairKey(t1[0], t1[1]));
-        if (s2 > s1) incCount(pairWins, pairKey(t2[0], t2[1]));
+        if (s1 > s2 && t1.length > 1) incCount(pairWins, pairKey(t1[0], t1[1]));
+        if (s2 > s1 && t2.length > 1) incCount(pairWins, pairKey(t2[0], t2[1]));
       }
     });
   });
