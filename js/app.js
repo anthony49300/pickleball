@@ -79,8 +79,24 @@ function generateSeed() {
 
 
 // =============================================================================
-// UTILITAIRES DE MATCHMAKING & COMPTAGE DES PAIRS
+// UTILITAIRES D'AFFICHAGE (AVATARS) & MATCHMAKING
 // =============================================================================
+
+/**
+ * Génère le code HTML de la pastille avatar à partir du nom d'un joueur.
+ * Exemple : "Marc" -> "MA", "Julien Dupont" -> "JD"
+ */
+function getPlayerAvatarHTML(name) {
+  if (!name) return "";
+  const cleanName = name.trim();
+  const parts = cleanName.split(/\s+/);
+  
+  const initials = parts.length > 1 
+    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    : cleanName.slice(0, 2).toUpperCase();
+    
+  return `<span class="player-avatar">${initials}</span>`;
+}
 
 /**
  * Crée une clé unique et ordonnée pour représenter une paire de joueurs (ex: "Alice||Bob").
@@ -104,7 +120,7 @@ function incCount(map, key, amt = 1) {
 }
 
 /**
- * Formate l'affichage texte d'une rencontre.
+ * Formate l'affichage texte brut d'une rencontre pour la copie.
  */
 function fmtMatch(match) {
   const [t1, t2] = match;
@@ -181,7 +197,6 @@ function bestSplitForFour(p4, teammateCount, opponentCount, playsCount, wT, wO, 
 
 /**
  * Sélectionne équitablement les joueurs qui iront sur le banc pour un tour donné.
- * Évite les passages consécutifs et réduit la répétition des mêmes duos sur le banc.
  */
 function pickBenchesByQueue(availablePlayers, benchesNeeded, benchQueue, lastBenchedSet, avoidB2B = true, benchPairCounts = new Map()) {
   if (benchesNeeded <= 0) return [];
@@ -209,7 +224,6 @@ function pickBenchesByQueue(availablePlayers, benchesNeeded, benchQueue, lastBen
       continue;
     }
 
-    // Évite d'associer deux joueurs qui ont déjà partagé le banc ensemble
     let pairConflict = false;
     if (benched.length > 0 && benchPairCounts) {
       for (const existing of benched) {
@@ -397,12 +411,11 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
     let matches = [];
     let benched = [];
 
-    // Cas spécifique : 6 joueurs et au moins 2 terrains -> 1 Double (4 j.) + 1 Simple (2 j.) = 0 personne sur le banc
+    // Cas spécifique : 6 joueurs et au moins 2 terrains -> 1 Double + 1 Simple
     if (numCourts >= 2 && activePlayers.length === 6) {
       benchesNeeded = 0;
       benched = [];
 
-      // Évaluation des 15 duos possibles en simple pour éviter le blocage en duos fixes
       const candidatePairs = [];
       for (let i = 0; i < activePlayers.length; i++) {
         for (let j = i + 1; j < activePlayers.length; j++) {
@@ -418,22 +431,18 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
       for (const [p1, p2] of shuffledPairs) {
         let cost = 0;
 
-        // 1. Éviter le passage consécutif en simple (B2B) si activé
         if (options.avoidB2B) {
           if (lastSingles.has(p1)) cost += 1000;
           if (lastSingles.has(p2)) cost += 1000;
         }
 
-        // 2. Équilibrer les passages globaux en simple pour chaque joueur
         const c1 = singlesCount.get(p1) ?? 0;
         const c2 = singlesCount.get(p2) ?? 0;
         cost += (c1 + c2) * 100;
 
-        // 3. Pénaliser la répétition de la MÊME affiche de simple
         const pairRepeats = getCount(singlesPairCounts, pairKey(p1, p2));
         cost += pairRepeats * 500;
 
-        // 4. Évaluer la qualité de la rencontre de double générée pour les 4 autres joueurs
         const doublesPlayers = activePlayers.filter(p => p !== p1 && p !== p2);
         const { score: doubleScore } = bestSplitForFour(
           doublesPlayers,
@@ -451,12 +460,10 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
       const singlesPlayers = bestPair;
       lastSingles = new Set(singlesPlayers);
 
-      // Mettre à jour les compteurs spécifiques au simple
       incCount(singlesCount, singlesPlayers[0]);
       incCount(singlesCount, singlesPlayers[1]);
       incCount(singlesPairCounts, pairKey(singlesPlayers[0], singlesPlayers[1]));
 
-      // Les 4 autres joueurs sont envoyés en double
       const doublesPlayers = activePlayers.filter(p => !singlesPlayers.includes(p));
       const doublesMatches = beamSearchRound(
         doublesPlayers, 1, teammateCount, opponentCount, playsCount,
@@ -587,9 +594,6 @@ let currentHeatmapMode = "teammates";
 // FONCTIONS D'ANALYSE DU FORMULAIRE ET PRESENCE
 // =============================================================================
 
-/**
- * Efface les messages d'erreur et d'avertissement à l'écran.
- */
 function clearMessages() {
   if (elError) elError.hidden = true;
   if (elWarning) elWarning.hidden = true;
@@ -607,7 +611,7 @@ function parseCourtNames() {
 }
 
 /**
- * Synchronise l'interface des plages d'arrivée/départ pour chaque joueur.
+ * Synchronise l'interface des plages d'arrivée/départ pour chaque joueur (avec Avatars).
  */
 function syncPresenceInputs() {
   const players = parsePlayers(elPlayers.value);
@@ -623,7 +627,10 @@ function syncPresenceInputs() {
     const item = document.createElement("div");
     item.className = "presence-item";
     item.innerHTML = `
-      <span><strong>${p}</strong></span>
+      <div style="display:flex; align-items:center; gap:8px;">
+        ${getPlayerAvatarHTML(p)}
+        <strong>${p}</strong>
+      </div>
       <div class="presence-inputs">
         <label style="font-size: 0.75rem;">De</label>
         <input type="number" min="1" max="${totalRounds}" value="${window.__PB_PRESENCE__[p].start}" data-player="${p}" data-type="start" />
@@ -635,7 +642,7 @@ function syncPresenceInputs() {
   });
 }
 
-// Écoute dynamique sur la présence (instantanée sur input et change)
+// Écoute dynamique sur la présence
 ["change", "input"].forEach(evt => {
   elPresenceList.addEventListener(evt, (e) => {
     const p = e.target.dataset.player;
@@ -663,12 +670,9 @@ elRounds.addEventListener("input", () => {
 
 
 // =============================================================================
-// RENDU VISUEL DU PLANNING (HTML) ET ETAT VIDE
+// RENDU VISUEL DU PLANNING (HTML AVEC AVATARS) ET ETAT VIDE
 // =============================================================================
 
-/**
- * Affiche un visuel neutre lorsqu'aucune session n'est générée ou chargée.
- */
 function renderEmptyState() {
   clearMessages();
   window.__PB_LAST_RESULT__ = null;
@@ -696,7 +700,7 @@ function renderEmptyState() {
 }
 
 /**
- * Construit la structure HTML affichant les terrains, matchs, scores et diagnostics.
+ * Construit la structure HTML affichant les terrains, matchs, scores et avatars.
  */
 function render(result, players, numCourts, numRounds) {
   elSchedule.innerHTML = "";
@@ -754,21 +758,24 @@ function render(result, players, numCourts, numRounds) {
         const matchCard = document.createElement("div");
         matchCard.className = "match-card";
         
-        // Récupération des scores sauvegardés en mémoire pour réinjection direct
         const key = `${idx}-${mIdx}`;
         const savedScore1 = window.__PB_SCORES__[key]?.['1'] ?? "";
         const savedScore2 = window.__PB_SCORES__[key]?.['2'] ?? "";
 
+        // Formater l'affichage des joueurs avec leurs avatars
+        const team1HTML = t1.map(p => `${getPlayerAvatarHTML(p)} ${p}`).join(" & ");
+        const team2HTML = t2.map(p => `${getPlayerAvatarHTML(p)} ${p}`).join(" & ");
+
         matchCard.innerHTML = `
           <span class="court-badge">${courtLabel}</span>
           <div class="team-score">
-            <span class="team">${t1.join(" & ")}</span>
+            <span class="team">${team1HTML}</span>
             <input type="number" class="score-input" data-round="${idx}" data-match="${mIdx}" data-team="1" min="0" placeholder="-" value="${savedScore1}" />
           </div>
           <span class="vs">VS</span>
           <div class="team-score">
             <input type="number" class="score-input" data-round="${idx}" data-match="${mIdx}" data-team="2" min="0" placeholder="-" value="${savedScore2}" />
-            <span class="team">${t2.join(" & ")}</span>
+            <span class="team">${team2HTML}</span>
           </div>
         `;
         matchesList.appendChild(matchCard);
@@ -790,7 +797,6 @@ function render(result, players, numCourts, numRounds) {
   const tmTop = topPairs(stats.teammateCount).map(([k, v]) => `${k.replace("||", " & ")} (${v})`).join(", ");
   const opTop = topPairs(stats.opponentCount).map(([k, v]) => `${k.replace("||", " vs ")} (${v})`).join(", ");
 
-  // Détection de la présence de matchs en simple dans la session
   const hasSingles = stats.singlesCount && Array.from(stats.singlesCount.values()).some(v => v > 0);
   const ratioLabel = hasSingles
     ? "Ratio individuel (J=Joué, S=Simple, B=Banc)"
@@ -834,9 +840,6 @@ function render(result, players, numCourts, numRounds) {
 // RENDU DE LA MATRICE (HEATMAP)
 // =============================================================================
 
-/**
- * Dessine la matrice visuelle des interactions entre partenaires ou adversaires.
- */
 function renderHeatmap() {
   const result = window.__PB_LAST_RESULT__;
   const players = parsePlayers(elPlayers.value);
@@ -893,12 +896,9 @@ btnHmModeOpponents.addEventListener("click", () => {
 
 
 // =============================================================================
-// CLASSEMENT, PODIUM & BADGES
+// CLASSEMENT, PODIUM & BADGES (AVEC AVATARS)
 // =============================================================================
 
-/**
- * Calcule et actualise le tableau des scores, le podium et les badges honorifiques.
- */
 function updateRankings() {
   const result = window.__PB_LAST_RESULT__;
   if (!result) return;
@@ -952,26 +952,29 @@ function updateRankings() {
   
   elRankingSection.hidden = false;
   
-  // Tri selon les règles de départage (Victoires -> Différentiel -> Points marqués)
   const sortedPlayers = Object.entries(playersStats).map(([name, stats]) => {
     return { name, ...stats, diff: stats.pf - stats.pa };
   }).sort((a, b) => {
-    if (b.w !== a.w) return b.w - a.w;        // 1. Victoires
-    if (b.diff !== a.diff) return b.diff - a.diff; // 2. Différentiel (+/-)
-    return b.pf - a.pf;                         // 3. Points marqués (PF)
+    if (b.w !== a.w) return b.w - a.w;
+    if (b.diff !== a.diff) return b.diff - a.diff;
+    return b.pf - a.pf;
   });
 
   renderPodium(sortedPlayers);
   renderBadges(sortedPlayers, pairWins);
 
-  // Rendu du tableau de classement
+  // Injection des avatars dans le tableau du classement
   elRankingTableBody.innerHTML = sortedPlayers.map((p, i) => {
     const diffClass = p.diff > 0 ? "diff-positive" : (p.diff < 0 ? "diff-negative" : "");
     const diffSign = p.diff > 0 ? "+" : "";
     return `
       <tr>
         <td>${i + 1}</td>
-        <td>${p.name}</td>
+        <td>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            ${getPlayerAvatarHTML(p.name)} <span>${p.name}</span>
+          </div>
+        </td>
         <td>${p.m}</td>
         <td>${p.w}</td>
         <td>${p.l}</td>
@@ -982,7 +985,6 @@ function updateRankings() {
     `;
   }).join('');
 
-  // Ajout / Mise à jour de la note de départage explicative sous le tableau
   let noteEl = document.getElementById("rankingTieBreakNote");
   if (!noteEl) {
     noteEl = document.createElement("p");
@@ -1011,17 +1013,17 @@ function renderPodium(sorted) {
 
   elPodiumContainer.innerHTML = `
     <div class="podium-step silver">
-      <div class="podium-avatar">🥈</div>
+      <div class="podium-avatar">🥈 ${getPlayerAvatarHTML(p2.name)}</div>
       <div class="podium-name">${p2.name}</div>
       <div class="podium-stats">${p2.w}V · ${p2.diff > 0 ? '+' : ''}${p2.diff}</div>
     </div>
     <div class="podium-step gold">
-      <div class="podium-avatar">🥇</div>
+      <div class="podium-avatar">🥇 ${getPlayerAvatarHTML(p1.name)}</div>
       <div class="podium-name">${p1.name}</div>
       <div class="podium-stats">${p1.w}V · ${p1.diff > 0 ? '+' : ''}${p1.diff}</div>
     </div>
     <div class="podium-step bronze">
-      <div class="podium-avatar">🥉</div>
+      <div class="podium-avatar">🥉 ${getPlayerAvatarHTML(p3.name)}</div>
       <div class="podium-name">${p3.name}</div>
       <div class="podium-stats">${p3.w}V · ${p3.diff > 0 ? '+' : ''}${p3.diff}</div>
     </div>
@@ -1086,12 +1088,9 @@ function renderBadges(sorted, pairWins) {
 
 
 // =============================================================================
-// GESTION DE L'ETAT, SAUVEGARDE ET CHARGEMENT SECURISE
+// GESTION DE L'ETAT, SAUVEGARDE ET CHARGEMENT
 // =============================================================================
 
-/**
- * Capture l'intégralité des paramètres et scores courants de l'application.
- */
 function getCurrentState() {
   return {
     p: elPlayers.value,
@@ -1111,9 +1110,6 @@ function getCurrentState() {
   };
 }
 
-/**
- * Sauvegarde la session dans le stockage local (localStorage).
- */
 function autoSaveState() {
   const state = getCurrentState();
   localStorage.setItem("pb_autosave", JSON.stringify(state));
@@ -1124,10 +1120,6 @@ function autoSaveState() {
   }
 }
 
-/**
- * Fonction centrale de génération du planning.
- * @param {boolean} preserveScores - Si true, conserve les scores déjà saisis lors de l'actualisation.
- */
 function generateSession(preserveScores = true) {
   clearMessages();
   btnCopy.disabled = true;
@@ -1152,7 +1144,6 @@ function generateSession(preserveScores = true) {
       throw new Error("Veuillez entrer au moins 4 joueurs.");
     }
 
-    // Prendre en compte les 2 terrains possibles à 6 joueurs (1 double + 1 simple)
     const maxUsableCourts = (players.length === 6 && numCourts >= 2) ? 2 : Math.floor(players.length / 4);
     if (numCourts > maxUsableCourts && maxUsableCourts > 0 && elWarning) {
       elWarning.hidden = false;
@@ -1173,7 +1164,6 @@ function generateSession(preserveScores = true) {
     window.__PB_LAST_RESULT__ = result;
 
     render(result, players, numCourts, numRounds);
-
     autoSaveState();
 
   } catch (e) {
@@ -1184,9 +1174,6 @@ function generateSession(preserveScores = true) {
   }
 }
 
-/**
- * Restaure un état complet préenregistré (depuis l'historique, l'URL ou le stockage).
- */
 function loadState(state) {
   if (state.p !== undefined) elPlayers.value = state.p;
   if (state.c !== undefined) elCourts.value = state.c;
@@ -1219,7 +1206,7 @@ function loadState(state) {
 
 
 // =============================================================================
-// HISTORIQUE ET REINITIALISATION COMPLETE DU CACHE
+// HISTORIQUE ET REINITIALISATION
 // =============================================================================
 
 function getHistory() {
@@ -1302,19 +1289,13 @@ if (elHistoryList) {
   });
 }
 
-// BOUTON DE SUPPRESSION ET REINITIALISATION TOTALE DU CACHE
 if (btnClearHistory) {
   btnClearHistory.addEventListener("click", () => {
     if (confirm("Voulez-vous vraiment TOUT réinitialiser ? Cela effacera l'historique, la sauvegarde automatique et remettra l'application entièrement à zéro.")) {
-      // 1. Vider totalement le stockage local du navigateur
       localStorage.clear();
-
-      // 2. Vider la mémoire vive JS
       window.__PB_SCORES__ = {};
       window.__PB_PRESENCE__ = {};
       window.__PB_LAST_RESULT__ = null;
-
-      // 3. Recharger la page sans paramètres URL pour repartir de zéro absolu
       window.location.href = window.location.pathname;
     }
   });
@@ -1330,7 +1311,7 @@ if (btnSaveToHistory) {
 
 
 // =============================================================================
-// EVENEMENTS GENERALISTES & FONCTIONNALITES EXPORT / PARTAGE
+// EVENEMENTS ET EXPORTS
 // =============================================================================
 
 btnNewSeed.addEventListener("click", () => {
@@ -1343,7 +1324,6 @@ btnGenerate.addEventListener("click", () => {
   generateSession(hasScores);
 });
 
-// Écoute instantanée sur la saisie des scores (input + change)
 ["input", "change"].forEach(evt => {
   elSchedule.addEventListener(evt, (e) => {
     if (e.target.classList.contains("score-input")) {
@@ -1362,7 +1342,6 @@ btnGenerate.addEventListener("click", () => {
   });
 });
 
-// Écoute instantanée de tous les paramètres du formulaire (input + change)
 [elPlayers, elCourts, elRounds, elSeed, elCourtNames, elwT, elwO, elwP, elBeamWidth, elPartnerK, elSquare, elAvoidB2B].forEach(el => {
   if (el) {
     ["change", "input"].forEach(evt => {
@@ -1454,10 +1433,9 @@ if (btnExportPng) {
 
 
 // =============================================================================
-// INITIALISATION ET SAUVEGARDE ULTIME A LA FERMETURE DE PAGE
+// INITIALISATION
 // =============================================================================
 
-// Forcer la sauvegarde instantanée avant toute recharge ou fermeture de la page
 window.addEventListener("beforeunload", () => {
   autoSaveState();
 });
