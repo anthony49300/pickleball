@@ -95,7 +95,8 @@ h2 {
 .subtle { color: var(--text-subtle); }
 
 .label {
-  display: block;
+  display: flex;
+  align-items: center;
   margin: 12px 0 6px;
   font-size: 0.88rem;
   font-weight: 600;
@@ -315,9 +316,7 @@ button:disabled {
   gap: 10px;
 }
 
-/* ==========================================================================
-   AFFICHAGE DE LA CARTE DE MATCH (CORRIGÉ & CENTRÉ)
-   ========================================================================== */
+/* CARTE DE MATCH */
 .match-card {
   display: flex;
   align-items: center;
@@ -359,7 +358,6 @@ button:disabled {
   flex-shrink: 0;
 }
 
-/* Alignement équilibré des deux blocs d'équipes */
 .team-score { 
   display: flex; 
   align-items: center; 
@@ -540,11 +538,73 @@ button:disabled {
 
 .footer { text-align: center; padding: 20px 0; font-size: 0.85rem; }
 
-/* ==========================================================================
-   MOBILE : CARTES DE MATCH & SCORES
-   ========================================================================== */
+/* --------------------------------------------------
+   INFOBULLES D'AIDE (TOOLTIPS)
+-------------------------------------------------- */
+.tooltip {
+  position: relative;
+  cursor: help;
+  margin-left: 6px;
+  font-size: 0.85em;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+  user-select: none;
+  display: inline-block;
+}
 
-/* 1. Taille fixe pour l'input de score */
+.tooltip:hover {
+  opacity: 1;
+}
+
+.tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 130%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #1e293b;
+  color: #ffffff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: normal;
+  text-transform: none;
+  white-space: max-content;
+  max-width: 220px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  z-index: 100;
+}
+
+.tooltip::before {
+  content: "";
+  position: absolute;
+  bottom: 110%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: #1e293b transparent transparent transparent;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  z-index: 100;
+}
+
+.tooltip:hover::after,
+.tooltip:hover::before {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* --------------------------------------------------
+   MOBILE : CARTES DE MATCH & SCORES
+-------------------------------------------------- */
 .score-input {
   width: 40px !important;
   min-width: 40px !important;
@@ -556,7 +616,6 @@ button:disabled {
   flex-shrink: 0 !important;
 }
 
-/* Suppression des flèches d'input type number */
 .score-input::-webkit-outer-spin-button,
 .score-input::-webkit-inner-spin-button {
   -webkit-appearance: none;
@@ -571,7 +630,6 @@ button:disabled {
   font-size: 0.85rem;
 }
 
-/* 2. Adaptation pour mobiles (< 500px) */
 @media (max-width: 500px) {
   .match-card {
     flex-wrap: wrap;
