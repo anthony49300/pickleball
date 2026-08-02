@@ -368,7 +368,6 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
   const opponentCount = new Map();
   const playsCount = new Map();
   const benchCount = new Map();
-  const benchPairCounts = new Map();
   const singlesCount = new Map();
   const singlesPairCounts = new Map();
 
@@ -403,7 +402,6 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
       benched = [];
 
       // Évaluation des 15 duos possibles en simple pour éviter le blocage en duos fixes
-      // et varier à la fois le simple et la composition du terrain de double.
       const candidatePairs = [];
       for (let i = 0; i < activePlayers.length; i++) {
         for (let j = i + 1; j < activePlayers.length; j++) {
@@ -786,10 +784,23 @@ function render(result, players, numCourts, numRounds) {
   const tmTop = topPairs(stats.teammateCount).map(([k, v]) => `${k.replace("||", " & ")} (${v})`).join(", ");
   const opTop = topPairs(stats.opponentCount).map(([k, v]) => `${k.replace("||", " vs ")} (${v})`).join(", ");
 
+  // Détection de la présence de matchs en simple dans la session
+  const hasSingles = stats.singlesCount && Array.from(stats.singlesCount.values()).some(v => v > 0);
+  const ratioLabel = hasSingles
+    ? "Ratio individuel (J=Joué, S=Simple, B=Banc)"
+    : "Ratio individuel (J=Joué, B=Banc)";
+
   const fairnessLine = players
     .slice()
     .sort((a, b) => a < b ? -1 : 1)
-    .map(p => `<strong>${p}</strong> : ${stats.playsCount.get(p) ?? 0}J / ${stats.benchCount.get(p) ?? 0}B`)
+    .map(p => {
+      const j = stats.playsCount.get(p) ?? 0;
+      const b = stats.benchCount.get(p) ?? 0;
+      const s = stats.singlesCount?.get(p) ?? 0;
+      return hasSingles
+        ? `<strong>${p}</strong> : ${j}J / ${s}S / ${b}B`
+        : `<strong>${p}</strong> : ${j}J / ${b}B`;
+    })
     .join(" · ");
 
   if (elDiag) {
@@ -798,7 +809,7 @@ function render(result, players, numCourts, numRounds) {
       <p><strong>Équilibre Banc :</strong> Min ${minBen} - Max ${maxBen} passages</p>
       <p><strong>Paires les plus fréquentes :</strong> ${tmTop || "Aucune"}</p>
       <p><strong>Oppositions les plus fréquentes :</strong> ${opTop || "Aucune"}</p>
-      <p><strong>Ratio individuel (J=Joué, B=Banc) :</strong> ${fairnessLine}</p>
+      <p><strong>${ratioLabel} :</strong> ${fairnessLine}</p>
     `;
   }
 
