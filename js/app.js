@@ -554,6 +554,7 @@ const btnSaveToHistory = document.getElementById("saveToHistory");
 const btnNewSeed = document.getElementById("newSeed");
 
 const elSchedule = document.getElementById("schedule");
+const elSessionStepper = document.getElementById("sessionStepper");
 const elDiag = document.getElementById("diagnostics");
 const elDiagSection = document.getElementById("diagnosticsSection") || (elDiag ? elDiag.closest("section") || elDiag.parentElement : null);
 const elWarning = document.getElementById("warning");
@@ -683,6 +684,7 @@ function renderEmptyState() {
     </div>
   `;
   
+  if (elSessionStepper) elSessionStepper.hidden = true;
   if (elDiag) elDiag.innerHTML = "";
   if (elDiagSection) elDiagSection.hidden = true;
   
@@ -693,6 +695,58 @@ function renderEmptyState() {
   btnCopy.disabled = true;
   btnCopyLink.disabled = true;
   btnSaveToHistory.disabled = true;
+}
+
+/**
+ * Met à jour le Stepper d'Étape de Session.
+ */
+function updateSessionStepper(rounds) {
+  if (!elSessionStepper || !rounds || !rounds.length) return;
+  
+  elSessionStepper.hidden = false;
+  elSessionStepper.innerHTML = "";
+
+  // Un tour est considéré comme complété si TOUS ses matchs ont des scores saisis
+  let activeRoundIndex = -1;
+  const roundStatuses = rounds.map((matches, rIdx) => {
+    if (!matches.length) return true;
+    let isComplete = true;
+    matches.forEach((_, mIdx) => {
+      const key = `${rIdx}-${mIdx}`;
+      const sc = window.__PB_SCORES__[key];
+      if (!sc || sc['1'] == null || sc['2'] == null) {
+        isComplete = false;
+      }
+    });
+    return isComplete;
+  });
+
+  // Le tour actif est le premier tour non entièrement complété
+  activeRoundIndex = roundStatuses.findIndex(status => status === false);
+  if (activeRoundIndex === -1 && roundStatuses.length > 0) {
+    activeRoundIndex = roundStatuses.length - 1; // Tous complétés
+  }
+
+  rounds.forEach((_, idx) => {
+    const isCompleted = roundStatuses[idx];
+    const isActive = (idx === activeRoundIndex) && !isCompleted;
+
+    const stepItem = document.createElement("div");
+    stepItem.className = `step-item ${isCompleted ? 'completed' : ''} ${isActive ? 'active' : ''}`;
+    stepItem.innerHTML = `
+      <div class="step-number">${isCompleted ? '✓' : idx + 1}</div>
+      <span>Tour ${idx + 1}</span>
+    `;
+    elSessionStepper.appendChild(stepItem);
+
+    if (idx < rounds.length - 1) {
+      const divider = document.createElement("div");
+      divider.className = `step-divider ${isCompleted ? 'active' : ''}`;
+      elSessionStepper.appendChild(divider);
+    }
+  });
+
+  return activeRoundIndex;
 }
 
 /**
@@ -707,9 +761,12 @@ function render(result, players, numCourts, numRounds) {
 
   elMeta.textContent = `${players.length} Joueurs · ${numCourts} Terrain(s) · ${numRounds} Tours`;
 
+  const activeRoundIndex = updateSessionStepper(rounds);
+
   rounds.forEach((matches, idx) => {
     const wrap = document.createElement("div");
-    wrap.className = "round";
+    const isActiveRound = (idx === activeRoundIndex);
+    wrap.className = `round ${isActiveRound ? 'active-round' : ''}`;
 
     const titleRow = document.createElement("div");
     titleRow.className = "roundTitle";
@@ -719,6 +776,13 @@ function render(result, players, numCourts, numRounds) {
     
     const tagsDiv = document.createElement("div");
     tagsDiv.className = "round-tags";
+
+    if (isActiveRound) {
+      const activeBadge = document.createElement("span");
+      activeBadge.className = "active-round-badge";
+      activeBadge.textContent = "⚡ Tour en cours";
+      tagsDiv.appendChild(activeBadge);
+    }
 
     if (benches[idx]?.length) {
       const bench = document.createElement("span");
@@ -1356,6 +1420,32 @@ btnGenerate.addEventListener("click", () => {
       if (!window.__PB_SCORES__[key]) window.__PB_SCORES__[key] = {};
       window.__PB_SCORES__[key][t] = isNaN(val) ? null : val;
       
+      if (window.__PB_LAST_RESULT__) {
+        updateSessionStepper(window.__PB_LAST_RESULT__.rounds);
+        
+        // Re-marquer visuellement le tour actif sans régénérer tout le DOM
+        const roundEls = elSchedule.querySelectorAll('.round');
+        const activeIdx = updateSessionStepper(window.__PB_LAST_RESULT__.rounds);
+        roundEls.forEach((el, idx) => {
+          if (idx === activeIdx) {
+            el.classList.add('active-round');
+            if (!el.querySelector('.active-round-badge')) {
+              const tags = el.querySelector('.round-tags');
+              if (tags) {
+                const b = document.createElement('span');
+                b.className = 'active-round-badge';
+                b.textContent = '⚡ Tour en cours';
+                tags.prepend(b);
+              }
+            }
+          } else {
+            el.classList.remove('active-round');
+            const badge = el.querySelector('.active-round-badge');
+            if (badge) badge.remove();
+          }
+        });
+      }
+
       updateRankings();
       autoSaveState();
     }

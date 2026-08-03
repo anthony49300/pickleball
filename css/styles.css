@@ -183,18 +183,54 @@ textarea { resize: vertical; min-height: 110px; }
   text-align: center;
 }
 
+/* --------------------------------------------------
+   COMMUTATEURS "SWITCH" (REMPLACE LES CHECKBOXES)
+-------------------------------------------------- */
 .checkbox {
   display: flex;
-  gap: 10px;
   align-items: center;
-  margin-top: 12px;
+  margin-top: 14px;
   font-size: 0.9rem;
+  cursor: pointer;
+  user-select: none;
 }
 
 .checkbox input[type="checkbox"] {
-  width: 18px;
+  display: none;
+}
+
+.switch-slider {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  margin-right: 12px;
+  transition: background-color 0.25s ease;
+  flex-shrink: 0;
+  border: 1px solid var(--border-color);
+}
+
+.switch-slider::before {
+  content: "";
+  position: absolute;
   height: 18px;
-  accent-color: var(--pickle-yellow);
+  width: 18px;
+  left: 2px;
+  bottom: 2px;
+  background-color: #ffffff;
+  border-radius: 50%;
+  transition: transform 0.25s ease, background-color 0.25s ease;
+}
+
+.checkbox input[type="checkbox"]:checked + .switch-slider {
+  background-color: var(--court-green);
+  border-color: var(--court-green);
+}
+
+.checkbox input[type="checkbox"]:checked + .switch-slider::before {
+  transform: translateX(20px);
+  background-color: #0a0f18;
 }
 
 /* Boutons */
@@ -246,6 +282,77 @@ button:disabled {
 .warning { color: var(--warn); margin-top: 12px; font-weight: 600; }
 .error { color: var(--danger); margin-top: 12px; font-weight: 600; }
 
+/* --------------------------------------------------
+   STEPPER DE SESSION (INDICATEUR D'ÉTAPE)
+-------------------------------------------------- */
+.session-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-subtle);
+  white-space: nowrap;
+}
+
+.step-number {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.step-item.active {
+  color: #ffffff;
+}
+
+.step-item.active .step-number {
+  background: var(--pickle-yellow);
+  color: #000;
+  border-color: var(--pickle-yellow);
+  box-shadow: 0 0 10px rgba(204, 255, 0, 0.4);
+}
+
+.step-item.completed {
+  color: var(--court-green);
+}
+
+.step-item.completed .step-number {
+  background: var(--court-green);
+  color: #fff;
+  border-color: var(--court-green);
+}
+
+.step-divider {
+  flex: 1;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  min-width: 15px;
+}
+
+.step-divider.active {
+  background: var(--court-green);
+}
+
 /* Planning */
 .headerRow {
   display: flex;
@@ -262,11 +369,41 @@ button:disabled {
   gap: 16px;
 }
 
+/* --------------------------------------------------
+   ROUND & EFFET GLOWING / ACTIVE STATE
+-------------------------------------------------- */
 .round {
   border: 1px solid var(--border-color);
   border-radius: 14px;
   padding: 16px;
   background: rgba(15, 23, 42, 0.6);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.round.active-round {
+  border-color: var(--pickle-yellow);
+  box-shadow: 0 0 20px rgba(204, 255, 0, 0.25), inset 0 0 15px rgba(204, 255, 0, 0.05);
+  background: rgba(20, 32, 54, 0.85);
+}
+
+.active-round-badge {
+  background: var(--pickle-yellow);
+  color: #000;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 0 8px rgba(204, 255, 0, 0.6);
+  animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+  0% { box-shadow: 0 0 4px rgba(204, 255, 0, 0.4); }
+  50% { box-shadow: 0 0 12px rgba(204, 255, 0, 0.8); }
+  100% { box-shadow: 0 0 4px rgba(204, 255, 0, 0.4); }
 }
 
 .roundTitle {
@@ -313,64 +450,118 @@ button:disabled {
 
 .matches-list {
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
-/* CARTE DE MATCH */
+/* --------------------------------------------------
+   LOOK "TERRAIN DE PICKLEBALL" SUR LES CARTES DE MATCH
+-------------------------------------------------- */
 .match-card {
-  display: flex;
+  position: relative;
+  /* Grille 2 colonnes égales (50% / 50%) */
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   align-items: center;
-  justify-content: space-between;
-  background: rgba(255, 255, 255, 0.03);
-  border-left: 4px solid var(--court-green);
-  border-radius: 8px;
-  padding: 10px 14px;
+  gap: 36px; /* Espace au centre pour ne pas chevaucher le badge VS */
+  background: linear-gradient(135deg, var(--court-blue) 0%, #0a2540 100%);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  border-radius: 10px;
+  padding: 12px 16px;
   font-size: 0.95rem;
-  gap: 8px;
+  overflow: hidden;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
+/* Ligne centrale de filet (pile à 50%) */
+.match-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.4);
+  border-left: 1px dashed rgba(255, 255, 255, 0.8);
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Zone "Kitchen" / NVZ au centre */
+.match-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 38%;
+  right: 38%;
+  background: rgba(16, 185, 129, 0.18);
+  border-left: 1px solid rgba(255, 255, 255, 0.5);
+  border-right: 1px solid rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Badge Terrain (Fixé à gauche) */
 .court-badge {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
   color: var(--pickle-yellow);
   font-size: 0.8rem;
-  font-weight: bold;
-  background: rgba(204, 255, 0, 0.08);
-  padding: 2px 8px;
+  font-weight: 800;
+  background: rgba(10, 15, 24, 0.85);
+  padding: 3px 10px;
   border-radius: 6px;
-  border: 1px solid rgba(204, 255, 0, 0.2);
-  margin-right: auto;
-  flex-shrink: 0;
+  border: 1px solid var(--pickle-yellow);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Badge VS (Ancré au centre exact sur le filet) */
+.vs {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  font-size: 0.75rem;
+  font-weight: 900;
+  color: #000;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  background: var(--pickle-yellow);
+  border-radius: 4px;
+  margin: 0;
+  box-shadow: 0 0 8px rgba(204, 255, 0, 0.5);
+  pointer-events: none;
 }
 
 .team { 
-  font-weight: 600; 
+  font-weight: 700; 
   color: #ffffff; 
-}
-
-.vs {
-  font-size: 0.75rem;
-  font-weight: 800;
-  color: var(--pickle-yellow);
-  text-transform: uppercase;
-  padding: 2px 8px;
-  background: rgba(204, 255, 0, 0.1);
-  border-radius: 4px;
-  margin: 0 6px;
-  flex-shrink: 0;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
 }
 
 .team-score { 
+  position: relative;
+  z-index: 2;
   display: flex; 
   align-items: center; 
   gap: 8px;
-  flex: 1;
   min-width: 0;
 }
 
+/* Équipe 1 : décalée à gauche pour ne pas toucher le badge terrain */
 .team-score:first-of-type {
   justify-content: flex-end;
   text-align: right;
+  padding-left: 36px;
 }
 
+/* Équipe 2 */
 .team-score:last-of-type {
   justify-content: flex-start;
   text-align: left;
@@ -614,6 +805,9 @@ button:disabled {
   padding: 2px !important;
   text-align: center !important;
   flex-shrink: 0 !important;
+  border-radius: 6px !important;
+  background: rgba(0, 0, 0, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
 }
 
 .score-input::-webkit-outer-spin-button,
@@ -634,7 +828,7 @@ button:disabled {
   .match-card {
     flex-wrap: wrap;
     justify-content: center;
-    padding: 8px;
+    padding: 10px 8px;
     gap: 6px;
   }
 
@@ -645,6 +839,6 @@ button:disabled {
 
   .vs {
     font-size: 0.75rem;
-    opacity: 0.7;
+    opacity: 0.9;
   }
 }

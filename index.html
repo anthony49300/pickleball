@@ -115,21 +115,24 @@
           </div>
         </div>
 
-        <div class="checkbox">
+        <!-- COMMUTATEURS SWITCH -->
+        <label class="checkbox" for="squareRepeats">
           <input id="squareRepeats" type="checkbox" checked />
-          <label for="squareRepeats">
+          <span class="switch-slider"></span>
+          <span>
             Pénalités quadratiques pour les répétitions
             <span class="tooltip" data-tooltip="Interdit quasi totalement qu'un duo rejoue une 3e fois ensemble">ℹ️</span>
-          </label>
-        </div>
+          </span>
+        </label>
 
-        <div class="checkbox">
+        <label class="checkbox" for="avoidB2B">
           <input id="avoidB2B" type="checkbox" checked />
-          <label for="avoidB2B">
+          <span class="switch-slider"></span>
+          <span>
             Éviter le banc deux fois de suite
             <span class="tooltip" data-tooltip="Empêche un joueur de passer 2 fois de suite sur le banc">ℹ️</span>
-          </label>
-        </div>
+          </span>
+        </label>
       </details>
 
       <div class="actions">
@@ -149,6 +152,10 @@
         <h2>🎾 Planning des matchs</h2>
         <span id="meta" class="subtle"></span>
       </div>
+
+      <!-- STEPPER DE SESSION -->
+      <div id="sessionStepper" class="session-stepper" hidden></div>
+
       <div id="schedule" class="schedule"></div>
     </section>
 
