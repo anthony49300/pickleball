@@ -458,21 +458,21 @@ button:disabled {
 -------------------------------------------------- */
 .match-card {
   position: relative;
-  /* Passage en Grid 4 colonnes : Badge | Équipe 1 | VS | Équipe 2 */
+  /* Grille 2 colonnes égales (50% / 50%) */
   display: grid;
-  grid-template-columns: auto 1fr auto 1fr;
+  grid-template-columns: 1fr 1fr;
   align-items: center;
+  gap: 36px; /* Espace au centre pour ne pas chevaucher le badge VS */
   background: linear-gradient(135deg, var(--court-blue) 0%, #0a2540 100%);
   border: 2px solid rgba(255, 255, 255, 0.8);
   border-radius: 10px;
   padding: 12px 16px;
   font-size: 0.95rem;
-  gap: 8px;
   overflow: hidden;
   box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-/* Ligne centrale de filet (exactement à 50%) */
+/* Ligne centrale de filet (pile à 50%) */
 .match-card::before {
   content: "";
   position: absolute;
@@ -502,9 +502,13 @@ button:disabled {
   z-index: 0;
 }
 
+/* Badge Terrain (Fixé à gauche) */
 .court-badge {
-  position: relative;
-  z-index: 2;
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
   color: var(--pickle-yellow);
   font-size: 0.8rem;
   font-weight: 800;
@@ -512,23 +516,17 @@ button:disabled {
   padding: 3px 10px;
   border-radius: 6px;
   border: 1px solid var(--pickle-yellow);
-  margin-right: 4px;
-  flex-shrink: 0;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.team { 
-  font-weight: 700; 
-  color: #ffffff; 
-  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
-}
-
-/* Centrage parfait du badge VS sur le filet */
+/* Badge VS (Ancré au centre exact sur le filet) */
 .vs {
-  position: relative;
-  z-index: 2;
-  justify-self: center; /* Aligne au centre exact de la colonne 3 */
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
   font-size: 0.75rem;
   font-weight: 900;
   color: #000;
@@ -537,8 +535,14 @@ button:disabled {
   background: var(--pickle-yellow);
   border-radius: 4px;
   margin: 0;
-  flex-shrink: 0;
   box-shadow: 0 0 8px rgba(204, 255, 0, 0.5);
+  pointer-events: none;
+}
+
+.team { 
+  font-weight: 700; 
+  color: #ffffff; 
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
 }
 
 .team-score { 
@@ -550,11 +554,14 @@ button:disabled {
   min-width: 0;
 }
 
+/* Équipe 1 : décalée à gauche pour ne pas toucher le badge terrain */
 .team-score:first-of-type {
   justify-content: flex-end;
   text-align: right;
+  padding-left: 36px;
 }
 
+/* Équipe 2 */
 .team-score:last-of-type {
   justify-content: flex-start;
   text-align: left;
