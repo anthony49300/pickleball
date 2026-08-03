@@ -63,10 +63,15 @@ header h1 {
 }
 
 .grid {
-  display: grid;
-  grid-template-columns: 1fr 1.3fr;
+  display: flex;
+  flex-direction: column; /* Empile la configuration puis le planning */
   gap: 24px;
-  align-items: start;
+  align-items: stretch;
+}
+
+/* Optionnel : Ajuste la largeur maximale du formulaire si besoin */
+.grid > .card:first-child {
+  width: 100%;
 }
 
 @media (max-width: 960px) {
