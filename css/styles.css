@@ -900,6 +900,59 @@ button:disabled {
 .diff-positive { color: var(--court-green); font-weight: bold; }
 .diff-negative { color: var(--danger); font-weight: bold; }
 
+/* --------------------------------------------------
+   GROUPES DE JOUEURS RÉGULIERS (CLUBS RÉCURRENTS)
+-------------------------------------------------- */
+.group-save-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.group-save-row input {
+  flex: 1;
+  min-width: 160px;
+}
+
+.group-save-row button {
+  flex-shrink: 0;
+}
+
+.player-groups-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.group-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.group-card h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--pickle-yellow);
+}
+
+.group-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.group-actions button {
+  padding: 6px 10px;
+  font-size: 0.8rem;
+}
+
 /* Historique */
 .history-grid {
   display: grid;

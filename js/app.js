@@ -600,6 +600,10 @@ const elHistoryList = document.getElementById("historyList");
 const btnClearHistory = document.getElementById("clearHistoryBtn");
 const btnResetAll = document.getElementById("resetAllBtn");
 
+const elPlayerGroupsList = document.getElementById("playerGroupsList");
+const elNewGroupName = document.getElementById("newGroupName");
+const btnSavePlayerGroup = document.getElementById("savePlayerGroupBtn");
+
 // Variables globales de mémoire
 window.__PB_SCORES__ = {};
 window.__PB_PRESENCE__ = {};
@@ -1404,6 +1408,119 @@ function loadState(state) {
 
 
 // =============================================================================
+// GROUPES DE JOUEURS RÉGULIERS (CLUBS RÉCURRENTS)
+// Distinct de l'historique de sessions : ici on ne sauvegarde qu'une liste de noms
+// réutilisable ("Mardi Soir", "Club du dimanche"...), sans scores ni réglages, pour
+// éviter de retaper la même liste de joueurs à chaque nouvelle session.
+// =============================================================================
+
+function getPlayerGroups() {
+  try {
+    return JSON.parse(localStorage.getItem("pb_player_groups") || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function savePlayerGroupsToStorage(groups) {
+  localStorage.setItem("pb_player_groups", JSON.stringify(groups));
+}
+
+function renderPlayerGroups() {
+  if (!elPlayerGroupsList) return;
+  const groups = getPlayerGroups();
+
+  if (!groups.length) {
+    elPlayerGroupsList.innerHTML = `<p class="subtle">Aucun groupe enregistré pour le&nbsp;moment.</p>`;
+    return;
+  }
+
+  elPlayerGroupsList.innerHTML = groups.map(g => `
+    <div class="group-card">
+      <div>
+        <h4>${escapeHtml(g.name)}</h4>
+        <div class="subtle" style="font-size: 0.78rem; margin-top: 2px;">👥 ${g.players.length} joueur(s)</div>
+      </div>
+      <div class="group-actions">
+        <button type="button" class="secondary load-group-btn" data-id="${g.id}">📥 Charger</button>
+        <button type="button" class="secondary danger del-group-btn" data-id="${g.id}" title="Supprimer ce groupe">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+if (btnSavePlayerGroup) {
+  btnSavePlayerGroup.addEventListener("click", () => {
+    const name = (elNewGroupName.value || "").trim();
+    const players = parsePlayers(elPlayers.value);
+
+    if (!name) {
+      elNewGroupName.focus();
+      return;
+    }
+    if (!players.length) {
+      if (elWarning) {
+        elWarning.hidden = false;
+        elWarning.textContent = "Attention : ajoutez au moins un joueur dans la liste avant d'enregistrer un groupe.";
+      }
+      return;
+    }
+
+    const groups = getPlayerGroups();
+    const existingIndex = groups.findIndex(g => g.name.toLowerCase() === name.toLowerCase());
+
+    const newGroup = {
+      id: existingIndex !== -1 ? groups[existingIndex].id : Date.now(),
+      name,
+      players
+    };
+
+    if (existingIndex !== -1) groups.splice(existingIndex, 1);
+    groups.unshift(newGroup);
+
+    savePlayerGroupsToStorage(groups);
+    renderPlayerGroups();
+
+    elNewGroupName.value = "";
+    btnSavePlayerGroup.textContent = "✓ Groupe enregistré !";
+    setTimeout(() => (btnSavePlayerGroup.textContent = "💾 Enregistrer les joueurs actuels"), 1200);
+  });
+}
+
+if (elNewGroupName) {
+  elNewGroupName.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      btnSavePlayerGroup?.click();
+    }
+  });
+}
+
+if (elPlayerGroupsList) {
+  elPlayerGroupsList.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-id]");
+    if (!btn) return;
+    const id = parseInt(btn.dataset.id, 10);
+    const groups = getPlayerGroups();
+
+    if (btn.classList.contains("load-group-btn")) {
+      const group = groups.find(g => g.id === id);
+      if (group) {
+        elPlayers.value = group.players.join("\n");
+        clearMessages();
+        syncPresenceInputs();
+        autoSaveState();
+      }
+    } else if (btn.classList.contains("del-group-btn")) {
+      const filtered = groups.filter(g => g.id !== id);
+      savePlayerGroupsToStorage(filtered);
+      renderPlayerGroups();
+    }
+  });
+}
+
+
+// =============================================================================
 // HISTORIQUE ET REINITIALISATION COMPLETE DU CACHE
 // =============================================================================
 
@@ -1499,19 +1616,23 @@ if (btnClearHistory) {
 }
 
 // BOUTON DE REINITIALISATION COMPLETE DE LA PAGE
-// (distinct de "Vider l'historique" : celui-ci efface TOUT — session en cours,
-// autosave et historique — et repart de zéro. Le libellé et la confirmation le précisent explicitement).
+// (distinct de "Vider l'historique" : celui-ci efface la session en cours, l'autosave
+// et l'historique des sessions — et repart de zéro. Le libellé et la confirmation le précisent
+// explicitement. Les groupes de joueurs réguliers (pb_player_groups) sont volontairement
+// PRÉSERVÉS : ce sont des données de type "carnet d'adresses", indépendantes d'une session
+// donnée, et les effacer ici irait à l'encontre de leur intérêt (ne pas retaper les joueurs).
 //
 // Important : on ne fait PAS de rechargement de page (location.reload / location.href).
-// Après un localStorage.clear(), un rechargement vers la même URL laisse certains
+// Après un vidage du storage, un rechargement vers la même URL laisse certains
 // navigateurs (Chrome/Firefox) restaurer automatiquement les anciennes valeurs des champs
 // de formulaire (textarea joueurs, scores...) depuis leur propre cache de formulaire,
 // indépendamment de localStorage — ce qui donnait l'impression que le reset "ne marchait pas".
 // On réinitialise donc directement les champs du DOM et l'état en mémoire, sans recharger.
 if (btnResetAll) {
   btnResetAll.addEventListener("click", () => {
-    if (confirm("Réinitialiser entièrement la page ? Cela effacera la session en cours, la sauvegarde automatique ET l'historique des sessions enregistrées. Cette action est irréversible.")) {
-      localStorage.clear();
+    if (confirm("Réinitialiser entièrement la page ? Cela effacera la session en cours, la sauvegarde automatique ET l'historique des sessions enregistrées.\n\nLes groupes de joueurs réguliers enregistrés seront conservés. Cette action est irréversible.")) {
+      localStorage.removeItem("pb_autosave");
+      localStorage.removeItem("pb_history");
 
       // Réinitialise l'état en mémoire
       window.__PB_SCORES__ = {};
@@ -1714,6 +1835,7 @@ window.addEventListener("beforeunload", () => {
 window.addEventListener("DOMContentLoaded", () => {
   if (!elSeed.value) elSeed.value = generateSeed();
   renderHistory();
+  renderPlayerGroups();
 
   const params = new URLSearchParams(window.location.search);
   const sharedData = params.get("d");

@@ -42,6 +42,23 @@
       </label>
       <textarea id="players" rows="5" placeholder="Antoine, Julien, Marc"></textarea>
 
+      <!-- GROUPES DE JOUEURS RÉGULIERS (CLUBS RÉCURRENTS) -->
+      <details class="details" id="playerGroupsDetails">
+        <summary>👥 Groupes de Joueurs Réguliers</summary>
+        <p class="subtle" style="font-size: 0.82rem; margin: 6px 0 12px;">
+          Enregistrez votre liste de joueurs habituels (ex: "Mardi Soir") pour la recharger en un clic la prochaine fois, sans tout retaper.
+        </p>
+
+        <div class="group-save-row">
+          <input id="newGroupName" type="text" placeholder="Nom du groupe (ex: Mardi Soir)" />
+          <button id="savePlayerGroupBtn" class="secondary">💾 Enregistrer les joueurs actuels</button>
+        </div>
+
+        <div id="playerGroupsList" class="player-groups-grid">
+          <p class="subtle">Aucun groupe enregistré pour le&nbsp;moment.</p>
+        </div>
+      </details>
+
       <div class="row">
         <div>
           <label class="label" for="courts">🏟️ Terrains</label>
@@ -260,7 +277,7 @@
         <button id="clearHistoryBtn" class="secondary" style="font-size: 0.8rem; padding: 6px 12px;">🗑️ Vider l'historique</button>
       </div>
       <div id="historyList" class="history-grid">
-        <p class="subtle">Aucune session enregistrée pour le moment.</p>
+        <p class="subtle">Aucune session enregistrée pour le&nbsp;moment.</p>
       </div>
     </section>
   </main>
