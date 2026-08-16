@@ -278,6 +278,18 @@ button.secondary.active {
   border-color: var(--pickle-yellow);
 }
 
+button.danger {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  box-shadow: none;
+}
+
+button.danger:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--danger);
+}
+
 button:disabled {
   opacity: 0.4;
   cursor: not-allowed;

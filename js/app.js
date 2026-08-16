@@ -591,6 +591,7 @@ const elPresenceList = document.getElementById("presenceList");
 const elAutosaveBadge = document.getElementById("autosaveBadge");
 const elHistoryList = document.getElementById("historyList");
 const btnClearHistory = document.getElementById("clearHistoryBtn");
+const btnResetAll = document.getElementById("resetAllBtn");
 
 // Variables globales de mémoire
 window.__PB_SCORES__ = {};
@@ -1426,6 +1427,24 @@ if (btnClearHistory) {
     if (confirm("Voulez-vous vraiment vider l'historique des sessions enregistrées ? Cette action est irréversible.")) {
       localStorage.removeItem("pb_history");
       renderHistory();
+    }
+  });
+}
+
+// BOUTON DE REINITIALISATION COMPLETE DE LA PAGE
+// (distinct de "Vider l'historique" : celui-ci efface TOUT — session en cours,
+// autosave et historique — et repart de zéro. Le libellé et la confirmation le précisent explicitement).
+if (btnResetAll) {
+  btnResetAll.addEventListener("click", () => {
+    if (confirm("Réinitialiser entièrement la page ? Cela effacera la session en cours, la sauvegarde automatique ET l'historique des sessions enregistrées. Cette action est irréversible.")) {
+      localStorage.clear();
+
+      window.__PB_SCORES__ = {};
+      window.__PB_PRESENCE__ = {};
+      window.__PB_LAST_RESULT__ = null;
+
+      // Recharge la page sans paramètres URL pour repartir de zéro absolu
+      window.location.href = window.location.pathname;
     }
   });
 }
