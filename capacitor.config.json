@@ -1,8 +1,7 @@
 {
   "appId": "com.jfpickleball.app",
   "appName": "JF Pickleball",
-  "webDir": ".",
-  "bundledWebRuntime": false,
+  "webDir": "www",
   "android": {
     "allowMixedContent": false
   }
