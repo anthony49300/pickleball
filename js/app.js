@@ -1434,17 +1434,44 @@ if (btnClearHistory) {
 // BOUTON DE REINITIALISATION COMPLETE DE LA PAGE
 // (distinct de "Vider l'historique" : celui-ci efface TOUT — session en cours,
 // autosave et historique — et repart de zéro. Le libellé et la confirmation le précisent explicitement).
+//
+// Important : on ne fait PAS de rechargement de page (location.reload / location.href).
+// Après un localStorage.clear(), un rechargement vers la même URL laisse certains
+// navigateurs (Chrome/Firefox) restaurer automatiquement les anciennes valeurs des champs
+// de formulaire (textarea joueurs, scores...) depuis leur propre cache de formulaire,
+// indépendamment de localStorage — ce qui donnait l'impression que le reset "ne marchait pas".
+// On réinitialise donc directement les champs du DOM et l'état en mémoire, sans recharger.
 if (btnResetAll) {
   btnResetAll.addEventListener("click", () => {
     if (confirm("Réinitialiser entièrement la page ? Cela effacera la session en cours, la sauvegarde automatique ET l'historique des sessions enregistrées. Cette action est irréversible.")) {
       localStorage.clear();
 
+      // Réinitialise l'état en mémoire
       window.__PB_SCORES__ = {};
       window.__PB_PRESENCE__ = {};
       window.__PB_LAST_RESULT__ = null;
 
-      // Recharge la page sans paramètres URL pour repartir de zéro absolu
-      window.location.href = window.location.pathname;
+      // Réinitialise les champs du formulaire à leurs valeurs par défaut
+      elPlayers.value = "";
+      elCourts.value = "2";
+      elRounds.value = "8";
+      elSeed.value = generateSeed();
+      elCourtNames.value = "";
+      elwT.value = "5";
+      elwO.value = "2";
+      elwP.value = "1";
+      elBeamWidth.value = "80";
+      elPartnerK.value = "10";
+      elSquare.checked = true;
+      elAvoidB2B.checked = true;
+
+      // Nettoie l'URL (retire un éventuel paramètre de partage ?d=...) sans recharger
+      window.history.replaceState({}, "", window.location.pathname);
+
+      clearMessages();
+      syncPresenceInputs();
+      renderEmptyState();
+      renderHistory();
     }
   });
 }
