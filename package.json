@@ -1,0 +1,16 @@
+{
+  "name": "jf-pickleball",
+  "version": "1.0.0",
+  "private": true,
+  "description": "JF Pickleball - Générateur de rotations de matchs de pickleball",
+  "scripts": {
+    "android:add": "npx cap add android",
+    "android:sync": "npx cap sync android",
+    "android:build": "npx cap sync android && cd android && gradlew.bat assembleDebug"
+  },
+  "devDependencies": {
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/cli": "^6.1.2",
+    "@capacitor/android": "^6.1.2"
+  }
+}
