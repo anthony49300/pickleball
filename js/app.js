@@ -613,6 +613,7 @@ const elModalCopyInput = document.getElementById("modalCopyInput");
 const elModalImageArea = document.getElementById("modalImageArea");
 const elModalImagePreview = document.getElementById("modalImagePreview");
 const btnModalCancel = document.getElementById("modalCancelBtn");
+const btnModalDownload = document.getElementById("modalDownloadBtn");
 const btnModalConfirm = document.getElementById("modalConfirmBtn");
 
 // Variables globales de mémoire
@@ -698,7 +699,7 @@ function onModalKeydown(e) {
   }
   if (e.key !== "Tab") return;
 
-  const focusables = [btnModalCancel, elModalCopyInput, btnModalConfirm].filter(
+  const focusables = [btnModalCancel, elModalCopyInput, btnModalDownload, btnModalConfirm].filter(
     el => el && !el.hidden && el.offsetParent !== null
   );
   if (!focusables.length) return;
@@ -720,7 +721,7 @@ function onModalKeydown(e) {
  * `true` si l'utilisateur a cliqué sur le bouton de confirmation, `false` sinon
  * (annulation, clic en dehors, Échap).
  */
-function openModal({ icon = "⚠️", title, message, confirmText = "Confirmer", cancelText = "Annuler", danger = false, showCancel = true, copyText = null, imageSrc = null }) {
+function openModal({ icon = "⚠️", title, message, confirmText = "Confirmer", cancelText = "Annuler", danger = false, showCancel = true, copyText = null, imageSrc = null, downloadFilename = null }) {
   modalLastFocusedEl = document.activeElement;
 
   elModalIcon.textContent = icon;
@@ -741,6 +742,14 @@ function openModal({ icon = "⚠️", title, message, confirmText = "Confirmer",
   } else {
     elModalImageArea.hidden = true;
     elModalImagePreview.src = "";
+  }
+
+  if (downloadFilename) {
+    btnModalDownload.hidden = false;
+    btnModalDownload.dataset.filename = downloadFilename;
+  } else {
+    btnModalDownload.hidden = true;
+    btnModalDownload.dataset.filename = "";
   }
 
   btnModalConfirm.textContent = confirmText;
@@ -765,6 +774,24 @@ btnModalConfirm.addEventListener("click", () => closeModal(true));
 btnModalCancel.addEventListener("click", () => closeModal(false));
 elModalOverlay.addEventListener("click", (e) => {
   if (e.target === elModalOverlay) closeModal(false);
+});
+
+/**
+ * Bouton "Télécharger" de la modale image : le long-press/clic-droit sur l'image ne
+ * suffit pas partout (notamment dans la WebView Android, qui n'active pas nativement
+ * le menu contextuel "Enregistrer l'image" sans configuration native supplémentaire).
+ * On propose donc aussi un vrai <a download> déclenché explicitement au clic.
+ */
+btnModalDownload.addEventListener("click", () => {
+  const src = elModalImagePreview.src;
+  if (!src) return;
+
+  const link = document.createElement("a");
+  link.href = src;
+  link.download = btnModalDownload.dataset.filename || "image.png";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 });
 
 /** Remplace confirm() : question à 2 issues (confirmer / annuler), destructif par défaut. */
@@ -815,10 +842,11 @@ function imagePreviewModal(dataUri, opts = {}) {
   return openModal({
     icon: opts.icon ?? "📷",
     title: opts.title ?? "Image générée",
-    message: opts.message ?? "Appui long sur mobile (ou clic droit sur ordinateur) pour l'enregistrer ou la partager.",
+    message: opts.message ?? "Appuyez sur \"Télécharger\" pour l'enregistrer.",
     confirmText: "Fermer",
     showCancel: false,
-    imageSrc: dataUri
+    imageSrc: dataUri,
+    downloadFilename: opts.downloadFilename ?? null
   });
 }
 
@@ -2031,13 +2059,16 @@ if (btnExportPng) {
         scale: 2
       });
 
-      // On affiche l'image dans la modale plutôt que de déclencher un <a download>
-      // "invisible" : cette technique ne fonctionne pas de façon fiable dans une WebView
-      // Android brute (pas de gestionnaire de téléchargement), alors qu'un appui long
-      // (mobile) ou un clic droit (desktop) sur l'image affichée permet de l'enregistrer
-      // partout, sans dépendre du support du téléchargement automatique du navigateur.
+      // On affiche l'image dans la modale avec un vrai bouton "Télécharger" plutôt que
+      // de déclencher un <a download> "invisible" au clic sur le bouton d'export : cette
+      // technique échoue silencieusement dans une WebView Android brute (pas de gestionnaire
+      // de téléchargement), alors qu'un <a download> déclenché depuis un clic explicite dans
+      // la modale (et le long-press/clic droit sur l'image en complément) fonctionne mieux.
       const imageUri = canvas.toDataURL("image/png");
-      await imagePreviewModal(imageUri, { title: "Classement — image générée" });
+      await imagePreviewModal(imageUri, {
+        title: "Classement — image générée",
+        downloadFilename: `Classement-Pickleball-${elSeed.value || "session"}.png`
+      });
     } catch (err) {
       console.error(err);
       await alertModal(
