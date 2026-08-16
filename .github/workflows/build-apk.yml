@@ -37,9 +37,18 @@ jobs:
       - name: Installer les dépendances Capacitor
         run: npm install
 
+      # Capacitor interdit webDir="." (racine du dépôt) pour ne pas risquer d'embarquer
+      # node_modules/.git/etc. dans l'APK. On copie donc uniquement les fichiers du site
+      # dans un dossier www/ dédié (non versionné, voir .gitignore), utilisé comme webDir.
+      - name: Préparer les assets web (dossier www/)
+        run: |
+          mkdir -p www
+          cp index.html manifest.json icon-192.png icon-512.png icon-pickleball.svg www/
+          cp -r css www/
+          cp -r js www/
+
       # Le dossier android/ n'est pas versionné (voir .gitignore) : Capacitor le régénère
-      # à chaque run à partir de capacitor.config.json, puis y copie le site (index.html,
-      # css/, js/, icônes) en respectant les exclusions de .capacitorignore.
+      # à chaque run à partir de capacitor.config.json, puis y copie le contenu de www/.
       - name: Générer le projet Android
         run: npx cap add android
 
