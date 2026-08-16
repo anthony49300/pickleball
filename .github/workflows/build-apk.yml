@@ -52,6 +52,28 @@ jobs:
       - name: Générer le projet Android
         run: npx cap add android
 
+      # Par défaut, la WebView Android ignore le <meta name="viewport"> de index.html et
+      # rend la page comme un site desktop (~980px de large) avant de la réduire pour
+      # qu'elle tienne à l'écran — d'où l'effet "page miniature/dézoomée" observé sur
+      # téléphone. On force explicitement le mode viewport mobile dans MainActivity,
+      # ce que Capacitor ne configure pas automatiquement.
+      - name: Forcer le viewport mobile dans la WebView (fix page dézoomée)
+        run: |
+          mkdir -p android/app/src/main/java/com/jfpickleball/app
+          cat > android/app/src/main/java/com/jfpickleball/app/MainActivity.java << 'EOF'
+          package com.jfpickleball.app;
+          import android.os.Bundle;
+          import com.getcapacitor.BridgeActivity;
+          public class MainActivity extends BridgeActivity {
+          @Override
+          public void onCreate(Bundle savedInstanceState) {
+          super.onCreate(savedInstanceState);
+          this.bridge.getWebView().getSettings().setUseWideViewPort(true);
+          this.bridge.getWebView().getSettings().setLoadWithOverviewMode(true);
+          }
+          }
+          EOF
+
       - name: Synchroniser le site web dans le projet Android
         run: npx cap sync android
 
