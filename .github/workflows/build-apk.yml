@@ -1,0 +1,61 @@
+name: Build Android APK
+
+# Se déclenche à chaque push sur main, ou manuellement depuis l'onglet "Actions" de GitHub.
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Installer le JDK (requis par Gradle/Android)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Mettre en cache les dépendances Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('android/**/*.gradle*') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      - name: Installer les dépendances Capacitor
+        run: npm install
+
+      # Le dossier android/ n'est pas versionné (voir .gitignore) : Capacitor le régénère
+      # à chaque run à partir de capacitor.config.json, puis y copie le site (index.html,
+      # css/, js/, icônes) en respectant les exclusions de .capacitorignore.
+      - name: Générer le projet Android
+        run: npx cap add android
+
+      - name: Synchroniser le site web dans le projet Android
+        run: npx cap sync android
+
+      - name: Rendre gradlew exécutable
+        run: chmod +x android/gradlew
+
+      - name: Compiler l'APK (debug, non signé)
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Publier l'APK en téléchargement
+        uses: actions/upload-artifact@v4
+        with:
+          name: jf-pickleball-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
