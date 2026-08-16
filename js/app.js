@@ -1,3 +1,10 @@
+"use strict";
+// Note : passer de <script type="module"> à un script classique (voir index.html) permet
+// d'ouvrir index.html directement en double-cliquant (file://), sans serveur local — les
+// navigateurs bloquent le chargement des modules ES par CORS sous file://. Ce fichier n'utilise
+// aucun import/export, donc le mode module ne servait qu'à activer le mode strict implicitement ;
+// on le restaure explicitement ici pour conserver un comportement identique.
+
 // =============================================================================
 // GENERATEUR ALEATOIRE PSEUDO-RANDOM (SEEDED RNG)
 // Permet de reproduire exactement les mêmes tirages à partir d'une même clé (seed)
@@ -600,6 +607,48 @@ let currentHeatmapMode = "teammates";
 
 
 // =============================================================================
+// CONTROLES UI MODERNISES : STEPPERS (TERRAINS/TOURS) & SLIDERS (ALGORITHME)
+// =============================================================================
+
+/**
+ * Câble les boutons +/- des steppers numériques (Terrains, Tours).
+ * Redispatche "input"/"change" pour que les listeners existants (autosave, présence…)
+ * continuent de fonctionner normalement.
+ */
+document.querySelectorAll(".stepper-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const wrapper = btn.closest(".stepper");
+    const input = wrapper?.querySelector("input[type='number']");
+    if (!input) return;
+
+    const step = parseInt(btn.dataset.step, 10) || 0;
+    const min = parseInt(wrapper.dataset.min ?? input.min, 10);
+    const max = parseInt(wrapper.dataset.max ?? input.max, 10);
+    const current = parseInt(input.value, 10) || 0;
+    const next = Math.min(
+      Number.isNaN(max) ? Infinity : max,
+      Math.max(Number.isNaN(min) ? -Infinity : min, current + step)
+    );
+
+    input.value = next;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+});
+
+/**
+ * Affiche et met à jour en direct la valeur numérique à côté de chaque slider.
+ */
+document.querySelectorAll(".slider-field input[type='range']").forEach(range => {
+  const output = range.parentElement.querySelector(".slider-value");
+  if (!output) return;
+  const syncValue = () => { output.textContent = range.value; };
+  syncValue();
+  range.addEventListener("input", syncValue);
+});
+
+
+// =============================================================================
 // FONCTIONS D'ANALYSE DU FORMULAIRE ET PRESENCE
 // =============================================================================
 
@@ -649,12 +698,30 @@ function parseCourtNames() {
 }
 
 /**
+ * Met à jour le badge affichant le nombre de joueurs détectés (et les doublons ignorés).
+ */
+function updatePlayerCountBadge() {
+  const elPlayerCountBadge = document.getElementById("playerCountBadge");
+  if (!elPlayerCountBadge) return;
+
+  const players = parsePlayers(elPlayers.value);
+  const duplicates = countRawPlayerEntries(elPlayers.value) - players.length;
+  const label = players.length > 1 ? "joueurs" : "joueur";
+
+  elPlayerCountBadge.textContent = duplicates > 0
+    ? `${players.length} ${label} · ${duplicates} doublon${duplicates > 1 ? "s" : ""} ignoré${duplicates > 1 ? "s" : ""}`
+    : `${players.length} ${label}`;
+  elPlayerCountBadge.classList.toggle("has-duplicates", duplicates > 0);
+}
+
+/**
  * Synchronise l'interface des plages d'arrivée/départ pour chaque joueur.
  */
 function syncPresenceInputs() {
   const players = parsePlayers(elPlayers.value);
   const totalRounds = parseInt(elRounds.value || "8", 10);
-  
+
+  updatePlayerCountBadge();
   elPresenceList.innerHTML = "";
 
   players.forEach(p => {
