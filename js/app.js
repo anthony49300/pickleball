@@ -604,6 +604,15 @@ const elPlayerGroupsList = document.getElementById("playerGroupsList");
 const elNewGroupName = document.getElementById("newGroupName");
 const btnSavePlayerGroup = document.getElementById("savePlayerGroupBtn");
 
+const elModalOverlay = document.getElementById("modalOverlay");
+const elModalIcon = document.getElementById("modalIcon");
+const elModalTitle = document.getElementById("modalTitle");
+const elModalMessage = document.getElementById("modalMessage");
+const elModalCopyArea = document.getElementById("modalCopyArea");
+const elModalCopyInput = document.getElementById("modalCopyInput");
+const btnModalCancel = document.getElementById("modalCancelBtn");
+const btnModalConfirm = document.getElementById("modalConfirmBtn");
+
 // Variables globales de mémoire
 window.__PB_SCORES__ = {};
 window.__PB_PRESENCE__ = {};
@@ -650,6 +659,139 @@ document.querySelectorAll(".slider-field input[type='range']").forEach(range => 
   syncValue();
   range.addEventListener("input", syncValue);
 });
+
+
+// =============================================================================
+// MODALE GENERIQUE (remplace confirm()/alert()/prompt() natifs du navigateur)
+// =============================================================================
+
+let modalResolve = null;
+let modalLastFocusedEl = null;
+
+/**
+ * Ferme la modale et résout la promesse en attente avec le résultat fourni.
+ */
+function closeModal(result) {
+  if (elModalOverlay.hidden) return;
+  elModalOverlay.hidden = true;
+  document.removeEventListener("keydown", onModalKeydown);
+
+  const resolve = modalResolve;
+  modalResolve = null;
+  if (resolve) resolve(result);
+
+  if (modalLastFocusedEl && typeof modalLastFocusedEl.focus === "function") {
+    modalLastFocusedEl.focus();
+  }
+}
+
+/**
+ * Gère Échap (annule) et un piège de focus basique (Tab reste dans la modale).
+ */
+function onModalKeydown(e) {
+  if (e.key === "Escape") {
+    e.preventDefault();
+    closeModal(false);
+    return;
+  }
+  if (e.key !== "Tab") return;
+
+  const focusables = [btnModalCancel, elModalCopyInput, btnModalConfirm].filter(
+    el => el && !el.hidden && el.offsetParent !== null
+  );
+  if (!focusables.length) return;
+
+  const first = focusables[0];
+  const last = focusables[focusables.length - 1];
+
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
+}
+
+/**
+ * Ouvre la modale générique et renvoie une promesse résolue à la fermeture :
+ * `true` si l'utilisateur a cliqué sur le bouton de confirmation, `false` sinon
+ * (annulation, clic en dehors, Échap).
+ */
+function openModal({ icon = "⚠️", title, message, confirmText = "Confirmer", cancelText = "Annuler", danger = false, showCancel = true, copyText = null }) {
+  modalLastFocusedEl = document.activeElement;
+
+  elModalIcon.textContent = icon;
+  elModalTitle.textContent = title;
+  elModalMessage.textContent = message;
+
+  if (copyText != null) {
+    elModalCopyArea.hidden = false;
+    elModalCopyInput.value = copyText;
+  } else {
+    elModalCopyArea.hidden = true;
+    elModalCopyInput.value = "";
+  }
+
+  btnModalConfirm.textContent = confirmText;
+  btnModalConfirm.className = danger ? "danger" : "";
+  btnModalCancel.hidden = !showCancel;
+  btnModalCancel.textContent = cancelText;
+
+  elModalOverlay.hidden = false;
+  document.addEventListener("keydown", onModalKeydown);
+
+  if (copyText != null) {
+    elModalCopyInput.focus();
+    elModalCopyInput.select();
+  } else {
+    (showCancel ? btnModalCancel : btnModalConfirm).focus();
+  }
+
+  return new Promise(resolve => { modalResolve = resolve; });
+}
+
+btnModalConfirm.addEventListener("click", () => closeModal(true));
+btnModalCancel.addEventListener("click", () => closeModal(false));
+elModalOverlay.addEventListener("click", (e) => {
+  if (e.target === elModalOverlay) closeModal(false);
+});
+
+/** Remplace confirm() : question à 2 issues (confirmer / annuler), destructif par défaut. */
+function confirmModal(message, opts = {}) {
+  return openModal({
+    icon: opts.icon ?? "⚠️",
+    title: opts.title ?? "Confirmation requise",
+    message,
+    confirmText: opts.confirmText ?? "Confirmer",
+    cancelText: opts.cancelText ?? "Annuler",
+    danger: opts.danger ?? true,
+    showCancel: true
+  });
+}
+
+/** Remplace alert() : information à acquitter, un seul bouton "OK". */
+function alertModal(message, opts = {}) {
+  return openModal({
+    icon: opts.icon ?? "ℹ️",
+    title: opts.title ?? "Information",
+    message,
+    confirmText: opts.confirmText ?? "OK",
+    showCancel: false
+  });
+}
+
+/** Remplace le prompt() utilisé en secours quand navigator.clipboard échoue. */
+function copyFallbackModal(text, opts = {}) {
+  return openModal({
+    icon: opts.icon ?? "🔗",
+    title: opts.title ?? "Copier manuellement",
+    message: opts.message ?? "La copie automatique a échoué. Le texte est sélectionné ci-dessous : copiez-le avec Ctrl+C (ou Cmd+C).",
+    confirmText: "Fermer",
+    showCancel: false,
+    copyText: text
+  });
+}
 
 
 // =============================================================================
@@ -1607,8 +1749,12 @@ if (elHistoryList) {
 // BOUTON DE SUPPRESSION DE L'HISTORIQUE UNIQUEMENT
 // (ne touche ni à la session en cours, ni à l'autosave : cohérent avec le libellé du bouton)
 if (btnClearHistory) {
-  btnClearHistory.addEventListener("click", () => {
-    if (confirm("Voulez-vous vraiment vider l'historique des sessions enregistrées ? Cette action est irréversible.")) {
+  btnClearHistory.addEventListener("click", async () => {
+    const confirmed = await confirmModal(
+      "Voulez-vous vraiment vider l'historique des sessions enregistrées ? Cette action est irréversible.",
+      { title: "Vider l'historique ?", confirmText: "Vider l'historique", icon: "🗑️" }
+    );
+    if (confirmed) {
       localStorage.removeItem("pb_history");
       renderHistory();
     }
@@ -1629,38 +1775,42 @@ if (btnClearHistory) {
 // indépendamment de localStorage — ce qui donnait l'impression que le reset "ne marchait pas".
 // On réinitialise donc directement les champs du DOM et l'état en mémoire, sans recharger.
 if (btnResetAll) {
-  btnResetAll.addEventListener("click", () => {
-    if (confirm("Réinitialiser entièrement la page ? Cela effacera la session en cours, la sauvegarde automatique ET l'historique des sessions enregistrées.\n\nLes groupes de joueurs réguliers enregistrés seront conservés. Cette action est irréversible.")) {
-      localStorage.removeItem("pb_autosave");
-      localStorage.removeItem("pb_history");
+  btnResetAll.addEventListener("click", async () => {
+    const confirmed = await confirmModal(
+      "Cela effacera la session en cours, la sauvegarde automatique ET l'historique des sessions enregistrées.\n\nLes groupes de joueurs réguliers enregistrés seront conservés. Cette action est irréversible.",
+      { title: "Réinitialiser entièrement la page ?", confirmText: "Tout réinitialiser", icon: "🔄" }
+    );
+    if (!confirmed) return;
 
-      // Réinitialise l'état en mémoire
-      window.__PB_SCORES__ = {};
-      window.__PB_PRESENCE__ = {};
-      window.__PB_LAST_RESULT__ = null;
+    localStorage.removeItem("pb_autosave");
+    localStorage.removeItem("pb_history");
 
-      // Réinitialise les champs du formulaire à leurs valeurs par défaut
-      elPlayers.value = "";
-      elCourts.value = "2";
-      elRounds.value = "8";
-      elSeed.value = generateSeed();
-      elCourtNames.value = "";
-      elwT.value = "5";
-      elwO.value = "2";
-      elwP.value = "1";
-      elBeamWidth.value = "80";
-      elPartnerK.value = "10";
-      elSquare.checked = true;
-      elAvoidB2B.checked = true;
+    // Réinitialise l'état en mémoire
+    window.__PB_SCORES__ = {};
+    window.__PB_PRESENCE__ = {};
+    window.__PB_LAST_RESULT__ = null;
 
-      // Nettoie l'URL (retire un éventuel paramètre de partage ?d=...) sans recharger
-      window.history.replaceState({}, "", window.location.pathname);
+    // Réinitialise les champs du formulaire à leurs valeurs par défaut
+    elPlayers.value = "";
+    elCourts.value = "2";
+    elRounds.value = "8";
+    elSeed.value = generateSeed();
+    elCourtNames.value = "";
+    elwT.value = "5";
+    elwO.value = "2";
+    elwP.value = "1";
+    elBeamWidth.value = "80";
+    elPartnerK.value = "10";
+    elSquare.checked = true;
+    elAvoidB2B.checked = true;
 
-      clearMessages();
-      syncPresenceInputs();
-      renderEmptyState();
-      renderHistory();
-    }
+    // Nettoie l'URL (retire un éventuel paramètre de partage ?d=...) sans recharger
+    window.history.replaceState({}, "", window.location.pathname);
+
+    clearMessages();
+    syncPresenceInputs();
+    renderEmptyState();
+    renderHistory();
   });
 }
 
@@ -1767,7 +1917,7 @@ btnCopy.addEventListener("click", async () => {
     btnCopy.textContent = "Copié !";
     setTimeout(() => (btnCopy.textContent = "📋 Copier"), 900);
   } catch {
-    window.prompt("Copier le texte :", text);
+    await copyFallbackModal(text, { title: "Copier le planning" });
   }
 });
 
@@ -1787,7 +1937,7 @@ async function copyShareUrl(btnElement) {
     btnElement.textContent = "Lien copié !";
     setTimeout(() => (btnElement.textContent = originalText), 1500);
   } catch {
-    window.prompt("Copier le lien :", urlToShare);
+    await copyFallbackModal(urlToShare, { title: "Copier le lien de partage", icon: "🔗" });
   }
 }
 
@@ -1815,7 +1965,10 @@ if (btnExportPng) {
       link.click();
     } catch (err) {
       console.error(err);
-      alert("Erreur lors de l'export PNG.");
+      await alertModal(
+        "Une erreur est survenue lors de la génération de l'image. Réessayez, ou changez de navigateur si le problème persiste.",
+        { title: "Export impossible", icon: "⚠️" }
+      );
     } finally {
       btnExportPng.textContent = originalBtnText;
     }

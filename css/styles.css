@@ -991,6 +991,81 @@ button:disabled {
 .footer { text-align: center; padding: 20px 0; font-size: 0.85rem; }
 
 /* --------------------------------------------------
+   MODALE GENERIQUE (remplace confirm/alert/prompt natifs)
+-------------------------------------------------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 8, 14, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: modal-fade-in 0.15s ease;
+}
+
+.modal-overlay[hidden] { display: none; }
+
+@keyframes modal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 28px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+  text-align: center;
+  animation: modal-pop-in 0.18s ease;
+}
+
+@keyframes modal-pop-in {
+  from { transform: scale(0.95) translateY(6px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.modal-icon { font-size: 2.2rem; margin-bottom: 8px; }
+
+.modal-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  margin: 0 0 10px;
+  color: #ffffff;
+}
+
+.modal-message {
+  font-size: 0.92rem;
+  color: var(--text-subtle);
+  line-height: 1.55;
+  margin: 0 0 18px;
+  white-space: pre-line;
+}
+
+.modal-copy-area { margin-bottom: 18px; }
+
+.modal-copy-area input {
+  text-align: center;
+  font-size: 0.82rem;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.modal-actions button {
+  flex: 1;
+}
+
+/* --------------------------------------------------
    INFOBULLES D'AIDE (TOOLTIPS)
 -------------------------------------------------- */
 .tooltip {
