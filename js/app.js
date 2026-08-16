@@ -104,6 +104,20 @@ function incCount(map, key, amt = 1) {
 }
 
 /**
+ * Échappe les caractères HTML sensibles d'une chaîne avant toute injection via innerHTML.
+ * Indispensable pour toute donnée saisie par l'utilisateur (noms de joueurs, terrains, seed…)
+ * afin d'éviter les failles XSS (ex: un nom de joueur du type "<img src=x onerror=...>").
+ */
+function escapeHtml(str) {
+  return String(str ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+/**
  * Formate l'affichage texte d'une rencontre.
  */
 function fmtMatch(match) {
@@ -596,9 +610,35 @@ function clearMessages() {
   if (elWarning) elWarning.hidden = true;
 }
 
+/**
+ * Découpe la saisie libre en une liste de noms de joueurs.
+ * Normalise les espaces et déduplique les doublons (insensible à la casse et aux espaces),
+ * pour éviter qu'un même joueur saisi deux fois (ex: "Marc" et "marc") ne fausse
+ * silencieusement le classement et l'algorithme de rotation.
+ */
 function parsePlayers(text) {
   const lines = text.split(/\n/).flatMap(line => line.split(","));
-  return lines.map(s => s.trim()).filter(Boolean);
+  const seen = new Set();
+  const result = [];
+  for (const raw of lines) {
+    const name = raw.trim().replace(/\s+/g, " ");
+    if (!name) continue;
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(name);
+  }
+  return result;
+}
+
+/**
+ * Compte le nombre d'entrées non vides de la saisie brute (avant déduplication),
+ * pour pouvoir signaler à l'utilisateur si des doublons ont été ignorés.
+ */
+function countRawPlayerEntries(text) {
+  return text.split(/\n/).flatMap(line => line.split(","))
+    .map(s => s.trim().replace(/\s+/g, " "))
+    .filter(Boolean).length;
 }
 
 function parseCourtNames() {
@@ -624,12 +664,12 @@ function syncPresenceInputs() {
     const item = document.createElement("div");
     item.className = "presence-item";
     item.innerHTML = `
-      <span><strong>${p}</strong></span>
+      <span><strong>${escapeHtml(p)}</strong></span>
       <div class="presence-inputs">
         <label style="font-size: 0.75rem;">De</label>
-        <input type="number" min="1" max="${totalRounds}" value="${window.__PB_PRESENCE__[p].start}" data-player="${p}" data-type="start" />
+        <input type="number" min="1" max="${totalRounds}" value="${window.__PB_PRESENCE__[p].start}" data-player="${escapeHtml(p)}" data-type="start" />
         <label style="font-size: 0.75rem;">à</label>
-        <input type="number" min="1" max="${totalRounds}" value="${window.__PB_PRESENCE__[p].end}" data-player="${p}" data-type="end" />
+        <input type="number" min="1" max="${totalRounds}" value="${window.__PB_PRESENCE__[p].end}" data-player="${escapeHtml(p)}" data-type="end" />
       </div>
     `;
     elPresenceList.appendChild(item);
@@ -814,10 +854,10 @@ function render(result, players, numCourts, numRounds) {
 
       matches.forEach((m, mIdx) => {
         const [t1, t2] = m;
-        const courtLabel = courtCustomNames[mIdx] || `Terrain ${mIdx + 1}`;
+        const courtLabel = escapeHtml(courtCustomNames[mIdx] || `Terrain ${mIdx + 1}`);
         const matchCard = document.createElement("div");
         matchCard.className = "match-card";
-        
+
         // Récupération des scores sauvegardés en mémoire pour réinjection direct
         const key = `${idx}-${mIdx}`;
         const savedScore1 = window.__PB_SCORES__[key]?.['1'] ?? "";
@@ -826,13 +866,13 @@ function render(result, players, numCourts, numRounds) {
         matchCard.innerHTML = `
           <span class="court-badge">${courtLabel}</span>
           <div class="team-score">
-            <span class="team">${t1.join(" & ")}</span>
+            <span class="team">${t1.map(escapeHtml).join(" & ")}</span>
             <input type="number" class="score-input" data-round="${idx}" data-match="${mIdx}" data-team="1" min="0" placeholder="-" value="${savedScore1}" />
           </div>
           <span class="vs">VS</span>
           <div class="team-score">
             <input type="number" class="score-input" data-round="${idx}" data-match="${mIdx}" data-team="2" min="0" placeholder="-" value="${savedScore2}" />
-            <span class="team">${t2.join(" & ")}</span>
+            <span class="team">${t2.map(escapeHtml).join(" & ")}</span>
           </div>
         `;
         matchesList.appendChild(matchCard);
@@ -851,8 +891,8 @@ function render(result, players, numCourts, numRounds) {
   const minBen = Math.min(...benchesCount.map(x => x[1]));
   const maxBen = Math.max(...benchesCount.map(x => x[1]));
 
-  const tmTop = topPairs(stats.teammateCount).map(([k, v]) => `${k.replace("||", " & ")} (${v})`).join(", ");
-  const opTop = topPairs(stats.opponentCount).map(([k, v]) => `${k.replace("||", " vs ")} (${v})`).join(", ");
+  const tmTop = topPairs(stats.teammateCount).map(([k, v]) => `${escapeHtml(k.replace("||", " & "))} (${v})`).join(", ");
+  const opTop = topPairs(stats.opponentCount).map(([k, v]) => `${escapeHtml(k.replace("||", " vs "))} (${v})`).join(", ");
 
   // Détection de la présence de matchs en simple dans la session
   const hasSingles = stats.singlesCount && Array.from(stats.singlesCount.values()).some(v => v > 0);
@@ -868,8 +908,8 @@ function render(result, players, numCourts, numRounds) {
       const b = stats.benchCount.get(p) ?? 0;
       const s = stats.singlesCount?.get(p) ?? 0;
       return hasSingles
-        ? `<strong>${p}</strong> : ${j}J / ${s}S / ${b}B`
-        : `<strong>${p}</strong> : ${j}J / ${b}B`;
+        ? `<strong>${escapeHtml(p)}</strong> : ${j}J / ${s}S / ${b}B`
+        : `<strong>${escapeHtml(p)}</strong> : ${j}J / ${b}B`;
     })
     .join(" · ");
 
@@ -917,12 +957,12 @@ function renderHeatmap() {
 
   let html = `<table class="heatmap-table"><thead><tr><th></th>`;
   players.forEach(p => {
-    html += `<th>${p.substring(0, 4)}.</th>`;
+    html += `<th>${escapeHtml(p.substring(0, 4))}.</th>`;
   });
   html += `</tr></thead><tbody>`;
 
   players.forEach(p1 => {
-    html += `<tr><th>${p1}</th>`;
+    html += `<tr><th>${escapeHtml(p1)}</th>`;
     players.forEach(p2 => {
       if (p1 === p2) {
         html += `<td style="background: rgba(0,0,0,0.3); color: #555;">-</td>`;
@@ -1035,7 +1075,7 @@ function updateRankings() {
     return `
       <tr>
         <td>${i + 1}</td>
-        <td>${p.name}</td>
+        <td>${escapeHtml(p.name)}</td>
         <td>${p.m}</td>
         <td>${p.w}</td>
         <td>${p.l}</td>
@@ -1076,17 +1116,17 @@ function renderPodium(sorted) {
   elPodiumContainer.innerHTML = `
     <div class="podium-step silver">
       <div class="podium-avatar">🥈</div>
-      <div class="podium-name">${p2.name}</div>
+      <div class="podium-name">${escapeHtml(p2.name)}</div>
       <div class="podium-stats">${p2.w}V · ${p2.diff > 0 ? '+' : ''}${p2.diff}</div>
     </div>
     <div class="podium-step gold">
       <div class="podium-avatar">🥇</div>
-      <div class="podium-name">${p1.name}</div>
+      <div class="podium-name">${escapeHtml(p1.name)}</div>
       <div class="podium-stats">${p1.w}V · ${p1.diff > 0 ? '+' : ''}${p1.diff}</div>
     </div>
     <div class="podium-step bronze">
       <div class="podium-avatar">🥉</div>
-      <div class="podium-name">${p3.name}</div>
+      <div class="podium-name">${escapeHtml(p3.name)}</div>
       <div class="podium-stats">${p3.w}V · ${p3.diff > 0 ? '+' : ''}${p3.diff}</div>
     </div>
   `;
@@ -1141,8 +1181,8 @@ function renderBadges(sorted, pairWins) {
       <div class="badge-icon">${b.icon}</div>
       <div>
         <div class="badge-title">${b.title}</div>
-        <div class="badge-player">${b.player}</div>
-        <div class="badge-desc">${b.desc}</div>
+        <div class="badge-player">${escapeHtml(b.player)}</div>
+        <div class="badge-desc">${escapeHtml(b.desc)}</div>
       </div>
     </div>
   `).join('');
@@ -1216,11 +1256,24 @@ function generateSession(preserveScores = true) {
       throw new Error("Veuillez entrer au moins 4 joueurs.");
     }
 
+    const warnings = [];
+
+    // Signale les doublons de joueurs (même nom, éventuellement casse différente) ignorés au parsing
+    const rawCount = countRawPlayerEntries(elPlayers.value);
+    if (rawCount > players.length) {
+      const duplicates = rawCount - players.length;
+      warnings.push(`${duplicates} doublon(s) de joueur ignoré(s).`);
+    }
+
     // Prendre en compte les 2 terrains possibles à 6 joueurs (1 double + 1 simple)
     const maxUsableCourts = (players.length === 6 && numCourts >= 2) ? 2 : Math.floor(players.length / 4);
-    if (numCourts > maxUsableCourts && maxUsableCourts > 0 && elWarning) {
+    if (numCourts > maxUsableCourts && maxUsableCourts > 0) {
+      warnings.push(`${numCourts} terrain(s) demandé(s), mais seulement ${maxUsableCourts} utilisé(s) pour ${players.length} joueur(s).`);
+    }
+
+    if (warnings.length && elWarning) {
       elWarning.hidden = false;
-      elWarning.textContent = `Attention : ${numCourts} terrain(s) demandé(s), mais seulement ${maxUsableCourts} utilisé(s) pour ${players.length} joueur(s).`;
+      elWarning.textContent = `Attention : ${warnings.join(" ")}`;
     }
 
     const options = {
@@ -1335,9 +1388,9 @@ function renderHistory() {
   elHistoryList.innerHTML = history.map(item => `
     <div class="history-card">
       <div>
-        <h4>Session #${item.seed}</h4>
+        <h4>Session #${escapeHtml(item.seed)}</h4>
         <div class="subtle" style="font-size: 0.8rem; margin-top: 4px;">
-          📅 ${item.date} · 👥 ${item.playersCount} Joueurs · 🔄 ${item.roundsCount} Tours
+          📅 ${escapeHtml(item.date)} · 👥 ${item.playersCount} Joueurs · 🔄 ${item.roundsCount} Tours
         </div>
       </div>
       <div class="history-actions">
@@ -1366,20 +1419,13 @@ if (elHistoryList) {
   });
 }
 
-// BOUTON DE SUPPRESSION ET REINITIALISATION TOTALE DU CACHE
+// BOUTON DE SUPPRESSION DE L'HISTORIQUE UNIQUEMENT
+// (ne touche ni à la session en cours, ni à l'autosave : cohérent avec le libellé du bouton)
 if (btnClearHistory) {
   btnClearHistory.addEventListener("click", () => {
-    if (confirm("Voulez-vous vraiment TOUT réinitialiser ? Cela effacera l'historique, la sauvegarde automatique et remettra l'application entièrement à zéro.")) {
-      // 1. Vider totalement le stockage local du navigateur
-      localStorage.clear();
-
-      // 2. Vider la mémoire vive JS
-      window.__PB_SCORES__ = {};
-      window.__PB_PRESENCE__ = {};
-      window.__PB_LAST_RESULT__ = null;
-
-      // 3. Recharger la page sans paramètres URL pour repartir de zéro absolu
-      window.location.href = window.location.pathname;
+    if (confirm("Voulez-vous vraiment vider l'historique des sessions enregistrées ? Cette action est irréversible.")) {
+      localStorage.removeItem("pb_history");
+      renderHistory();
     }
   });
 }
