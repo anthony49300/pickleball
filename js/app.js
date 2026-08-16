@@ -610,6 +610,8 @@ const elModalTitle = document.getElementById("modalTitle");
 const elModalMessage = document.getElementById("modalMessage");
 const elModalCopyArea = document.getElementById("modalCopyArea");
 const elModalCopyInput = document.getElementById("modalCopyInput");
+const elModalImageArea = document.getElementById("modalImageArea");
+const elModalImagePreview = document.getElementById("modalImagePreview");
 const btnModalCancel = document.getElementById("modalCancelBtn");
 const btnModalConfirm = document.getElementById("modalConfirmBtn");
 
@@ -718,7 +720,7 @@ function onModalKeydown(e) {
  * `true` si l'utilisateur a cliqué sur le bouton de confirmation, `false` sinon
  * (annulation, clic en dehors, Échap).
  */
-function openModal({ icon = "⚠️", title, message, confirmText = "Confirmer", cancelText = "Annuler", danger = false, showCancel = true, copyText = null }) {
+function openModal({ icon = "⚠️", title, message, confirmText = "Confirmer", cancelText = "Annuler", danger = false, showCancel = true, copyText = null, imageSrc = null }) {
   modalLastFocusedEl = document.activeElement;
 
   elModalIcon.textContent = icon;
@@ -731,6 +733,14 @@ function openModal({ icon = "⚠️", title, message, confirmText = "Confirmer",
   } else {
     elModalCopyArea.hidden = true;
     elModalCopyInput.value = "";
+  }
+
+  if (imageSrc != null) {
+    elModalImageArea.hidden = false;
+    elModalImagePreview.src = imageSrc;
+  } else {
+    elModalImageArea.hidden = true;
+    elModalImagePreview.src = "";
   }
 
   btnModalConfirm.textContent = confirmText;
@@ -791,6 +801,60 @@ function copyFallbackModal(text, opts = {}) {
     showCancel: false,
     copyText: text
   });
+}
+
+/**
+ * Affiche une image (data URI) dans la modale au lieu de tenter un téléchargement
+ * automatique via <a download> — cette technique ne déclenche généralement AUCUNE
+ * sauvegarde dans une WebView Android brute (pas de gestionnaire de téléchargement
+ * natif comme dans un vrai navigateur). Un appui long sur l'image affichée déclenche
+ * en revanche le menu natif Android "Enregistrer l'image", qui fonctionne partout,
+ * y compris dans l'app installée, sans plugin ni permission particulière.
+ */
+function imagePreviewModal(dataUri, opts = {}) {
+  return openModal({
+    icon: opts.icon ?? "📷",
+    title: opts.title ?? "Image générée",
+    message: opts.message ?? "Appui long sur mobile (ou clic droit sur ordinateur) pour l'enregistrer ou la partager.",
+    confirmText: "Fermer",
+    showCancel: false,
+    imageSrc: dataUri
+  });
+}
+
+/**
+ * Copie un texte dans le presse-papiers en essayant plusieurs méthodes dans l'ordre :
+ * 1. navigator.clipboard.writeText (moderne, mais souvent bloqué par permission dans
+ *    une WebView Android : DOMException "Write permission denied" / "Document is not focused")
+ * 2. document.execCommand("copy") (dépréciée, mais historiquement plus fiable dans les
+ *    WebView embarquées que l'API Clipboard moderne)
+ * Renvoie true si l'une des deux méthodes a réussi, false sinon (l'appelant doit alors
+ * proposer une copie manuelle, voir copyFallbackModal).
+ */
+async function copyTextRobust(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    // On retente avec la méthode historique execCommand("copy"), via un textarea
+    // temporaire hors-écran (nécessaire car execCommand copie la sélection courante).
+    try {
+      const tempEl = document.createElement("textarea");
+      tempEl.value = text;
+      tempEl.setAttribute("readonly", "");
+      tempEl.style.position = "fixed";
+      tempEl.style.top = "0";
+      tempEl.style.left = "-9999px";
+      document.body.appendChild(tempEl);
+      tempEl.focus();
+      tempEl.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(tempEl);
+      return ok;
+    } catch {
+      return false;
+    }
+  }
 }
 
 
@@ -1912,11 +1976,10 @@ btnCopy.addEventListener("click", async () => {
   });
 
   const text = lines.join("\n").trim();
-  try {
-    await navigator.clipboard.writeText(text);
+  if (await copyTextRobust(text)) {
     btnCopy.textContent = "Copié !";
     setTimeout(() => (btnCopy.textContent = "📋 Copier"), 900);
-  } catch {
+  } else {
     await copyFallbackModal(text, { title: "Copier le planning" });
   }
 });
@@ -1930,13 +1993,23 @@ function buildShareableUrl() {
 }
 
 async function copyShareUrl(btnElement) {
-  const urlToShare = buildShareableUrl();
+  let urlToShare;
   try {
-    await navigator.clipboard.writeText(urlToShare);
+    urlToShare = buildShareableUrl();
+  } catch (err) {
+    console.error(err);
+    await alertModal(
+      "Impossible de construire le lien de partage (une dépendance requise n'a peut-être pas pu se charger).",
+      { title: "Partage impossible", icon: "⚠️" }
+    );
+    return;
+  }
+
+  if (await copyTextRobust(urlToShare)) {
     const originalText = btnElement.textContent;
     btnElement.textContent = "Lien copié !";
     setTimeout(() => (btnElement.textContent = originalText), 1500);
-  } catch {
+  } else {
     await copyFallbackModal(urlToShare, { title: "Copier le lien de partage", icon: "🔗" });
   }
 }
@@ -1957,12 +2030,14 @@ if (btnExportPng) {
         backgroundColor: "#0a0f18",
         scale: 2
       });
-      
+
+      // On affiche l'image dans la modale plutôt que de déclencher un <a download>
+      // "invisible" : cette technique ne fonctionne pas de façon fiable dans une WebView
+      // Android brute (pas de gestionnaire de téléchargement), alors qu'un appui long
+      // (mobile) ou un clic droit (desktop) sur l'image affichée permet de l'enregistrer
+      // partout, sans dépendre du support du téléchargement automatique du navigateur.
       const imageUri = canvas.toDataURL("image/png");
-      const link = document.createElement("a");
-      link.download = `Classement-Pickleball-${elSeed.value || "session"}.png`;
-      link.href = imageUri;
-      link.click();
+      await imagePreviewModal(imageUri, { title: "Classement — image générée" });
     } catch (err) {
       console.error(err);
       await alertModal(
