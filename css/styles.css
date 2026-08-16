@@ -302,6 +302,10 @@ button:disabled {
 /* --------------------------------------------------
    STEPPER DE SESSION (INDICATEUR D'ÉTAPE)
 -------------------------------------------------- */
+.session-stepper[hidden] {
+  display: none;
+}
+
 .session-stepper {
   display: flex;
   align-items: center;
