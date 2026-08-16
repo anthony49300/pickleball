@@ -1161,20 +1161,78 @@ button:disabled {
 }
 
 @media (max-width: 500px) {
+  /* .match-card est en display:grid (2 colonnes) sur desktop, avec badge terrain et VS
+     positionnés en absolu par-dessus une ligne de filet verticale. Sur un écran étroit,
+     cette grille à 2 colonnes rigides + les éléments absolus n'ont pas la place de
+     respirer et se chevauchent (nom d'équipe caché sous le badge terrain, score collé
+     au VS). On passe donc en empilement vertical (flex-column), et le décor "filet/kitchen"
+     est réorienté à l'horizontale pour rester cohérent avec des équipes empilées au lieu
+     de côte à côte (le filet vertical devient horizontal, la bande kitchen aussi).
+  */
   .match-card {
-    flex-wrap: wrap;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 36px 12px 14px; /* padding-top dégagé pour le badge terrain, replacé dans le coin */
+  }
+
+  /* Filet : toujours présent, mais horizontal (les équipes sont empilées, plus côte à côte) */
+  .match-card::before {
+    top: 50%;
+    left: 0;
+    right: 0;
+    bottom: auto;
+    width: auto;
+    height: 2px;
+    border-left: none;
+    border-top: 1px dashed rgba(255, 255, 255, 0.8);
+    transform: translateY(-50%);
+  }
+
+  /* Zone "Kitchen" : bande horizontale autour du filet, au lieu d'une bande verticale */
+  .match-card::after {
+    top: 32%;
+    bottom: 32%;
+    left: 0;
+    right: 0;
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.5);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+  }
+
+  /* Badge terrain : replacé dans le coin plutôt qu'en pleine largeur au-dessus */
+  .court-badge {
+    top: 10px;
+    left: 10px;
+    transform: none;
+  }
+
+  .vs {
+    position: static;
+    align-self: center;
+    transform: none;
+    margin: 0;
+  }
+
+  /* Nom d'équipe + son score regroupés et centrés ensemble sur la même ligne
+     (plutôt qu'écartés aux 2 extrémités de la carte comme sur desktop) : sinon,
+     visuellement, rien n'indique quel score appartient à quelle équipe. */
+  .team-score {
+    width: 100%;
     justify-content: center;
-    padding: 10px 8px;
-    gap: 6px;
+    text-align: center;
   }
 
   .team-score:first-of-type,
   .team-score:last-of-type {
     justify-content: center;
+    text-align: center;
+    padding-left: 0;
   }
 
-  .vs {
-    font-size: 0.75rem;
-    opacity: 0.9;
+  .team {
+    font-size: 0.85rem;
   }
 }
