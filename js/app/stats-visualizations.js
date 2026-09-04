@@ -77,7 +77,7 @@ function updateRankings() {
   const allPlayers = parsePlayers(elPlayers.value);
   
   allPlayers.forEach(p => {
-    playersStats[p] = { w: 0, l: 0, pf: 0, pa: 0, m: 0, maxWin: 0, maxLoss: 0, streak: 0 };
+    playersStats[p] = { w: 0, l: 0, pf: 0, pa: 0, m: 0, maxWin: 0, maxLoss: 0, streak: 0, closeWins: 0, closeLosses: 0, results: [] };
   });
   
   let hasAnyScore = false;
@@ -101,14 +101,19 @@ function updateRankings() {
               stats.m++;
               stats.pf += ptsFor;
               stats.pa += ptsAgainst;
+              const margin = Math.abs(ptsFor - ptsAgainst);
               if (ptsFor > ptsAgainst) {
                 stats.w++;
                 stats.maxWin = Math.max(stats.maxWin, ptsFor - ptsAgainst);
                 stats.streak = stats.streak >= 0 ? stats.streak + 1 : 1;
+                if (margin <= 2) stats.closeWins++;
+                stats.results.push("W");
               } else if (ptsFor < ptsAgainst) {
                 stats.l++;
                 stats.maxLoss = Math.max(stats.maxLoss, ptsAgainst - ptsFor);
                 stats.streak = stats.streak <= 0 ? stats.streak - 1 : -1;
+                if (margin <= 2) stats.closeLosses++;
+                stats.results.push("L");
               }
             }
           });
@@ -225,6 +230,18 @@ function renderPodium(sorted) {
   `;
 }
 
+/**
+ * Compte le nombre de fois où le résultat (victoire/défaite) change d'un match
+ * au suivant, dans l'ordre chronologique (utilisé pour le badge Montagnes Russes).
+ */
+function countAlternations(results) {
+  let count = 0;
+  for (let i = 1; i < results.length; i++) {
+    if (results[i] !== results[i - 1]) count++;
+  }
+  return count;
+}
+
 function renderBadges(sorted, pairWins) {
   const badges = [];
 
@@ -266,6 +283,42 @@ function renderBadges(sorted, pairWins) {
       title: "Maître du Différentiel",
       player: bestDiff.name,
       desc: `Différentiel de +${bestDiff.diff}`
+    });
+  }
+
+  const coldBlood = [...sorted].filter(p => p.closeWins > 0).sort((a, b) => b.closeWins - a.closeWins)[0];
+  if (coldBlood) {
+    badges.push({
+      icon: "🧊",
+      title: "Sang-Froid",
+      player: coldBlood.name,
+      desc: `${coldBlood.closeWins} victoire${coldBlood.closeWins > 1 ? "s" : ""} arrachée${coldBlood.closeWins > 1 ? "s" : ""} à 2 points ou moins`
+    });
+  }
+
+  // "Malgré un bon différentiel global" : on exige un différentiel positif, pour ne
+  // récompenser que les joueurs dont la malchance sur les matchs serrés ne reflète
+  // pas leur niveau réel sur l'ensemble de la session.
+  const unlucky = [...sorted].filter(p => p.closeLosses > 0 && p.diff > 0).sort((a, b) => b.closeLosses - a.closeLosses)[0];
+  if (unlucky) {
+    badges.push({
+      icon: "😬",
+      title: "Poissard",
+      player: unlucky.name,
+      desc: `${unlucky.closeLosses} défaite${unlucky.closeLosses > 1 ? "s" : ""} à 2 points ou moins malgré un différentiel de +${unlucky.diff}`
+    });
+  }
+
+  const rollercoaster = [...sorted]
+    .filter(p => p.m >= 2)
+    .map(p => ({ ...p, alternations: countAlternations(p.results) }))
+    .sort((a, b) => b.alternations - a.alternations)[0];
+  if (rollercoaster && rollercoaster.alternations > 0) {
+    badges.push({
+      icon: "🎢",
+      title: "Montagnes Russes",
+      player: rollercoaster.name,
+      desc: `${rollercoaster.alternations} changement${rollercoaster.alternations > 1 ? "s" : ""} de résultat sur ${rollercoaster.m} matchs`
     });
   }
 
