@@ -315,6 +315,18 @@
        hors-ligne, notamment dans l'APK Android où l'accès réseau n'est pas garanti. -->
   <script src="js/vendor/lz-string.min.js"></script>
   <script src="js/vendor/html2canvas.min.js"></script>
-  <script src="js/app.js"></script>
+
+  <!-- Découpage de l'ancien js/app.js en modules thématiques, chargés en scripts
+       classiques (pas type="module") pour rester utilisable en file:// sans serveur.
+       L'ordre est important : chaque fichier peut s'appuyer sur les déclarations
+       (fonctions, const/let de haut niveau) des fichiers chargés avant lui. -->
+  <script src="js/app/algorithm.js"></script>
+  <script src="js/app/dom-elements.js"></script>
+  <script src="js/app/modal.js"></script>
+  <script src="js/app/form-and-render.js"></script>
+  <script src="js/app/stats-visualizations.js"></script>
+  <script src="js/app/state-and-groups.js"></script>
+  <script src="js/app/history-and-events.js"></script>
+  <script src="js/app/init.js"></script>
 </body>
 </html>
