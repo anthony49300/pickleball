@@ -1,0 +1,92 @@
+name: Build Android APK
+
+# Se déclenche à chaque push sur main, ou manuellement depuis l'onglet "Actions" de GitHub.
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Installer le JDK (requis par Gradle/Android)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Mettre en cache les dépendances Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('android/**/*.gradle*') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      - name: Installer les dépendances Capacitor
+        run: npm install
+
+      # Capacitor interdit webDir="." (racine du dépôt) pour ne pas risquer d'embarquer
+      # node_modules/.git/etc. dans l'APK. On copie donc uniquement les fichiers du site
+      # dans un dossier www/ dédié (non versionné, voir .gitignore), utilisé comme webDir.
+      - name: Préparer les assets web (dossier www/)
+        run: |
+          mkdir -p www
+          cp index.html manifest.json icon-192.png icon-512.png icon-pickleball.svg www/
+          cp -r css www/
+          cp -r js www/
+
+      # Le dossier android/ n'est pas versionné (voir .gitignore) : Capacitor le régénère
+      # à chaque run à partir de capacitor.config.json, puis y copie le contenu de www/.
+      - name: Générer le projet Android
+        run: npx cap add android
+
+      # Par défaut, la WebView Android ignore le <meta name="viewport"> de index.html et
+      # rend la page comme un site desktop (~980px de large) avant de la réduire pour
+      # qu'elle tienne à l'écran — d'où l'effet "page miniature/dézoomée" observé sur
+      # téléphone. On force explicitement le mode viewport mobile dans MainActivity,
+      # ce que Capacitor ne configure pas automatiquement.
+      - name: Forcer le viewport mobile dans la WebView (fix page dézoomée)
+        run: |
+          mkdir -p android/app/src/main/java/com/jfpickleball/app
+          cat > android/app/src/main/java/com/jfpickleball/app/MainActivity.java << 'EOF'
+          package com.jfpickleball.app;
+          import android.os.Bundle;
+          import com.getcapacitor.BridgeActivity;
+          public class MainActivity extends BridgeActivity {
+          @Override
+          public void onCreate(Bundle savedInstanceState) {
+          super.onCreate(savedInstanceState);
+          this.bridge.getWebView().getSettings().setUseWideViewPort(true);
+          this.bridge.getWebView().getSettings().setLoadWithOverviewMode(true);
+          }
+          }
+          EOF
+
+      - name: Synchroniser le site web dans le projet Android
+        run: npx cap sync android
+
+      - name: Rendre gradlew exécutable
+        run: chmod +x android/gradlew
+
+      - name: Compiler l'APK (debug, non signé)
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Publier l'APK en téléchargement
+        uses: actions/upload-artifact@v4
+        with:
+          name: jf-pickleball-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error

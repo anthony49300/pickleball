@@ -1,0 +1,14 @@
+# Fichiers à ne PAS copier dans les assets web de l'app Android
+# (webDir = "." dans capacitor.config.json, donc tout ce qui n'est pas le site lui-même
+# doit être exclu ici, sinon ça finit embarqué dans l'APK)
+node_modules
+android
+ios
+.git
+.github
+.gitignore
+.capacitorignore
+package.json
+package-lock.json
+capacitor.config.json
+README.md

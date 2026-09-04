@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JF Pickleball Générateur</title>
+  
+  <!-- Favicon Balle de Pickleball SVG -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2245%22 fill=%22%23ccff00%22/><circle cx=%2235%22 cy=%2235%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2265%22 cy=%2235%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2250%22 cy=%2250%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2235%22 cy=%2265%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2265%22 cy=%2265%22 r=%226%22 fill=%22%230a0f18%22/></svg>">
+  
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0a0f18" />
+</head>
+<body>
+  <header class="container header-bar">
+    <h1>
+      <svg width="32" height="32" viewBox="0 0 100 100" style="vertical-align: middle;">
+        <circle cx="50" cy="50" r="45" fill="#ccff00"/>
+        <circle cx="35" cy="35" r="5" fill="#0a0f18"/>
+        <circle cx="65" cy="35" r="5" fill="#0a0f18"/>
+        <circle cx="50" cy="50" r="5" fill="#0a0f18"/>
+        <circle cx="35" cy="65" r="5" fill="#0a0f18"/>
+        <circle cx="65" cy="65" r="5" fill="#0a0f18"/>
+      </svg>
+      JF Pickleball
+    </h1>
+    <div class="header-actions" style="display:flex; align-items:center; gap:10px;">
+      <div id="autosaveBadge" class="save-badge">💾 Sauvegardé</div>
+      <button id="resetAllBtn" class="secondary danger" style="font-size: 0.8rem; padding: 6px 12px;" title="Effacer toutes les données de cette page (session, historique, sauvegarde)">🔄 Réinitialiser la page</button>
+    </div>
+  </header>
+
+  <main class="container grid">
+    <!-- SECTION PARAMÈTRES -->
+    <section class="card">
+      <h2>🔧 Configuration de Session</h2>
+
+      <label class="label label-with-badge" for="players">
+        <span>⚔️ Joueurs (un par ligne ou séparés par des virgules)</span>
+        <span id="playerCountBadge" class="count-badge">0 joueur</span>
+      </label>
+      <textarea id="players" rows="5" placeholder="Antoine, Julien, Marc"></textarea>
+
+      <!-- GROUPES DE JOUEURS RÉGULIERS (CLUBS RÉCURRENTS) -->
+      <details class="details" id="playerGroupsDetails">
+        <summary>👥 Groupes de Joueurs Réguliers</summary>
+        <p class="subtle" style="font-size: 0.82rem; margin: 6px 0 12px;">
+          Enregistrez votre liste de joueurs habituels (ex: "Mardi Soir") pour la recharger en un clic la prochaine fois, sans tout retaper.
+        </p>
+
+        <div class="group-save-row">
+          <input id="newGroupName" type="text" placeholder="Nom du groupe (ex: Mardi Soir)" />
+          <button id="savePlayerGroupBtn" class="secondary">💾 Enregistrer les joueurs actuels</button>
+        </div>
+
+        <div id="playerGroupsList" class="player-groups-grid">
+          <p class="subtle">Aucun groupe enregistré pour le&nbsp;moment.</p>
+        </div>
+      </details>
+
+      <div class="row">
+        <div>
+          <label class="label" for="courts">🏟️ Terrains</label>
+          <div class="stepper" data-min="1" data-max="10">
+            <button type="button" class="stepper-btn" data-step="-1" aria-label="Diminuer le nombre de terrains">−</button>
+            <input id="courts" type="number" min="1" max="10" value="2" />
+            <button type="button" class="stepper-btn" data-step="1" aria-label="Augmenter le nombre de terrains">+</button>
+          </div>
+        </div>
+        <div>
+          <label class="label" for="rounds">🔄 Tours</label>
+          <div class="stepper" data-min="1" data-max="50">
+            <button type="button" class="stepper-btn" data-step="-1" aria-label="Diminuer le nombre de tours">−</button>
+            <input id="rounds" type="number" min="1" max="50" value="8" />
+            <button type="button" class="stepper-btn" data-step="1" aria-label="Augmenter le nombre de tours">+</button>
+          </div>
+        </div>
+        <div>
+          <label class="label" for="seed">🎲 ID Session</label>
+          <div style="display:flex; gap:6px;">
+            <input id="seed" type="text" placeholder="Auto" />
+            <button id="newSeed" class="secondary" title="Nouvelle Seed">🔀</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Nommage Personnalisé des Terrains -->
+      <div style="margin-top: 12px;">
+        <label class="label" for="courtNames">🏷️ Noms des Terrains (Optionnel, séparés par virgules)</label>
+        <input id="courtNames" type="text" placeholder="ex: Court Central, Court 1, Terrain A" />
+      </div>
+
+      <!-- Arrivées et Départs -->
+      <details class="details" id="presenceDetails">
+        <summary>⏱️ Arrivées & Départs des Joueurs</summary>
+        <p class="subtle" style="font-size: 0.82rem; margin: 6px 0 12px;">
+          Indiquez à quel tour un joueur arrive ou repart s'il ne joue pas toute la session.
+        </p>
+        <div id="presenceList" class="presence-grid">
+          <!-- Rempli dynamiquement en JS -->
+        </div>
+      </details>
+
+      <!-- OPTIONS D'ALGORITHME AVANCÉES (AVEC INFOBULLES) -->
+      <details class="details">
+        <summary>⚙️ Options d'Algorithme Avancées</summary>
+        <div class="row">
+          <div>
+            <label class="label" for="wT">
+              Poids Partenaires
+              <span class="tooltip" data-tooltip="Évite de rejouer avec la même personne dans son équipe">ℹ️</span>
+            </label>
+            <div class="slider-field">
+              <input id="wT" type="range" min="0" max="20" step="0.5" value="5" />
+              <output for="wT" class="slider-value">5</output>
+            </div>
+          </div>
+          <div>
+            <label class="label" for="wO">
+              Poids Adversaires
+              <span class="tooltip" data-tooltip="Pénalise la répétition des mêmes affrontements en face-à-face">ℹ️</span>
+            </label>
+            <div class="slider-field">
+              <input id="wO" type="range" min="0" max="20" step="0.5" value="2" />
+              <output for="wO" class="slider-value">2</output>
+            </div>
+          </div>
+          <div>
+            <label class="label" for="wP">
+              Équilibre de Jeu
+              <span class="tooltip" data-tooltip="Priorise les joueurs qui ont le moins joué pour égaliser le temps de jeu">ℹ️</span>
+            </label>
+            <div class="slider-field">
+              <input id="wP" type="range" min="0" max="10" step="0.25" value="1" />
+              <output for="wP" class="slider-value">1</output>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label class="label" for="beamWidth">
+              Largeur Faisceau
+              <span class="tooltip" data-tooltip="80 = Recherche très précise. 10 = Calcul ultra rapide">ℹ️</span>
+            </label>
+            <div class="slider-field">
+              <input id="beamWidth" type="range" min="10" max="500" step="10" value="80" />
+              <output for="beamWidth" class="slider-value">80</output>
+            </div>
+          </div>
+          <div>
+            <label class="label" for="partnerK">
+              Présélection
+              <span class="tooltip" data-tooltip="Nombre de partenaires potentiels testés par joueur pour accélérer le calcul">ℹ️</span>
+            </label>
+            <div class="slider-field">
+              <input id="partnerK" type="range" min="4" max="30" step="1" value="10" />
+              <output for="partnerK" class="slider-value">10</output>
+            </div>
+          </div>
+        </div>
+
+        <!-- COMMUTATEURS SWITCH -->
+        <label class="checkbox" for="squareRepeats">
+          <input id="squareRepeats" type="checkbox" checked />
+          <span class="switch-slider"></span>
+          <span>
+            Pénalités quadratiques pour les répétitions
+            <span class="tooltip" data-tooltip="Interdit quasi totalement qu'un duo rejoue une 3e fois ensemble">ℹ️</span>
+          </span>
+        </label>
+
+        <label class="checkbox" for="avoidB2B">
+          <input id="avoidB2B" type="checkbox" checked />
+          <span class="switch-slider"></span>
+          <span>
+            Éviter le banc deux fois de suite
+            <span class="tooltip" data-tooltip="Empêche un joueur de passer 2 fois de suite sur le banc">ℹ️</span>
+          </span>
+        </label>
+      </details>
+
+      <div class="actions">
+        <button id="generate" class="btn-primary-lg">⚡ Générer les matchs</button>
+        <div class="actions-secondary">
+          <button id="copy" class="secondary" disabled>📋 Copier les matchs</button>
+          <button id="copyLink" class="secondary" disabled>🔗 Partager via un lien</button>
+          <button id="saveToHistory" class="secondary" disabled>💾 Enregistrer les modifications</button>
+        </div>
+      </div>
+
+      <p id="warning" class="warning" hidden></p>
+      <p id="error" class="error" hidden></p>
+    </section>
+
+    <!-- SECTION MATCHS -->
+    <section class="card">
+      <div class="headerRow">
+        <h2>🎾 Planning des matchs</h2>
+        <span id="meta" class="subtle"></span>
+      </div>
+
+      <!-- STEPPER DE SESSION -->
+      <div id="sessionStepper" class="session-stepper" hidden></div>
+
+      <div id="schedule" class="schedule"></div>
+    </section>
+
+    <!-- SECTION CLASSEMENT, PODIUM & BADGES -->
+    <section class="card" id="rankingSection" style="grid-column: 1 / -1;" hidden>
+      <div class="headerRow">
+        <h2>🏆 Classement</h2>
+        <div class="ranking-actions">
+          <button id="exportRankingsPng" class="secondary">📷 Exporter le classement</button>
+          <button id="copyRankingLink" class="secondary">🔗 Partager le classement</button>
+        </div>
+      </div>
+
+      <div id="rankingCaptureArea" style="padding: 10px;">
+        <!-- PODIUM VISUEL -->
+        <div id="podiumContainer" class="podium-container"></div>
+
+        <!-- BADGES & DISTINCTIONS -->
+        <div id="badgesContainer" class="badges-grid" style="margin-bottom: 24px;"></div>
+
+        <!-- TABLEAU CLASSEMENT -->
+        <div style="overflow-x:auto;">
+          <table id="rankingTable" class="ranking-table">
+            <thead>
+              <tr>
+                <th>Rang</th>
+                <th>Joueur</th>
+                <th>Matchs Joués</th>
+                <th>Victoires (V)</th>
+                <th>Défaites (D)</th>
+                <th>% V</th>
+                <th>Points Pour (PP)</th>
+                <th>Points Contre (PC)</th>
+                <th>Différence (+/-)</th>
+                <th>Moy. Pts (P/C)</th>
+                <th>Meilleure V</th>
+                <th>Pire D</th>
+                <th>Série</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- MATRICE D'AFFINITÉ (HEATMAP) -->
+    <section class="card" id="heatmapSection" style="grid-column: 1 / -1;" hidden>
+      <div class="headerRow">
+        <h2>🔥 Matrice d'Affinité & Interactions</h2>
+        <div class="heatmap-mode-selector">
+          <button id="hmModeTeammates" class="secondary active">Coéquipiers 🤝</button>
+          <button id="hmModeOpponents" class="secondary">Adversaires ⚔️</button>
+        </div>
+      </div>
+      <p class="subtle" style="font-size: 0.85rem; margin-bottom: 14px;">
+        Visualisez la répartition des matchs joués ensemble ou l'un contre l'autre. Plus la couleur est vive, plus la fréquence est élevée.
+      </p>
+      <div style="overflow-x: auto;">
+        <div id="heatmapTableContainer"></div>
+      </div>
+    </section>
+
+    <!-- SECTION STATISTIQUES -->
+    <section class="card" style="grid-column: 1 / -1;">
+      <h2>📊 Statistiques & Équité de Session</h2>
+      <div id="diagnostics" class="diagnostics subtle">
+        <p>Générez un planning pour analyser les répartitions de temps de jeu, paires et oppositions.</p>
+      </div>
+    </section>
+
+    <!-- HISTORIQUE DES SESSIONS -->
+    <section class="card" style="grid-column: 1 / -1;">
+      <div class="headerRow">
+        <h2>📜 Historique des sessions</h2>
+        <button id="clearHistoryBtn" class="secondary" style="font-size: 0.8rem; padding: 6px 12px;">🗑️ Vider l'historique</button>
+      </div>
+      <div id="historyList" class="history-grid">
+        <p class="subtle">Aucune session enregistrée pour le&nbsp;moment.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="container subtle footer">
+    <p>JF Pickleball — Planificateur de rotation de terrains</p>
+  </footer>
+
+  <!-- MODALE GENERIQUE (remplace confirm/alert/prompt natifs du navigateur) -->
+  <div id="modalOverlay" class="modal-overlay" hidden>
+    <div class="modal-box" role="alertdialog" aria-modal="true" aria-labelledby="modalTitle" aria-describedby="modalMessage">
+      <div class="modal-icon" id="modalIcon" aria-hidden="true">⚠️</div>
+      <h3 class="modal-title" id="modalTitle"></h3>
+      <p class="modal-message" id="modalMessage"></p>
+      <div class="modal-copy-area" id="modalCopyArea" hidden>
+        <input type="text" id="modalCopyInput" readonly />
+      </div>
+      <div class="modal-image-area" id="modalImageArea" hidden>
+        <img id="modalImagePreview" alt="Classement généré" />
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="modalCancelBtn" class="secondary">Annuler</button>
+        <button type="button" id="modalDownloadBtn" class="secondary" hidden>📥 Télécharger</button>
+        <button type="button" id="modalConfirmBtn">Confirmer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Librairies embarquées localement (plutôt que via CDN) : l'app doit fonctionner
+       hors-ligne, notamment dans l'APK Android où l'accès réseau n'est pas garanti. -->
+  <script src="js/vendor/lz-string.min.js"></script>
+  <script src="js/vendor/html2canvas.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
