@@ -6,11 +6,17 @@
   "scripts": {
     "android:add": "npx cap add android",
     "android:sync": "npx cap sync android",
-    "android:build": "npx cap sync android && cd android && gradlew.bat assembleDebug"
+    "android:build": "npx cap sync android && cd android && gradlew.bat assembleDebug",
+    "test": "node tests/algorithm.test.js",
+    "lint": "eslint js/app",
+    "format": "prettier --write \"js/app/**/*.js\" \"*.html\" \"css/**/*.css\"",
+    "format:check": "prettier --check \"js/app/**/*.js\" \"*.html\" \"css/**/*.css\""
   },
   "devDependencies": {
     "@capacitor/core": "^6.1.2",
     "@capacitor/cli": "^6.1.2",
-    "@capacitor/android": "^6.1.2"
+    "@capacitor/android": "^6.1.2",
+    "eslint": "^8.57.0",
+    "prettier": "^3.3.3"
   }
 }
