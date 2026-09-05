@@ -1,0 +1,32 @@
+name: Tests & Lint
+
+# Se déclenche à chaque push sur main et sur toute pull request ciblant main,
+# ou manuellement depuis l'onglet "Actions" de GitHub.
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Installer les dépendances
+        run: npm install
+
+      - name: Lancer les tests unitaires (moteur de rotation)
+        run: npm test
+
+      - name: Lancer ESLint
+        run: npm run lint
