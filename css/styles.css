@@ -1200,6 +1200,11 @@ button:disabled {
   border-radius: 6px !important;
   background: rgba(0, 0, 0, 0.6) !important;
   border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  /* Toujours blanc, quel que soit le thème de la page : ce champ est posé sur
+     le fond bleu marine du "terrain" (.match-card), qui reste sombre dans les
+     deux thèmes. Sans ça, le texte hérite de var(--text-main) et devient
+     illisible (sombre sur sombre) en thème clair. */
+  color: #fff !important;
 }
 
 .score-input::-webkit-outer-spin-button,
