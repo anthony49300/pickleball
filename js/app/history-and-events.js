@@ -165,6 +165,50 @@ if (btnSaveToHistory) {
 // EVENEMENTS GENERALISTES & FONCTIONNALITES EXPORT / PARTAGE
 // =============================================================================
 
+// --------------------------------------------------
+// THEME CLAIR / SOMBRE
+// --------------------------------------------------
+const THEME_STORAGE_KEY = "pb_theme";
+const THEME_COLOR_DARK = "#0a0f18";
+const THEME_COLOR_LIGHT = "#eef2f7";
+
+/**
+ * Applique le thème demandé (attribut sur <html>, icône du bouton, couleur de
+ * la barre d'adresse mobile). N'écrit jamais dans localStorage lui-même : voir
+ * le click listener plus bas pour la persistance.
+ */
+function applyTheme(theme) {
+  if (theme === "light") {
+    document.documentElement.setAttribute("data-theme", "light");
+    if (btnThemeToggle) btnThemeToggle.textContent = "☀️";
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+    if (btnThemeToggle) btnThemeToggle.textContent = "🌙";
+  }
+  if (elMetaThemeColor) {
+    elMetaThemeColor.setAttribute("content", theme === "light" ? THEME_COLOR_LIGHT : THEME_COLOR_DARK);
+  }
+}
+
+// Synchronise l'icône du bouton avec le thème déjà appliqué au chargement de la
+// page (voir le script anti-flash dans le <head> de index.html, qui lit
+// localStorage et pose data-theme="light" avant même le premier rendu).
+applyTheme(document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark");
+
+if (btnThemeToggle) {
+  btnThemeToggle.addEventListener("click", () => {
+    const isCurrentlyLight = document.documentElement.getAttribute("data-theme") === "light";
+    const nextTheme = isCurrentlyLight ? "dark" : "light";
+    applyTheme(nextTheme);
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+    } catch (e) {
+      // localStorage indisponible (navigation privée, quota dépassé...) : le thème
+      // choisi reste appliqué pour cette session, mais ne survivra pas à un rechargement.
+    }
+  });
+}
+
 btnNewSeed.addEventListener("click", () => {
   elSeed.value = generateSeed();
   autoSaveState();

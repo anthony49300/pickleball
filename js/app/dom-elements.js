@@ -23,6 +23,8 @@ const btnCopy = document.getElementById("copy");
 const btnCopyLink = document.getElementById("copyLink");
 const btnSaveToHistory = document.getElementById("saveToHistory");
 const btnNewSeed = document.getElementById("newSeed");
+const btnThemeToggle = document.getElementById("themeToggleBtn");
+const elMetaThemeColor = document.getElementById("metaThemeColor");
 
 const elSchedule = document.getElementById("schedule");
 const elSessionStepper = document.getElementById("sessionStepper");

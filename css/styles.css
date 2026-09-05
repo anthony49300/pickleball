@@ -4,15 +4,43 @@
 :root {
   --bg-dark: #0a0f18;
   --bg-card: rgba(18, 26, 43, 0.75);
+  --bg-gradient-start: #17324d;
   --court-blue: #0f3854;
   --court-green: #10b981;
   --pickle-yellow: #ccff00;
   --pickle-yellow-hover: #b3e600;
+  --heading-start: #ffffff;
   --text-main: #f8fafc;
   --text-subtle: #94a3b8;
   --border-color: rgba(255, 255, 255, 0.12);
+  /* Canal RGB (sans parenthèses) d'une teinte "au-dessus du fond" utilisée pour
+     les fines bordures/surbrillances translucides (rgba(var(--fg-overlay-rgb), X)).
+     Blanc en sombre, noir en clair — voir le bloc [data-theme="light"] plus bas. */
+  --fg-overlay-rgb: 255, 255, 255;
   --danger: #ef4444;
   --warn: #f59e0b;
+}
+
+/* --------------------------------------------------
+   THEME CLAIR (bascule manuelle, voir le bouton 🌙/☀️ dans l'en-tête)
+   Le thème sombre ci-dessus reste la valeur par défaut (data-theme absent) :
+   ni comportement ni apparence changés pour qui n'a jamais touché au bouton.
+-------------------------------------------------- */
+[data-theme="light"] {
+  --bg-dark: #eef2f7;
+  --bg-card: rgba(255, 255, 255, 0.85);
+  --bg-gradient-start: #ffffff;
+  /* --court-blue et --court-green ne changent pas : le "terrain" (carte de match)
+     et les statuts restent identiques quel que soit le thème de la page. */
+  /* Jaune plus sombre qu'en mode sombre : #ccff00 en texte sur un fond clair
+     serait quasi illisible (contraste très insuffisant). */
+  --pickle-yellow: #5c6900;
+  --pickle-yellow-hover: #4a5400;
+  --heading-start: #0f172a;
+  --text-main: #0f172a;
+  --text-subtle: #475569;
+  --border-color: rgba(0, 0, 0, 0.12);
+  --fg-overlay-rgb: 0, 0, 0;
 }
 
 * { box-sizing: border-box; }
@@ -21,10 +49,11 @@ html, body { min-height: 100vh; }
 body {
   margin: 0;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background: radial-gradient(circle at 50% 0%, #17324d 0%, var(--bg-dark) 70%);
+  background: radial-gradient(circle at 50% 0%, var(--bg-gradient-start) 0%, var(--bg-dark) 70%);
   background-attachment: fixed;
   color: var(--text-main);
   line-height: 1.5;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 .container {
@@ -43,7 +72,7 @@ header h1 {
   margin: 10px 0;
   font-size: 2rem;
   font-weight: 800;
-  background: linear-gradient(90deg, #ffffff, var(--pickle-yellow));
+  background: linear-gradient(90deg, var(--heading-start), var(--pickle-yellow));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   display: flex;
@@ -92,7 +121,7 @@ h2 {
   margin-bottom: 16px;
   font-size: 1.25rem;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--text-main);
   border-bottom: 2px solid rgba(204, 255, 0, 0.2);
   padding-bottom: 8px;
 }
@@ -198,7 +227,7 @@ textarea { resize: vertical; min-height: 110px; }
   width: 38px;
   border: none;
   border-radius: 0;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--fg-overlay-rgb), 0.06);
   color: var(--text-main);
   font-size: 1.1rem;
   font-weight: 700;
@@ -230,7 +259,7 @@ textarea { resize: vertical; min-height: 110px; }
   flex: 1;
   height: 6px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(var(--fg-overlay-rgb), 0.12);
   outline: none;
   padding: 0;
   border: none;
@@ -338,7 +367,7 @@ textarea { resize: vertical; min-height: 110px; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--fg-overlay-rgb), 0.04);
   padding: 6px 10px;
   border-radius: 8px;
   border: 1px solid var(--border-color);
@@ -377,7 +406,7 @@ textarea { resize: vertical; min-height: 110px; }
   position: relative;
   width: 44px;
   height: 24px;
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: rgba(var(--fg-overlay-rgb), 0.15);
   border-radius: 20px;
   margin-right: 12px;
   transition: background-color 0.25s ease;
@@ -452,13 +481,13 @@ button:hover {
 }
 
 button.secondary {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--fg-overlay-rgb), 0.08);
   color: var(--text-main);
   border: 1px solid var(--border-color);
   box-shadow: none;
 }
 
-button.secondary:hover { background: rgba(255, 255, 255, 0.15); }
+button.secondary:hover { background: rgba(var(--fg-overlay-rgb), 0.15); }
 button.secondary.active {
   background: var(--pickle-yellow);
   color: #000;
@@ -520,7 +549,7 @@ button:disabled {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(var(--fg-overlay-rgb), 0.1);
   border: 1px solid var(--border-color);
   display: flex;
   align-items: center;
@@ -530,7 +559,7 @@ button:disabled {
 }
 
 .step-item.active {
-  color: #ffffff;
+  color: var(--text-main);
 }
 
 .step-item.active .step-number {
@@ -553,7 +582,7 @@ button:disabled {
 .step-divider {
   flex: 1;
   height: 2px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(var(--fg-overlay-rgb), 0.1);
   min-width: 15px;
 }
 
@@ -828,7 +857,7 @@ button:disabled {
 }
 
 .badge-card {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--fg-overlay-rgb), 0.04);
   border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 12px;
@@ -845,7 +874,7 @@ button:disabled {
 }
 
 .badge-title { font-size: 0.8rem; text-transform: uppercase; color: var(--pickle-yellow); font-weight: bold; }
-.badge-player { font-size: 0.95rem; font-weight: bold; color: #fff; }
+.badge-player { font-size: 0.95rem; font-weight: bold; color: var(--text-main); }
 .badge-desc { font-size: 0.75rem; color: var(--text-subtle); }
 
 /* Matrice Heatmap */
@@ -886,7 +915,7 @@ button:disabled {
 .ranking-table th, .ranking-table td {
   padding: 12px 10px;
   text-align: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(var(--fg-overlay-rgb), 0.08);
 }
 
 .ranking-table th {
@@ -926,7 +955,7 @@ button:disabled {
 }
 
 .group-card {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--fg-overlay-rgb), 0.03);
   border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 12px;
@@ -961,7 +990,7 @@ button:disabled {
 }
 
 .history-card {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--fg-overlay-rgb), 0.03);
   border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 14px;
@@ -1037,7 +1066,7 @@ button:disabled {
   font-size: 1.15rem;
   font-weight: 800;
   margin: 0 0 10px;
-  color: #ffffff;
+  color: var(--text-main);
 }
 
 .modal-message {

@@ -10,7 +10,19 @@
   
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#0a0f18" />
+  <meta name="theme-color" content="#0a0f18" id="metaThemeColor" />
+
+  <!-- Applique le thème clair/sombre AVANT le premier rendu, pour éviter un flash
+       (sombre par défaut si rien n'est enregistré ou si localStorage est inaccessible,
+       par ex. navigation privée). Le reste de la logique (bouton, sauvegarde) est
+       dans js/app/history-and-events.js, chargé en fin de page. -->
+  <script>
+    try {
+      if (localStorage.getItem("pb_theme") === "light") {
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+    } catch (e) {}
+  </script>
 </head>
 <body>
   <header class="container header-bar">
@@ -27,6 +39,7 @@
     </h1>
     <div class="header-actions" style="display:flex; align-items:center; gap:10px;">
       <div id="autosaveBadge" class="save-badge">💾 Sauvegardé</div>
+      <button id="themeToggleBtn" class="secondary" style="font-size: 0.9rem; padding: 6px 10px;" title="Changer de thème (clair/sombre)" aria-label="Changer de thème">🌙</button>
       <button id="resetAllBtn" class="secondary danger" style="font-size: 0.8rem; padding: 6px 12px;" title="Effacer toutes les données de cette page (session, historique, sauvegarde)">🔄 Réinitialiser la page</button>
     </div>
   </header>
