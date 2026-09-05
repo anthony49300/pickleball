@@ -1,9 +1,8 @@
 name: Build Android APK
 
-# Se déclenche à chaque push sur main, ou manuellement depuis l'onglet "Actions" de GitHub.
+# Ne se déclenche plus automatiquement sur push (build long, pas nécessaire à
+# chaque commit) : uniquement à la demande, depuis l'onglet "Actions" de GitHub.
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
