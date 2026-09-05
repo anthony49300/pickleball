@@ -17,6 +17,9 @@
      les fines bordures/surbrillances translucides (rgba(var(--fg-overlay-rgb), X)).
      Blanc en sombre, noir en clair — voir le bloc [data-theme="light"] plus bas. */
   --fg-overlay-rgb: 255, 255, 255;
+  --round-bg: rgba(15, 23, 42, 0.6);
+  --round-bg-active: rgba(20, 32, 54, 0.85);
+  --table-header-bg: rgba(0, 0, 0, 0.4);
   --danger: #ef4444;
   --warn: #f59e0b;
 }
@@ -41,6 +44,13 @@
   --text-subtle: #475569;
   --border-color: rgba(0, 0, 0, 0.12);
   --fg-overlay-rgb: 0, 0, 0;
+  /* Fond des cartes "Tour N" : léger lavis gris-bleu plutôt qu'un bleu marine
+     quasi opaque (qui donnait un bloc gris terne sur fond clair). Le tour actif
+     reprend une teinte pâle de l'accent jaune-vert, cohérente avec sa bordure
+     et son halo (qui eux ne changent pas de couleur entre les deux thèmes). */
+  --round-bg: rgba(15, 23, 42, 0.04);
+  --round-bg-active: rgba(204, 255, 0, 0.12);
+  --table-header-bg: rgba(0, 0, 0, 0.06);
 }
 
 * { box-sizing: border-box; }
@@ -320,7 +330,7 @@ textarea { resize: vertical; min-height: 110px; }
   background: rgba(0,0,0,0.15);
   border-radius: 12px;
   padding: 10px 14px;
-  border: 1px solid rgba(255,255,255,0.05);
+  border: 1px solid rgba(var(--fg-overlay-rgb), 0.05);
 }
 
 .details summary {
@@ -613,7 +623,7 @@ button:disabled {
   border: 1px solid var(--border-color);
   border-radius: 14px;
   padding: 16px;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--round-bg);
   transition: all 0.3s ease;
   position: relative;
 }
@@ -621,7 +631,7 @@ button:disabled {
 .round.active-round {
   border-color: var(--pickle-yellow);
   box-shadow: 0 0 20px rgba(204, 255, 0, 0.25), inset 0 0 15px rgba(204, 255, 0, 0.05);
-  background: rgba(20, 32, 54, 0.85);
+  background: var(--round-bg-active);
 }
 
 .active-round-badge {
@@ -647,7 +657,7 @@ button:disabled {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-bottom: 1px solid rgba(var(--fg-overlay-rgb), 0.08);
   padding-bottom: 10px;
   margin-bottom: 12px;
   flex-wrap: wrap;
@@ -893,7 +903,7 @@ button:disabled {
 }
 
 .heatmap-table th {
-  background: rgba(0,0,0,0.4);
+  background: var(--table-header-bg);
   color: var(--pickle-yellow);
   font-weight: 600;
 }
