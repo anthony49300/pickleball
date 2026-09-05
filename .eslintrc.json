@@ -11,7 +11,8 @@
   "extends": "eslint:recommended",
   "ignorePatterns": ["js/vendor/", "android/", "ios/", "www/", "node_modules/"],
   "rules": {
-    "no-unused-vars": ["warn", { "args": "none" }]
+    "no-unused-vars": ["warn", { "args": "none", "vars": "local" }],
+    "no-redeclare": ["error", { "builtinGlobals": false }]
   },
   "globals": {
     "alertModal": "readonly",
@@ -38,6 +39,7 @@
     "closeModal": "readonly",
     "confirmModal": "readonly",
     "copyFallbackModal": "readonly",
+    "copyTextRobust": "readonly",
     "countAlternations": "readonly",
     "countRawPlayerEntries": "readonly",
     "currentHeatmapMode": "writable",
@@ -87,9 +89,11 @@
     "getCurrentState": "readonly",
     "getHistory": "readonly",
     "getPlayerGroups": "readonly",
+    "html2canvas": "readonly",
     "imagePreviewModal": "readonly",
     "incCount": "readonly",
     "loadState": "readonly",
+    "LZString": "readonly",
     "makeRng": "readonly",
     "modalLastFocusedEl": "writable",
     "modalResolve": "writable",
