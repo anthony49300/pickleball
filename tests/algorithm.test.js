@@ -130,8 +130,13 @@ test("cas spécial 6 joueurs / 2 terrains : 1 double + 1 simple, personne au ban
 
   result.rounds.forEach((matches, rIdx) => {
     assert.strictEqual(matches.length, 2, `Tour ${rIdx + 1} devrait avoir 2 matchs (1 double + 1 simple)`);
-    const sizes = matches.map(([t1, t2]) => t1.length + t2.length).sort();
-    assert.deepStrictEqual(sizes, [2, 4], `Tour ${rIdx + 1} devrait combiner un simple (2 joueurs) et un double (4 joueurs)`);
+
+    const sizes = matches.map(([t1, t2]) => t1.length + t2.length).sort((a, b) => a - b);
+    const detail = `reçu ${JSON.stringify(sizes)} (tour ${rIdx + 1})`;
+    assert.strictEqual(sizes.length, 2, `Devrait y avoir exactement 2 tailles de match, ${detail}`);
+    assert.strictEqual(sizes[0], 2, `Devrait y avoir un simple (2 joueurs), ${detail}`);
+    assert.strictEqual(sizes[1], 4, `Devrait y avoir un double (4 joueurs), ${detail}`);
+
     assert.strictEqual(result.benches[rIdx].length, 0, `Tour ${rIdx + 1} ne devrait avoir personne au banc`);
   });
 });
