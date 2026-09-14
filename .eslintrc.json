@@ -16,6 +16,7 @@
   },
   "globals": {
     "alertModal": "readonly",
+    "allocateCourtsToPools": "readonly",
     "autoPairPlayers": "readonly",
     "autoSaveState": "readonly",
     "autoSaveTournamentState": "readonly",
@@ -67,6 +68,7 @@
     "elManualAssignSection": "readonly",
     "elMeta": "readonly",
     "elNewGroupName": "readonly",
+    "elNumCourts": "readonly",
     "elNumPools": "readonly",
     "elPartnerK": "readonly",
     "elPlayerGroupsList": "readonly",

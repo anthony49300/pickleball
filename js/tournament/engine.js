@@ -120,6 +120,52 @@ function parseCourtNames(text) {
 }
 
 /**
+ * Répartit les terrains disponibles entre les poules, pour qu'elles puissent
+ * jouer en parallèle (plutôt que de se contenter d'étiqueter les matchs sans
+ * coordination réelle entre poules) :
+ * - S'il y a au moins autant de terrains que de poules, chaque poule reçoit
+ *   un ou plusieurs terrains QUI LUI SONT DÉDIÉS (jamais partagés avec une
+ *   autre poule) : les terrains excédentaires vont en priorité aux poules
+ *   ayant le plus d'équipes (donc le plus de matchs simultanés par journée à
+ *   paralléliser).
+ * - S'il y a moins de terrains que de poules, il est impossible de dédier un
+ *   terrain à chacune : toutes les poules se partagent alors l'ensemble des
+ *   terrains disponibles (leurs matchs s'enchaînent, un terrain à la fois).
+ * @param {Array} pools
+ * @param {number} numCourts
+ * @returns {number[][]} pour chaque poule (même ordre que `pools`), la liste
+ *   des index de terrain (0-based) qui lui sont attribués.
+ */
+function allocateCourtsToPools(pools, numCourts) {
+  const n = Math.max(1, numCourts);
+  const numPools = pools.length;
+  if (numPools === 0) return [];
+
+  if (n < numPools) {
+    const shared = Array.from({ length: n }, (_, i) => i);
+    return pools.map(() => shared);
+  }
+
+  const courtsPerPool = pools.map(() => Math.floor(n / numPools));
+  let extra = n % numPools;
+
+  // Terrains excédentaires : priorité aux poules avec le plus d'équipes.
+  pools
+    .map((pool, idx) => ({ idx, size: pool.teams.length }))
+    .sort((a, b) => b.size - a.size)
+    .forEach(({ idx }) => {
+      if (extra > 0) { courtsPerPool[idx]++; extra--; }
+    });
+
+  let cursor = 0;
+  return courtsPerPool.map(count => {
+    const indices = Array.from({ length: count }, (_, i) => cursor + i);
+    cursor += count;
+    return indices;
+  });
+}
+
+/**
  * Génère un calendrier round-robin pour une poule : chaque équipe affronte
  * toutes les autres exactement une fois (algorithme du cercle / circle method).
  * Si le nombre d'équipes est impair, une équipe est exemptée ("bye") à tour de

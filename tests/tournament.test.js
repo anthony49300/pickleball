@@ -32,6 +32,7 @@ const {
   parsePlayerList,
   autoPairPlayers,
   parseCourtNames,
+  allocateCourtsToPools,
   generateRoundRobin,
   dealRoundRobinIntoPools,
   dealSnakeIntoPools,
@@ -126,6 +127,38 @@ test("autoPairPlayers : signale le joueur seul si l'effectif est impair", () => 
 test("parseCourtNames : sépare sur les virgules et ignore les entrées vides", () => {
   assert.deepStrictEqual(parseCourtNames("Court Central, Court 1,, Terrain A"), ["Court Central", "Court 1", "Terrain A"]);
   assert.deepStrictEqual(parseCourtNames(""), []);
+});
+
+// ---------------------------------------------------------------------------
+// allocateCourtsToPools
+// ---------------------------------------------------------------------------
+
+test("allocateCourtsToPools : au moins 1 terrain dédié par poule dès qu'il y en a assez", () => {
+  const pools = [{ teams: makeTeams(4) }, { teams: makeTeams(4) }, { teams: makeTeams(4) }];
+  const allocation = allocateCourtsToPools(pools, 3);
+
+  allocation.forEach(courts => assert.ok(courts.length >= 1));
+
+  // Aucun terrain partagé entre deux poules différentes.
+  const allIndices = allocation.flat();
+  assert.strictEqual(new Set(allIndices).size, allIndices.length, "un même terrain a été attribué à plusieurs poules");
+  assert.deepStrictEqual([...new Set(allIndices)].sort((a, b) => a - b), [0, 1, 2]);
+});
+
+test("allocateCourtsToPools : les terrains excédentaires vont aux poules les plus grandes", () => {
+  const pools = [{ teams: makeTeams(2) }, { teams: makeTeams(6) }];
+  const allocation = allocateCourtsToPools(pools, 3);
+  // 3 terrains pour 2 poules : 1 chacune + 1 en plus pour la plus grande (poule 1, 6 équipes).
+  assert.strictEqual(allocation[0].length, 1);
+  assert.strictEqual(allocation[1].length, 2);
+});
+
+test("allocateCourtsToPools : moins de terrains que de poules -> tout le monde partage", () => {
+  const pools = [{ teams: makeTeams(2) }, { teams: makeTeams(2) }, { teams: makeTeams(2) }];
+  const allocation = allocateCourtsToPools(pools, 2);
+  assert.deepStrictEqual(allocation[0], [0, 1]);
+  assert.deepStrictEqual(allocation[1], [0, 1]);
+  assert.deepStrictEqual(allocation[2], [0, 1]);
 });
 
 // ---------------------------------------------------------------------------

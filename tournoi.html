@@ -106,6 +106,14 @@
             <button type="button" class="stepper-btn" data-step="1" aria-label="Augmenter le nombre de qualifiés">+</button>
           </div>
         </div>
+        <div>
+          <label class="label" for="numCourts">🏟️ Nombre de terrains disponibles</label>
+          <div class="stepper" data-min="1" data-max="16">
+            <button type="button" class="stepper-btn" data-step="-1" aria-label="Diminuer le nombre de terrains">−</button>
+            <input id="numCourts" type="number" min="1" max="16" value="2" />
+            <button type="button" class="stepper-btn" data-step="1" aria-label="Augmenter le nombre de terrains">+</button>
+          </div>
+        </div>
       </div>
 
       <label class="label" for="poolAssignMode" style="margin-top: 14px;">🔀 Répartition des équipes en poules</label>
@@ -115,7 +123,10 @@
         <option value="manual">Manuelle (je choisis moi-même la poule de chaque équipe)</option>
       </select>
 
-      <label class="label" for="courtNames" style="margin-top: 14px;">🏷️ Noms des terrains (optionnel, séparés par des virgules)</label>
+      <p class="subtle" style="font-size: 0.8rem; margin-top: 14px;">
+        Chaque poule reçoit au moins 1 terrain dédié dès qu'il y en a assez pour ça (les terrains en trop vont aux poules les plus grandes, pour paralléliser davantage) — sinon les poules se partagent les terrains disponibles, à tour de rôle.
+      </p>
+      <label class="label" for="courtNames">🏷️ Noms des terrains (optionnel, séparés par des virgules — sinon "Terrain 1", "Terrain 2"...)</label>
       <input id="courtNames" type="text" placeholder="ex: Court Central, Court 1, Terrain A" />
 
       <div class="actions" style="margin-top: 16px;">

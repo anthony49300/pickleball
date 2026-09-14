@@ -60,9 +60,14 @@ function renderManualAssignList(teams, numPools, currentAssignment) {
  * pour une apparence cohérente entre les deux modes.
  * @param {Array} pools
  * @param {string[]} courtNames - noms de terrains optionnels (voir #courtNames)
+ * @param {number[][]} courtAllocation - pour chaque poule, les index de
+ *   terrain (0-based) qui lui sont attribués (voir allocateCourtsToPools) ;
+ *   les matchs d'une même journée y cyclent dans l'ordre.
  */
-function renderPools(pools, courtNames = []) {
+function renderPools(pools, courtNames = [], courtAllocation = []) {
   elPoolsContainer.innerHTML = pools.map((pool, poolIdx) => {
+    const poolCourts = courtAllocation[poolIdx]?.length ? courtAllocation[poolIdx] : [poolIdx];
+
     const roundsHtml = pool.rounds.map((matches, rIdx) => {
       const matchesHtml = matches.map((match, mIdx) => {
         if (match.bye) {
@@ -70,7 +75,8 @@ function renderPools(pools, courtNames = []) {
         }
 
         const score = pool.scores[`${rIdx}-${mIdx}`] || {};
-        const courtLabel = escapeHtml(courtNames[mIdx] || `Terrain ${mIdx + 1}`);
+        const globalCourtIdx = poolCourts[mIdx % poolCourts.length];
+        const courtLabel = escapeHtml(courtNames[globalCourtIdx] || `Terrain ${globalCourtIdx + 1}`);
         return `
           <div class="match-card">
             <span class="court-badge">${courtLabel}</span>

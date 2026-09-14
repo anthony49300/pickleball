@@ -15,6 +15,7 @@ const elTeamsError = document.getElementById("teamsError");
 
 const elNumPools = document.getElementById("numPools");
 const elQualifiersPerPool = document.getElementById("qualifiersPerPool");
+const elNumCourts = document.getElementById("numCourts");
 const elPoolAssignMode = document.getElementById("poolAssignMode");
 const elCourtNames = document.getElementById("courtNames");
 const btnGeneratePools = document.getElementById("generatePools");

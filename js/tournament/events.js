@@ -171,11 +171,13 @@ btnGeneratePools.addEventListener("click", async () => {
   }
 
   const pools = buildPools(teams, numPools, mode, null);
+  const numCourts = Math.max(1, parseInt(elNumCourts.value || "1", 10));
   const courtNames = parseCourtNames(elCourtNames.value);
-  window.__PT_TOURNAMENT__ = { teams, numPools, qualifiersPerPool, poolAssignMode: mode, courtNames, pools };
+  const courtAllocation = allocateCourtsToPools(pools, numCourts);
+  window.__PT_TOURNAMENT__ = { teams, numPools, qualifiersPerPool, poolAssignMode: mode, numCourts, courtNames, courtAllocation, pools };
 
   elManualAssignSection.hidden = true;
-  renderPools(pools, courtNames);
+  renderPools(pools, courtNames, courtAllocation);
   renderPoolStandings(pools, qualifiersPerPool);
   elPoolsSection.hidden = false;
   elPoolStandingsSection.hidden = false;
@@ -198,11 +200,13 @@ btnConfirmManualAssign.addEventListener("click", () => {
   });
 
   const pools = buildPools(teams, numPools, "manual", manualPoolIndexByTeamId);
+  const numCourts = Math.max(1, parseInt(elNumCourts.value || "1", 10));
   const courtNames = parseCourtNames(elCourtNames.value);
-  window.__PT_TOURNAMENT__ = { teams, numPools, qualifiersPerPool, poolAssignMode: "manual", courtNames, pools };
+  const courtAllocation = allocateCourtsToPools(pools, numCourts);
+  window.__PT_TOURNAMENT__ = { teams, numPools, qualifiersPerPool, poolAssignMode: "manual", numCourts, courtNames, courtAllocation, pools };
 
   elManualAssignSection.hidden = true;
-  renderPools(pools, courtNames);
+  renderPools(pools, courtNames, courtAllocation);
   renderPoolStandings(pools, qualifiersPerPool);
   elPoolsSection.hidden = false;
   elPoolStandingsSection.hidden = false;
@@ -210,16 +214,23 @@ btnConfirmManualAssign.addEventListener("click", () => {
 });
 
 // --------------------------------------------------
-// NOMS DES TERRAINS (mise à jour à chaud si des poules existent déjà)
+// TERRAINS (mise à jour à chaud si des poules existent déjà, sans jamais
+// toucher aux matchs/scores déjà saisis — seul l'étiquetage change)
 // --------------------------------------------------
 
-elCourtNames.addEventListener("input", () => {
+function refreshCourtsOnExistingTournament() {
   autoSaveTournamentState();
   const tournament = window.__PT_TOURNAMENT__;
   if (!tournament) return;
+
+  tournament.numCourts = Math.max(1, parseInt(elNumCourts.value || "1", 10));
   tournament.courtNames = parseCourtNames(elCourtNames.value);
-  renderPools(tournament.pools, tournament.courtNames);
-});
+  tournament.courtAllocation = allocateCourtsToPools(tournament.pools, tournament.numCourts);
+  renderPools(tournament.pools, tournament.courtNames, tournament.courtAllocation);
+}
+
+elCourtNames.addEventListener("input", refreshCourtsOnExistingTournament);
+elNumCourts.addEventListener("input", refreshCourtsOnExistingTournament);
 
 // --------------------------------------------------
 // SAISIE DES SCORES DE POULE (délégation d'événement)
