@@ -327,6 +327,9 @@ function renderFinalRanking(tournament) {
         <tbody>${rows}</tbody>
       </table>
     </div>
+    <p class="subtle" style="margin-top: 0.75rem; font-size: 0.8rem;">
+      💡 <strong>Le rang est déterminé par le parcours en phase finale et matchs de classement</strong> (qui a gagné/perdu chaque match d'élimination), pas par les statistiques ci-dessus — elles sont uniquement informatives.
+    </p>
   `;
   elFinalRankingSection.hidden = false;
 }
