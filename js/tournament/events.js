@@ -375,3 +375,42 @@ wireBracketGenerateButton(btnGenerateConsolationPhase, {
 
 wireBracketScoreInputs(elFinalPhaseContainer, "finalPhase");
 wireBracketScoreInputs(elConsolationPhaseContainer, "consolationPhase");
+
+// --------------------------------------------------
+// EXPORT DU CLASSEMENT FINAL EN IMAGE (PNG)
+// --------------------------------------------------
+
+if (btnExportFinalRankingPng) {
+  btnExportFinalRankingPng.addEventListener("click", async () => {
+    if (!elFinalRankingContainer.innerHTML.trim()) return;
+
+    const originalBtnText = btnExportFinalRankingPng.textContent;
+    btnExportFinalRankingPng.textContent = "⏳ Génération...";
+
+    // Fond de capture assorti au thème courant (sinon le texte du thème clair,
+    // sombre, deviendrait illisible sur un fond figé à l'autre couleur).
+    const isLight = document.documentElement.getAttribute("data-theme") === "light";
+
+    try {
+      const canvas = await html2canvas(elFinalRankingContainer, {
+        backgroundColor: isLight ? "#eef2f7" : "#0a0f18",
+        scale: 2
+      });
+
+      const imageUri = canvas.toDataURL("image/png");
+      const dateLabel = new Date().toISOString().slice(0, 10);
+      await imagePreviewModal(imageUri, {
+        title: "Classement final — image générée",
+        downloadFilename: `Classement-Tournoi-${dateLabel}.png`
+      });
+    } catch (err) {
+      console.error(err);
+      await alertModal(
+        "Une erreur est survenue lors de la génération de l'image. Réessayez, ou changez de navigateur si le problème persiste.",
+        { title: "Export impossible", icon: "⚠️" }
+      );
+    } finally {
+      btnExportFinalRankingPng.textContent = originalBtnText;
+    }
+  });
+}

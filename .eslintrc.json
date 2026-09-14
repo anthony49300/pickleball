@@ -28,6 +28,7 @@
     "btnCopy": "readonly",
     "btnCopyLink": "readonly",
     "btnCopyRankingLink": "readonly",
+    "btnExportFinalRankingPng": "readonly",
     "btnExportPng": "readonly",
     "btnFormPairs": "readonly",
     "btnGenerate": "readonly",

@@ -189,7 +189,10 @@
 
     <!-- CLASSEMENT FINAL DU TOURNOI -->
     <section class="card" id="finalRankingSection" style="grid-column: 1 / -1;" hidden>
-      <h2>🏆 Classement final du tournoi</h2>
+      <div class="headerRow">
+        <h2>🏆 Classement final du tournoi</h2>
+        <button id="exportFinalRankingPng" class="secondary" type="button">📷 Exporter le classement</button>
+      </div>
       <div id="finalRankingContainer"></div>
     </section>
   </main>
@@ -217,6 +220,10 @@
       </div>
     </div>
   </div>
+
+  <!-- Bibliothèque embarquée localement pour l'export du classement en image
+       (voir index.html) : l'app doit fonctionner hors-ligne. -->
+  <script src="js/vendor/html2canvas.min.js"></script>
 
   <!-- Modules partagés avec index.html : modale générique, thème clair/sombre
        et câblage des steppers (+/- sur "Nombre de poules", etc.). -->

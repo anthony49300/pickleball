@@ -38,6 +38,7 @@ const elConsolationPhaseContainer = document.getElementById("consolationPhaseCon
 
 const elFinalRankingSection = document.getElementById("finalRankingSection");
 const elFinalRankingContainer = document.getElementById("finalRankingContainer");
+const btnExportFinalRankingPng = document.getElementById("exportFinalRankingPng");
 
 const elAutosaveBadge = document.getElementById("autosaveBadge");
 
