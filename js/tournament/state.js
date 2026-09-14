@@ -73,8 +73,11 @@ function loadTournamentState() {
     elPoolStandingsSection.hidden = false;
 
     if (state.tournament.finalPhase) {
-      renderFinalPhase(state.tournament.finalPhase);
-      renderFinalRanking(state.tournament.finalPhase);
+      renderBracketPhase(state.tournament.finalPhase, elFinalPhaseContainer);
     }
+    if (state.tournament.consolationPhase) {
+      renderBracketPhase(state.tournament.consolationPhase, elConsolationPhaseContainer);
+    }
+    renderFinalRanking(state.tournament);
   }
 }

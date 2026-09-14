@@ -32,6 +32,10 @@ const elPoolStandingsContainer = document.getElementById("poolStandingsContainer
 
 const btnGenerateFinalPhase = document.getElementById("generateFinalPhase");
 const elFinalPhaseContainer = document.getElementById("finalPhaseContainer");
+
+const btnGenerateConsolationPhase = document.getElementById("generateConsolationPhase");
+const elConsolationPhaseContainer = document.getElementById("consolationPhaseContainer");
+
 const elFinalRankingSection = document.getElementById("finalRankingSection");
 const elFinalRankingContainer = document.getElementById("finalRankingContainer");
 

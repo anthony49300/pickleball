@@ -42,6 +42,7 @@ const {
   nextPowerOfTwo,
   seedOrder,
   seedQualifiedTeams,
+  seedNonQualifiedTeams,
   buildFinalPhase,
   segmentPairs,
   isSegmentRoundComplete,
@@ -373,6 +374,49 @@ test("seedQualifiedTeams : tous les 1ers de poule d'abord, puis tous les 2èmes,
   assert.strictEqual(seeded[1].id, 102); // 1er de poule B
   assert.strictEqual(seeded[2].id, 1);   // 2e de poule A
   assert.strictEqual(seeded[3].id, 101); // 2e de poule B
+});
+
+test("seedNonQualifiedTeams : ne prend que les équipes classées après les qualifiés, mêmes bandes", () => {
+  const poolA = { teams: makeTeams(3), rounds: [], scores: {} };
+  poolA.rounds = generateRoundRobin(poolA.teams);
+  const poolB = { teams: makeTeams(3).map(t => ({ ...t, id: t.id + 100 })), rounds: [], scores: {} };
+  poolB.rounds = generateRoundRobin(poolB.teams);
+
+  poolA.rounds.forEach((matches, rIdx) => matches.forEach((match, mIdx) => {
+    if (match.bye) return;
+    poolA.scores[`${rIdx}-${mIdx}`] = match.a.id < match.b.id ? { a: 11, b: 5 } : { a: 5, b: 11 };
+  }));
+  poolB.rounds.forEach((matches, rIdx) => matches.forEach((match, mIdx) => {
+    if (match.bye) return;
+    poolB.scores[`${rIdx}-${mIdx}`] = match.a.id > match.b.id ? { a: 11, b: 5 } : { a: 5, b: 11 };
+  }));
+
+  // qualifiersPerPool=2 -> seuls les 3èmes de poule (derniers) sont NON qualifiés ici.
+  const nonQualified = seedNonQualifiedTeams([poolA, poolB], 2);
+  assert.strictEqual(nonQualified.length, 2);
+  assert.strictEqual(nonQualified[0].id, 2);   // dernier de poule A
+  assert.strictEqual(nonQualified[1].id, 100); // dernier de poule B
+});
+
+test("buildFinalPhase + computeFinalRanking : rankOffset décale les places affichées", () => {
+  const teams = Array.from({ length: 4 }, (_, i) => ({ id: i + 1, name: `Seed${i + 1}` }));
+  const finalPhase = buildFinalPhase(teams, 4); // continue après 4 places déjà prises ailleurs
+  assert.strictEqual(finalPhase.segments[0].rankStart, 5);
+
+  let guard = 0;
+  while (!finalPhase.finalRanking && guard < 10) {
+    guard++;
+    finalPhase.segments.forEach(segment => {
+      if (segment.slots.length === 1) return;
+      segmentPairs(segment).forEach(([a, b], idx) => {
+        if (a.bye || b.bye || segment.scores[idx]) return;
+        segment.scores[idx] = a.team.id < b.team.id ? { a: 11, b: 5 } : { a: 5, b: 11 };
+      });
+    });
+    progressFinalPhase(finalPhase);
+  }
+
+  assert.deepStrictEqual(finalPhase.finalRanking.map(r => r.rank), [5, 6, 7, 8]);
 });
 
 test("buildFinalPhase : complète avec des repos jusqu'à la puissance de 2 supérieure, données aux moins bonnes têtes de série", () => {

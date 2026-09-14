@@ -197,16 +197,20 @@ function renderBracketPairs(pairs, scores, editable, segmentId) {
 }
 
 /**
- * Affiche l'intégralité de la phase finale : l'historique des tours déjà
- * joués (en lecture seule) suivi des segments encore en cours (saisie active).
+ * Affiche l'intégralité d'un bracket à classement complet (phase finale OU
+ * matchs de classement des non-qualifiés — même moteur, même affichage) :
+ * l'historique des tours déjà joués (en lecture seule) suivi des segments
+ * encore en cours (saisie active).
+ * @param {Object} phase - finalPhase ou consolationPhase (voir engine.js)
+ * @param {HTMLElement} container
  */
-function renderFinalPhase(finalPhase) {
-  if (!finalPhase) {
-    elFinalPhaseContainer.innerHTML = "";
+function renderBracketPhase(phase, container) {
+  if (!phase) {
+    container.innerHTML = "";
     return;
   }
 
-  const historyCards = finalPhase.rounds.map(round => `
+  const historyCards = phase.rounds.map(round => `
     <div class="pool-card">
       <h3 class="pool-card-title">${escapeHtml(round.label)}</h3>
       <div class="round">
@@ -215,7 +219,7 @@ function renderFinalPhase(finalPhase) {
     </div>
   `);
 
-  const activeCards = finalPhase.segments
+  const activeCards = phase.segments
     .filter(segment => segment.slots.length > 1)
     .map(segment => `
       <div class="pool-card">
@@ -226,20 +230,26 @@ function renderFinalPhase(finalPhase) {
       </div>
     `);
 
-  elFinalPhaseContainer.innerHTML = [...historyCards, ...activeCards].join("");
+  container.innerHTML = [...historyCards, ...activeCards].join("");
 }
 
 /**
- * Affiche (ou masque) le classement final complet du tournoi, une fois la
- * phase finale entièrement résolue.
+ * Affiche (ou masque) le classement final complet du tournoi, en fusionnant
+ * la phase finale (places 1..N) et les matchs de classement des non-qualifiés
+ * (places N+1..) — ce qui est déjà résolu s'affiche au fur et à mesure, même
+ * si l'autre bracket n'est pas encore terminé (ou pas encore lancé).
  */
-function renderFinalRanking(finalPhase) {
-  if (!finalPhase || !finalPhase.finalRanking) {
+function renderFinalRanking(tournament) {
+  const fromFinalPhase = tournament?.finalPhase?.finalRanking || [];
+  const fromConsolationPhase = tournament?.consolationPhase?.finalRanking || [];
+  const combined = [...fromFinalPhase, ...fromConsolationPhase].sort((a, b) => a.rank - b.rank);
+
+  if (!combined.length) {
     elFinalRankingSection.hidden = true;
     return;
   }
 
-  const rows = finalPhase.finalRanking
+  const rows = combined
     .map(r => `<tr><td>${r.rank}</td><td>${escapeHtml(r.team.name)}</td></tr>`)
     .join("");
 

@@ -379,28 +379,32 @@ function seedOrder(size) {
 }
 
 /**
- * Construit le classement global des équipes qualifiées, tous poules
- * confondues : d'abord tous les 1ers de poule (départagés entre eux comme un
- * classement de poule normal : victoires → différentiel → points marqués),
- * puis tous les 2èmes de poule, etc. Sert de base au tirage au sort de la
- * phase finale (seed 1 = la meilleure équipe qualifiée).
+ * Construit un classement global d'équipes à partir d'une PLAGE de positions
+ * de poule (0-indexée, incluse des deux côtés) : toutes les équipes classées
+ * `poolRankStart`-ième de leur poule d'abord (départagées entre elles comme
+ * un classement de poule normal : victoires → différentiel → points
+ * marqués), puis toutes les `poolRankStart+1`-ièmes, etc. Sert de base
+ * commune à seedQualifiedTeams et seedNonQualifiedTeams ci-dessous.
  * @param {Array} pools
- * @param {number} qualifiersPerPool
- * @returns {Array} équipes qualifiées, dans l'ordre du seeding (meilleure en premier)
+ * @param {number} poolRankStart - 0-indexé
+ * @param {number} poolRankEnd - 0-indexé, inclus
+ * @returns {Array} équipes, dans l'ordre du seeding (meilleure en premier)
  */
-function seedQualifiedTeams(pools, qualifiersPerPool) {
-  const byRank = [];
+function seedTeamsByPoolRange(pools, poolRankStart, poolRankEnd) {
+  const byBand = [];
 
   pools.forEach(pool => {
     const standings = computePoolStandings(pool);
-    for (let i = 0; i < qualifiersPerPool && i < standings.length; i++) {
-      if (!byRank[i]) byRank[i] = [];
-      byRank[i].push(standings[i]);
+    const end = Math.min(poolRankEnd, standings.length - 1);
+    for (let i = poolRankStart; i <= end; i++) {
+      const bandIdx = i - poolRankStart;
+      if (!byBand[bandIdx]) byBand[bandIdx] = [];
+      byBand[bandIdx].push(standings[i]);
     }
   });
 
   const seeded = [];
-  byRank.forEach(bandTeams => {
+  byBand.forEach(bandTeams => {
     if (!bandTeams) return;
     const sorted = [...bandTeams].sort((a, b) => {
       if (b.w !== a.w) return b.w - a.w;
@@ -414,14 +418,40 @@ function seedQualifiedTeams(pools, qualifiersPerPool) {
 }
 
 /**
- * Construit l'état initial de la phase finale à partir des équipes classées
- * par ordre de seeding (voir seedQualifiedTeams). Complète avec des repos
- * ("bye") jusqu'à la prochaine puissance de 2, placés aux moins bonnes têtes
- * de série selon la convention standard (elles sautent alors le 1er tour).
- * @param {Array} seededTeams
- * @returns {{bracketSize:number, segments:Array, rounds:Array, finalRanking:null}}
+ * Construit le classement global des équipes QUALIFIÉES, tous poules
+ * confondues (les `qualifiersPerPool` premières de chaque poule). Sert de
+ * base au tirage au sort de la phase finale (seed 1 = la meilleure équipe
+ * qualifiée).
  */
-function buildFinalPhase(seededTeams) {
+function seedQualifiedTeams(pools, qualifiersPerPool) {
+  return seedTeamsByPoolRange(pools, 0, qualifiersPerPool - 1);
+}
+
+/**
+ * Construit le classement global des équipes NON qualifiées, tous poules
+ * confondues (celles classées après `qualifiersPerPool` dans leur poule).
+ * Sert de base au tirage au sort des matchs de classement, pour que ces
+ * équipes continuent elles aussi à jouer et obtiennent une place finale
+ * précise plutôt que de s'arrêter à la fin des poules.
+ */
+function seedNonQualifiedTeams(pools, qualifiersPerPool) {
+  const maxPoolSize = pools.reduce((max, pool) => Math.max(max, pool.teams.length), 0);
+  return seedTeamsByPoolRange(pools, qualifiersPerPool, maxPoolSize - 1);
+}
+
+/**
+ * Construit l'état initial d'un bracket à classement complet (phase finale
+ * ou matchs de classement des non-qualifiés) à partir des équipes classées
+ * par ordre de seeding. Complète avec des repos ("bye") jusqu'à la
+ * prochaine puissance de 2, placés aux moins bonnes têtes de série selon la
+ * convention standard (elles sautent alors le 1er tour).
+ * @param {Array} seededTeams
+ * @param {number} rankOffset - décalage des places affichées (0 pour la
+ *   phase finale, qui joue pour les places 1..N ; le nombre de qualifiés
+ *   pour les matchs de classement, qui jouent pour les places N+1..)
+ * @returns {{bracketSize:number, rankOffset:number, segments:Array, rounds:Array, finalRanking:null}}
+ */
+function buildFinalPhase(seededTeams, rankOffset = 0) {
   const bracketSize = nextPowerOfTwo(seededTeams.length);
   const order = seedOrder(bracketSize);
   const slots = order.map(seedNum => {
@@ -431,7 +461,8 @@ function buildFinalPhase(seededTeams) {
 
   return {
     bracketSize,
-    segments: [{ id: "seg-1", rankStart: 1, rankSize: bracketSize, slots, scores: {} }],
+    rankOffset,
+    segments: [{ id: "seg-1", rankStart: 1 + rankOffset, rankSize: bracketSize, slots, scores: {} }],
     rounds: [],
     finalRanking: null
   };
@@ -511,14 +542,16 @@ function segmentLabel(segment) {
 /**
  * Calcule le classement final une fois tous les segments résolus à une seule
  * équipe (ou repos). Les repos sont filtrés puis les places renumérotées en
- * continu de 1 à N (les repos ne "mangent" jamais que les moins bonnes
- * places, de par la convention de placement des têtes de série).
+ * continu à partir de `rankOffset + 1` (les repos ne "mangent" jamais que
+ * les moins bonnes places, de par la convention de placement des têtes de
+ * série). `rankOffset` permet aux matchs de classement des non-qualifiés de
+ * continuer la numérotation là où s'arrête la phase finale (voir buildFinalPhase).
  */
-function computeFinalRanking(segments) {
+function computeFinalRanking(segments, rankOffset = 0) {
   return segments
     .filter(s => s.slots.length === 1 && s.slots[0].team)
     .sort((a, b) => a.rankStart - b.rankStart)
-    .map((s, i) => ({ team: s.slots[0].team, rank: i + 1 }));
+    .map((s, i) => ({ team: s.slots[0].team, rank: rankOffset + i + 1 }));
 }
 
 /**
@@ -560,7 +593,7 @@ function progressFinalPhase(finalPhase) {
   }
 
   if (finalPhase.segments.every(s => s.slots.length === 1)) {
-    finalPhase.finalRanking = computeFinalRanking(finalPhase.segments);
+    finalPhase.finalRanking = computeFinalRanking(finalPhase.segments, finalPhase.rankOffset || 0);
   } else {
     finalPhase.finalRanking = null;
   }

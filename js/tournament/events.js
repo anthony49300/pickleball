@@ -20,8 +20,9 @@ function finalPhaseHasAnyProgress(finalPhase) {
 }
 
 /**
- * Le tournoi actuel a-t-il déjà une progression (score de poule ou de phase
- * finale) ? Sert à avertir avant de régénérer les poules et tout perdre.
+ * Le tournoi actuel a-t-il déjà une progression (score de poule, de phase
+ * finale ou de matchs de classement) ? Sert à avertir avant de régénérer les
+ * poules et tout perdre.
  */
 function tournamentHasAnyScore(tournament) {
   if (!tournament) return false;
@@ -29,7 +30,7 @@ function tournamentHasAnyScore(tournament) {
     Object.values(pool.scores).some(s => s && (s.a != null || s.b != null))
   );
   if (poolsHaveScores) return true;
-  return finalPhaseHasAnyProgress(tournament.finalPhase);
+  return finalPhaseHasAnyProgress(tournament.finalPhase) || finalPhaseHasAnyProgress(tournament.consolationPhase);
 }
 
 // --------------------------------------------------
@@ -275,70 +276,102 @@ elPoolsContainer.addEventListener("input", (e) => {
 // PHASE FINALE
 // --------------------------------------------------
 
-btnGenerateFinalPhase.addEventListener("click", async () => {
-  const tournament = window.__PT_TOURNAMENT__;
-  if (!tournament) {
-    await alertModal("Générez d'abord les poules.", { title: "Poules manquantes", icon: "⚠️" });
-    return;
-  }
+/**
+ * Câble le bouton "Générer..." d'un bracket à classement complet (phase
+ * finale ou matchs de classement des non-qualifiés — même moteur pour les
+ * deux, voir engine.js) : mêmes vérifications, seules la source des équipes,
+ * le décalage de classement et le conteneur d'affichage changent.
+ */
+function wireBracketGenerateButton(button, { phaseKey, getSeededTeams, getRankOffset, notEnoughMessage, container }) {
+  button.addEventListener("click", async () => {
+    const tournament = window.__PT_TOURNAMENT__;
+    if (!tournament) {
+      await alertModal("Générez d'abord les poules.", { title: "Poules manquantes", icon: "⚠️" });
+      return;
+    }
 
-  if (!tournament.pools.every(isPoolComplete)) {
-    await alertModal(
-      "Tous les matchs de poule doivent être terminés (scores saisis) avant de lancer la phase finale.",
-      { title: "Poules non terminées", icon: "⚠️" }
-    );
-    return;
-  }
+    if (!tournament.pools.every(isPoolComplete)) {
+      await alertModal(
+        "Tous les matchs de poule doivent être terminés (scores saisis) avant de continuer.",
+        { title: "Poules non terminées", icon: "⚠️" }
+      );
+      return;
+    }
 
-  const seeded = seedQualifiedTeams(tournament.pools, tournament.qualifiersPerPool);
-  if (seeded.length < 2) {
-    await alertModal("Il faut au moins 2 équipes qualifiées pour lancer une phase finale.", { title: "Pas assez de qualifiés", icon: "⚠️" });
-    return;
-  }
+    const seeded = getSeededTeams(tournament);
+    if (seeded.length < 2) {
+      await alertModal(notEnoughMessage, { title: "Pas assez d'équipes", icon: "⚠️" });
+      return;
+    }
 
-  if (finalPhaseHasAnyProgress(tournament.finalPhase)) {
-    const confirmed = await confirmModal(
-      "Une phase finale est déjà en cours. La régénérer effacera sa progression. Continuer ?",
-      { title: "Régénérer la phase finale ?", confirmText: "Régénérer", icon: "⚠️" }
-    );
-    if (!confirmed) return;
-  }
+    if (finalPhaseHasAnyProgress(tournament[phaseKey])) {
+      const confirmed = await confirmModal(
+        "Une progression existe déjà ici. La régénérer l'effacera. Continuer ?",
+        { title: "Régénérer ?", confirmText: "Régénérer", icon: "⚠️" }
+      );
+      if (!confirmed) return;
+    }
 
-  tournament.finalPhase = buildFinalPhase(seeded);
-  progressFinalPhase(tournament.finalPhase);
+    tournament[phaseKey] = buildFinalPhase(seeded, getRankOffset(tournament));
+    progressFinalPhase(tournament[phaseKey]);
 
-  renderFinalPhase(tournament.finalPhase);
-  renderFinalRanking(tournament.finalPhase);
-  autoSaveTournamentState();
+    renderBracketPhase(tournament[phaseKey], container);
+    renderFinalRanking(tournament);
+    autoSaveTournamentState();
+  });
+}
+
+/**
+ * Délégation d'événement pour la saisie des scores d'un bracket. On ne
+ * réaffiche PAS le conteneur à chaque frappe (ça ferait perdre le focus du
+ * champ en cours de saisie) : uniquement quand un segment vient réellement
+ * de se terminer et de produire de nouveaux segments enfants.
+ */
+function wireBracketScoreInputs(container, phaseKey) {
+  container.addEventListener("input", (e) => {
+    if (!e.target.classList.contains("bracket-score-input") || e.target.readOnly) return;
+
+    const tournament = window.__PT_TOURNAMENT__;
+    const phase = tournament?.[phaseKey];
+    if (!phase) return;
+
+    const segmentId = e.target.dataset.segment;
+    const matchIdx = e.target.dataset.match;
+    const side = e.target.dataset.side;
+    const val = parseInt(e.target.value, 10);
+
+    const segment = phase.segments.find(s => s.id === segmentId);
+    if (!segment) return;
+
+    if (!segment.scores[matchIdx]) segment.scores[matchIdx] = {};
+    segment.scores[matchIdx][side] = Number.isNaN(val) ? null : val;
+
+    const roundsBefore = phase.rounds.length;
+    progressFinalPhase(phase);
+
+    if (phase.rounds.length !== roundsBefore) {
+      renderBracketPhase(phase, container);
+    }
+    renderFinalRanking(tournament);
+    autoSaveTournamentState();
+  });
+}
+
+wireBracketGenerateButton(btnGenerateFinalPhase, {
+  phaseKey: "finalPhase",
+  getSeededTeams: t => seedQualifiedTeams(t.pools, t.qualifiersPerPool),
+  getRankOffset: () => 0,
+  notEnoughMessage: "Il faut au moins 2 équipes qualifiées pour lancer une phase finale.",
+  container: elFinalPhaseContainer
 });
 
-// Délégation d'événement pour la saisie des scores de la phase finale. On ne
-// réaffiche PAS finalPhaseContainer à chaque frappe (ça ferait perdre le
-// focus du champ en cours de saisie) : uniquement quand un segment vient
-// réellement de se terminer et de produire de nouveaux segments enfants.
-elFinalPhaseContainer.addEventListener("input", (e) => {
-  if (!e.target.classList.contains("bracket-score-input") || e.target.readOnly) return;
-
-  const tournament = window.__PT_TOURNAMENT__;
-  if (!tournament || !tournament.finalPhase) return;
-
-  const segmentId = e.target.dataset.segment;
-  const matchIdx = e.target.dataset.match;
-  const side = e.target.dataset.side;
-  const val = parseInt(e.target.value, 10);
-
-  const segment = tournament.finalPhase.segments.find(s => s.id === segmentId);
-  if (!segment) return;
-
-  if (!segment.scores[matchIdx]) segment.scores[matchIdx] = {};
-  segment.scores[matchIdx][side] = Number.isNaN(val) ? null : val;
-
-  const roundsBefore = tournament.finalPhase.rounds.length;
-  progressFinalPhase(tournament.finalPhase);
-
-  if (tournament.finalPhase.rounds.length !== roundsBefore) {
-    renderFinalPhase(tournament.finalPhase);
-  }
-  renderFinalRanking(tournament.finalPhase);
-  autoSaveTournamentState();
+wireBracketGenerateButton(btnGenerateConsolationPhase, {
+  phaseKey: "consolationPhase",
+  getSeededTeams: t => seedNonQualifiedTeams(t.pools, t.qualifiersPerPool),
+  getRankOffset: t => seedQualifiedTeams(t.pools, t.qualifiersPerPool).length,
+  notEnoughMessage: "Il faut au moins 2 équipes non qualifiées pour générer des matchs de classement.",
+  container: elConsolationPhaseContainer
 });
+
+wireBracketScoreInputs(elFinalPhaseContainer, "finalPhase");
+wireBracketScoreInputs(elConsolationPhaseContainer, "consolationPhase");
