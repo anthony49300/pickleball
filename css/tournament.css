@@ -220,12 +220,22 @@ select option {
   font-family: inherit;
 }
 
-.pool-standing-card tr.forfeited {
+/* Ligne d'une équipe forfait : dans le classement de poule (.pool-standing-card,
+   nom barré via .team-name-text) ET dans le classement final (.ranking-table,
+   voir renderFinalRanking — pas de .team-name-text là, juste la ligne grisée). */
+.pool-standing-card tr.forfeited,
+.ranking-table tr.forfeited {
   opacity: 0.6;
 }
 
 .pool-standing-card tr.forfeited .team-name-text {
   text-decoration: line-through;
+}
+
+.forfeit-badge-inline {
+  font-size: 0.75rem;
+  color: #ef4444;
+  font-weight: 700;
 }
 
 /* Badge affiché sur un match de poule résolu automatiquement (forfait).

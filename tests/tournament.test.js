@@ -424,6 +424,48 @@ test("seedNonQualifiedTeams : ne prend que les équipes classées après les qua
   assert.strictEqual(nonQualified[1].id, 100); // dernier de poule B
 });
 
+test("seedQualifiedTeams / seedNonQualifiedTeams : une équipe forfait AVANT le tirage libère sa place, prise par la suivante de sa poule", () => {
+  const teams = makeTeams(4);
+  const pool = { teams, rounds: generateRoundRobin(teams), scores: {} };
+
+  const findMatchKey = (idA, idB) => {
+    for (let r = 0; r < pool.rounds.length; r++) {
+      for (let m = 0; m < pool.rounds[r].length; m++) {
+        const match = pool.rounds[r][m];
+        if (!match.bye && ((match.a.id === idA && match.b.id === idB) || (match.a.id === idB && match.b.id === idA))) {
+          return { key: `${r}-${m}`, reversed: match.a.id === idB };
+        }
+      }
+    }
+    throw new Error(`Match ${idA} vs ${idB} introuvable`);
+  };
+  const setScore = (idA, idB, scoreA, scoreB) => {
+    const { key, reversed } = findMatchKey(idA, idB);
+    pool.scores[key] = reversed ? { a: scoreB, b: scoreA } : { a: scoreA, b: scoreB };
+  };
+
+  // Team0 gagne tout (1er), Team1 bat tout sauf Team0 (2e), Team2 ne bat
+  // que Team3 (3e), Team3 perd tout (4e).
+  setScore(0, 1, 11, 5);
+  setScore(0, 2, 11, 5);
+  setScore(0, 3, 11, 5);
+  setScore(1, 2, 11, 5);
+  setScore(1, 3, 11, 5);
+  setScore(2, 3, 11, 5);
+
+  const forfeitedTeamIds = new Set([0]); // Team0 (1er) déclare forfait avant tout tirage
+
+  const qualified = seedQualifiedTeams([pool], 2, forfeitedTeamIds);
+  assert.deepStrictEqual(qualified.map(t => t.id), [1, 2], "Team2 (3e à l'origine) doit prendre la place laissée par Team0");
+
+  const nonQualified = seedNonQualifiedTeams([pool], 2, forfeitedTeamIds);
+  assert.deepStrictEqual(nonQualified.map(t => t.id), [3], "Team0 (forfait) ne doit apparaître dans AUCUN des deux tirages");
+
+  // Sans forfait, le comportement d'origine reste inchangé (non-régression).
+  assert.deepStrictEqual(seedQualifiedTeams([pool], 2).map(t => t.id), [0, 1]);
+  assert.deepStrictEqual(seedNonQualifiedTeams([pool], 2).map(t => t.id), [2, 3]);
+});
+
 test("buildFinalPhase + computeFinalRanking : rankOffset décale les places affichées", () => {
   const teams = Array.from({ length: 4 }, (_, i) => ({ id: i + 1, name: `Seed${i + 1}` }));
   const finalPhase = buildFinalPhase(teams, 4); // continue après 4 places déjà prises ailleurs

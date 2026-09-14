@@ -449,15 +449,19 @@ function wireBracketScoreInputs(container, phaseKey) {
 
 wireBracketGenerateButton(btnGenerateFinalPhase, {
   phaseKey: "finalPhase",
-  getSeededTeams: t => seedQualifiedTeams(t.pools, t.qualifiersPerPool),
+  // Une équipe forfait AVANT ce tirage (donc encore en phase de poules)
+  // libère sa place : la suivante de sa poule est qualifiée à sa place,
+  // plutôt que de lui laisser une place vide en phase finale qu'elle
+  // perdrait automatiquement à chaque tour (voir seedTeamsByPoolRange).
+  getSeededTeams: t => seedQualifiedTeams(t.pools, t.qualifiersPerPool, new Set(t.forfeitedTeamIds || [])),
   getRankOffset: () => 0,
   notEnoughMessage: "Il faut au moins 2 équipes qualifiées pour lancer une phase finale."
 });
 
 wireBracketGenerateButton(btnGenerateConsolationPhase, {
   phaseKey: "consolationPhase",
-  getSeededTeams: t => seedNonQualifiedTeams(t.pools, t.qualifiersPerPool),
-  getRankOffset: t => seedQualifiedTeams(t.pools, t.qualifiersPerPool).length,
+  getSeededTeams: t => seedNonQualifiedTeams(t.pools, t.qualifiersPerPool, new Set(t.forfeitedTeamIds || [])),
+  getRankOffset: t => seedQualifiedTeams(t.pools, t.qualifiersPerPool, new Set(t.forfeitedTeamIds || [])).length,
   notEnoughMessage: "Il faut au moins 2 équipes non qualifiées pour générer des matchs de classement."
 });
 

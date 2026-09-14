@@ -339,19 +339,51 @@ function renderFinalPodium(combined, statsByTeamId) {
 }
 
 /**
+ * Retrouve une équipe par id n'importe où dans le tournoi (liste d'équipes,
+ * ou à défaut poules). Sert à retrouver le nom d'une équipe forfait AVANT le
+ * tirage d'un bracket (voir renderFinalRanking) : elle n'apparaît alors dans
+ * AUCUN classement de bracket calculé (elle n'a jamais été tirée au sort,
+ * voir seedTeamsByPoolRange), il faut donc aller chercher son nom ailleurs.
+ */
+function findTeamById(tournament, teamId) {
+  const inTeams = (tournament.teams || []).find(t => t.id === teamId);
+  if (inTeams) return inTeams;
+  for (const pool of tournament.pools || []) {
+    const found = pool.teams.find(t => t.id === teamId);
+    if (found) return found;
+  }
+  return null;
+}
+
+/**
  * Affiche (ou masque) le classement final complet du tournoi, en fusionnant
  * la phase finale (places 1..N) et les matchs de classement des non-qualifiés
  * (places N+1..) — ce qui est déjà résolu s'affiche au fur et à mesure, même
  * si l'autre bracket n'est pas encore terminé (ou pas encore lancé). Podium
  * pour le top 3, tableau avec les statistiques agrégées sur tout le tournoi
  * (poules + phase finale + matchs de classement).
+ *
+ * Une équipe déclarée forfait AVANT le tirage d'un bracket (encore en phase
+ * de poules) n'est tirée au sort dans AUCUN des deux brackets — sa place y
+ * est prise par la suivante de sa poule (voir seedTeamsByPoolRange) — donc
+ * absente des classements ci-dessus alors que le principe de ce mode est que
+ * TOUTE équipe inscrite obtienne une place : elle est ajoutée en fin de
+ * liste, avec les places restantes (dans l'ordre où les forfaits ont été
+ * déclarés), visuellement distinguée comme forfait plutôt que classée sur un
+ * vrai parcours.
  */
 function renderFinalRanking(tournament) {
   const fromFinalPhase = tournament?.finalPhase?.finalRanking || [];
   const fromConsolationPhase = tournament?.consolationPhase?.finalRanking || [];
   const combined = [...fromFinalPhase, ...fromConsolationPhase].sort((a, b) => a.rank - b.rank);
 
-  if (!combined.length) {
+  const rankedTeamIds = new Set(combined.map(r => r.team.id));
+  const forfeitedBeforeBracket = (tournament.forfeitedTeamIds || [])
+    .filter(id => !rankedTeamIds.has(id))
+    .map(id => findTeamById(tournament, id))
+    .filter(Boolean);
+
+  if (!combined.length && !forfeitedBeforeBracket.length) {
     elFinalRankingSection.hidden = true;
     return;
   }
@@ -374,6 +406,22 @@ function renderFinalRanking(tournament) {
         <td>${s.pf}</td>
         <td>${s.pa}</td>
         <td class="${diffClass}">${diffSign}${diff}</td>
+      </tr>
+    `;
+  }).join("") + forfeitedBeforeBracket.map((team, i) => {
+    const s = statsByTeamId.get(team.id) || zeroStats;
+    const diff = s.pf - s.pa;
+    const diffSign = diff > 0 ? "+" : "";
+    return `
+      <tr class="forfeited">
+        <td>${combined.length + i + 1}</td>
+        <td>${escapeHtml(team.name)} <span class="forfeit-badge-inline">🚫 Forfait</span></td>
+        <td>${s.m}</td>
+        <td>${s.w}</td>
+        <td>${s.l}</td>
+        <td>${s.pf}</td>
+        <td>${s.pa}</td>
+        <td>${diffSign}${diff}</td>
       </tr>
     `;
   }).join("");
@@ -400,6 +448,11 @@ function renderFinalRanking(tournament) {
     <p class="subtle" style="margin-top: 0.75rem; font-size: 0.8rem;">
       💡 <strong>Le rang est déterminé par le parcours en phase finale et matchs de classement</strong> (qui a gagné/perdu chaque match d'élimination), pas par les statistiques ci-dessus — elles sont uniquement informatives.
     </p>
+    ${forfeitedBeforeBracket.length ? `
+      <p class="subtle" style="font-size: 0.8rem;">
+        🚫 <strong>${forfeitedBeforeBracket.length > 1 ? "Équipes forfait" : "Équipe forfait"}</strong> avant le tirage d'un bracket : sa place dans la poule a été prise par l'équipe suivante (voir le classement de poule), d'où les dernières places ci-dessus.
+      </p>
+    ` : ""}
   `;
   elFinalRankingSection.hidden = false;
 }

@@ -405,13 +405,20 @@ function seedOrder(size) {
  * @param {Array} pools
  * @param {number} poolRankStart - 0-indexé
  * @param {number} poolRankEnd - 0-indexé, inclus
+ * @param {Set<number>|null} forfeitedTeamIds - équipes à exclure AVANT de
+ *   découper par rang (voir setTeamForfeited) : une équipe forfait déclarée
+ *   pendant la phase de poules (donc avant tout tirage de bracket) libère
+ *   ainsi sa place — la suivante de sa poule prend directement sa place
+ *   dans la bande de rang concernée (qualification ou classement), sans
+ *   qu'aucune place ne saute ni ne se retrouve occupée deux fois.
  * @returns {Array} équipes, dans l'ordre du seeding (meilleure en premier)
  */
-function seedTeamsByPoolRange(pools, poolRankStart, poolRankEnd) {
+function seedTeamsByPoolRange(pools, poolRankStart, poolRankEnd, forfeitedTeamIds) {
   const byBand = [];
 
   pools.forEach(pool => {
-    const standings = computePoolStandings(pool);
+    const standings = computePoolStandings(pool)
+      .filter(s => !forfeitedTeamIds || !forfeitedTeamIds.has(s.team.id));
     const end = Math.min(poolRankEnd, standings.length - 1);
     for (let i = poolRankStart; i <= end; i++) {
       const bandIdx = i - poolRankStart;
@@ -436,24 +443,31 @@ function seedTeamsByPoolRange(pools, poolRankStart, poolRankEnd) {
 
 /**
  * Construit le classement global des équipes QUALIFIÉES, tous poules
- * confondues (les `qualifiersPerPool` premières de chaque poule). Sert de
- * base au tirage au sort de la phase finale (seed 1 = la meilleure équipe
- * qualifiée).
+ * confondues (les `qualifiersPerPool` premières de chaque poule, forfaits
+ * exclus — voir seedTeamsByPoolRange). Sert de base au tirage au sort de la
+ * phase finale (seed 1 = la meilleure équipe qualifiée).
+ * @param {Array} pools
+ * @param {number} qualifiersPerPool
+ * @param {Set<number>|null} forfeitedTeamIds
  */
-function seedQualifiedTeams(pools, qualifiersPerPool) {
-  return seedTeamsByPoolRange(pools, 0, qualifiersPerPool - 1);
+function seedQualifiedTeams(pools, qualifiersPerPool, forfeitedTeamIds) {
+  return seedTeamsByPoolRange(pools, 0, qualifiersPerPool - 1, forfeitedTeamIds);
 }
 
 /**
  * Construit le classement global des équipes NON qualifiées, tous poules
- * confondues (celles classées après `qualifiersPerPool` dans leur poule).
- * Sert de base au tirage au sort des matchs de classement, pour que ces
- * équipes continuent elles aussi à jouer et obtiennent une place finale
- * précise plutôt que de s'arrêter à la fin des poules.
+ * confondues (celles classées après `qualifiersPerPool` dans leur poule,
+ * forfaits exclus — voir seedTeamsByPoolRange). Sert de base au tirage au
+ * sort des matchs de classement, pour que ces équipes continuent elles
+ * aussi à jouer et obtiennent une place finale précise plutôt que de
+ * s'arrêter à la fin des poules.
+ * @param {Array} pools
+ * @param {number} qualifiersPerPool
+ * @param {Set<number>|null} forfeitedTeamIds
  */
-function seedNonQualifiedTeams(pools, qualifiersPerPool) {
+function seedNonQualifiedTeams(pools, qualifiersPerPool, forfeitedTeamIds) {
   const maxPoolSize = pools.reduce((max, pool) => Math.max(max, pool.teams.length), 0);
-  return seedTeamsByPoolRange(pools, qualifiersPerPool, maxPoolSize - 1);
+  return seedTeamsByPoolRange(pools, qualifiersPerPool, maxPoolSize - 1, forfeitedTeamIds);
 }
 
 /**
