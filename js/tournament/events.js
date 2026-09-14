@@ -240,6 +240,9 @@ function refreshCourtsOnExistingTournament() {
   tournament.courtNames = parseCourtNames(elCourtNames.value);
   tournament.courtAllocation = allocateCourtsToPools(tournament.pools, tournament.numCourts);
   renderPools(tournament.pools, tournament.courtNames, tournament.courtAllocation);
+
+  if (tournament.finalPhase) renderBracketPhase(tournament.finalPhase, elFinalPhaseContainer, tournament.courtNames);
+  if (tournament.consolationPhase) renderBracketPhase(tournament.consolationPhase, elConsolationPhaseContainer, tournament.courtNames);
 }
 
 elCourtNames.addEventListener("input", refreshCourtsOnExistingTournament);
@@ -315,7 +318,7 @@ function wireBracketGenerateButton(button, { phaseKey, getSeededTeams, getRankOf
     tournament[phaseKey] = buildFinalPhase(seeded, getRankOffset(tournament));
     progressFinalPhase(tournament[phaseKey]);
 
-    renderBracketPhase(tournament[phaseKey], container);
+    renderBracketPhase(tournament[phaseKey], container, tournament.courtNames);
     renderFinalRanking(tournament);
     autoSaveTournamentState();
   });
@@ -350,7 +353,7 @@ function wireBracketScoreInputs(container, phaseKey) {
     progressFinalPhase(phase);
 
     if (phase.rounds.length !== roundsBefore) {
-      renderBracketPhase(phase, container);
+      renderBracketPhase(phase, container, tournament.courtNames);
     }
     renderFinalRanking(tournament);
     autoSaveTournamentState();

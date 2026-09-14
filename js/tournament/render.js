@@ -160,15 +160,17 @@ function renderPoolStandings(pools, qualifiersPerPool) {
 
 /**
  * Affiche les affiches d'un tour/segment de phase finale. Reprend les mêmes
- * classes que les matchs de poule (match-card, team-score, team, vs,
- * score-input) pour une apparence cohérente.
+ * classes que les matchs de poule (match-card, court-badge, team-score, team,
+ * vs, score-input) pour une apparence cohérente.
  * @param {Array} pairs - paires [a, b] où a/b sont {team} ou {bye:true}
  * @param {Object} scores - scores saisis, indexés par position dans `pairs`
  * @param {boolean} editable - true pour le tour en cours (saisie active),
  *   false pour l'historique (déjà joué, affiché en lecture seule)
  * @param {string|null} segmentId - identifiant du segment (nécessaire si editable)
+ * @param {string[]} courtNames - noms de terrains optionnels (voir #courtNames),
+ *   cyclés par position dans `pairs` comme pour les matchs de poule.
  */
-function renderBracketPairs(pairs, scores, editable, segmentId) {
+function renderBracketPairs(pairs, scores, editable, segmentId, courtNames = []) {
   return pairs.map(([a, b], idx) => {
     if (a.bye && b.bye) return "";
 
@@ -180,8 +182,10 @@ function renderBracketPairs(pairs, scores, editable, segmentId) {
     const score = scores[idx] || {};
     const readonlyAttr = editable ? "" : "readonly";
     const dataAttrs = editable ? `data-segment="${segmentId}" data-match="${idx}"` : "";
+    const courtLabel = escapeHtml(courtNames[idx] || `Terrain ${idx + 1}`);
     return `
       <div class="match-card">
+        <span class="court-badge">${courtLabel}</span>
         <div class="team-score">
           <span class="team">${escapeHtml(a.team.name)}</span>
           <input type="number" class="score-input bracket-score-input" min="0" placeholder="-" ${dataAttrs} data-side="a" ${readonlyAttr} value="${score.a ?? ""}" />
@@ -203,8 +207,9 @@ function renderBracketPairs(pairs, scores, editable, segmentId) {
  * encore en cours (saisie active).
  * @param {Object} phase - finalPhase ou consolationPhase (voir engine.js)
  * @param {HTMLElement} container
+ * @param {string[]} courtNames - noms de terrains optionnels (voir #courtNames)
  */
-function renderBracketPhase(phase, container) {
+function renderBracketPhase(phase, container, courtNames = []) {
   if (!phase) {
     container.innerHTML = "";
     return;
@@ -214,7 +219,7 @@ function renderBracketPhase(phase, container) {
     <div class="pool-card">
       <h3 class="pool-card-title">${escapeHtml(round.label)}</h3>
       <div class="round">
-        <div class="matches-list">${renderBracketPairs(round.pairs, round.scores, false, null)}</div>
+        <div class="matches-list">${renderBracketPairs(round.pairs, round.scores, false, null, courtNames)}</div>
       </div>
     </div>
   `);
@@ -225,7 +230,7 @@ function renderBracketPhase(phase, container) {
       <div class="pool-card">
         <h3 class="pool-card-title">${escapeHtml(segmentLabel(segment))}</h3>
         <div class="round">
-          <div class="matches-list">${renderBracketPairs(segmentPairs(segment), segment.scores, true, segment.id)}</div>
+          <div class="matches-list">${renderBracketPairs(segmentPairs(segment), segment.scores, true, segment.id, courtNames)}</div>
         </div>
       </div>
     `);
