@@ -3,6 +3,22 @@
 // =============================================================================
 // MODALE GENERIQUE (remplace confirm()/alert()/prompt() natifs du navigateur)
 // =============================================================================
+// Module partagé entre toutes les pages du site (index.html, tournoi.html...) :
+// entièrement autonome (ses propres références DOM ci-dessous), à charger sur
+// toute page qui inclut le balisage de la modale (voir index.html, section
+// "MODALE GENERIQUE") et souhaite utiliser confirmModal/alertModal/etc.
+
+const elModalOverlay = document.getElementById("modalOverlay");
+const elModalIcon = document.getElementById("modalIcon");
+const elModalTitle = document.getElementById("modalTitle");
+const elModalMessage = document.getElementById("modalMessage");
+const elModalCopyArea = document.getElementById("modalCopyArea");
+const elModalCopyInput = document.getElementById("modalCopyInput");
+const elModalImageArea = document.getElementById("modalImageArea");
+const elModalImagePreview = document.getElementById("modalImagePreview");
+const btnModalCancel = document.getElementById("modalCancelBtn");
+const btnModalDownload = document.getElementById("modalDownloadBtn");
+const btnModalConfirm = document.getElementById("modalConfirmBtn");
 
 let modalResolve = null;
 let modalLastFocusedEl = null;
@@ -220,5 +236,3 @@ async function copyTextRobust(text) {
     }
   }
 }
-
-

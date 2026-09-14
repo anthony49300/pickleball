@@ -23,8 +23,6 @@ const btnCopy = document.getElementById("copy");
 const btnCopyLink = document.getElementById("copyLink");
 const btnSaveToHistory = document.getElementById("saveToHistory");
 const btnNewSeed = document.getElementById("newSeed");
-const btnThemeToggle = document.getElementById("themeToggleBtn");
-const elMetaThemeColor = document.getElementById("metaThemeColor");
 
 const elSchedule = document.getElementById("schedule");
 const elSessionStepper = document.getElementById("sessionStepper");
@@ -56,17 +54,9 @@ const elPlayerGroupsList = document.getElementById("playerGroupsList");
 const elNewGroupName = document.getElementById("newGroupName");
 const btnSavePlayerGroup = document.getElementById("savePlayerGroupBtn");
 
-const elModalOverlay = document.getElementById("modalOverlay");
-const elModalIcon = document.getElementById("modalIcon");
-const elModalTitle = document.getElementById("modalTitle");
-const elModalMessage = document.getElementById("modalMessage");
-const elModalCopyArea = document.getElementById("modalCopyArea");
-const elModalCopyInput = document.getElementById("modalCopyInput");
-const elModalImageArea = document.getElementById("modalImageArea");
-const elModalImagePreview = document.getElementById("modalImagePreview");
-const btnModalCancel = document.getElementById("modalCancelBtn");
-const btnModalDownload = document.getElementById("modalDownloadBtn");
-const btnModalConfirm = document.getElementById("modalConfirmBtn");
+// Les références DOM de la modale générique et du bouton de thème sont
+// désormais dans js/shared/modal.js et js/shared/theme.js (modules partagés
+// avec les autres pages du site, chargés avant celui-ci — voir index.html).
 
 // Variables globales de mémoire
 window.__PB_SCORES__ = {};

@@ -8,9 +8,9 @@
     "android:sync": "npx cap sync android",
     "android:build": "npx cap sync android && cd android && gradlew.bat assembleDebug",
     "test": "node tests/algorithm.test.js",
-    "lint": "eslint js/app",
-    "format": "prettier --write \"js/app/**/*.js\" \"*.html\" \"css/**/*.css\"",
-    "format:check": "prettier --check \"js/app/**/*.js\" \"*.html\" \"css/**/*.css\""
+    "lint": "eslint js/app js/shared",
+    "format": "prettier --write \"js/app/**/*.js\" \"js/shared/**/*.js\" \"*.html\" \"css/**/*.css\"",
+    "format:check": "prettier --check \"js/app/**/*.js\" \"js/shared/**/*.js\" \"*.html\" \"css/**/*.css\""
   },
   "devDependencies": {
     "@capacitor/core": "^6.1.2",
