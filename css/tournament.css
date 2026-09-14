@@ -1,9 +1,40 @@
 /* --------------------------------------------------
    MODE TOURNOI — styles propres aux poules & à la phase finale.
    Réutilise les variables de thème déjà définies dans styles.css (--bg-card,
-   --border-color, --text-main, --pickle-yellow, --fg-overlay-rgb...) : ce
-   fichier n'en redéfinit aucune, il s'appuie sur le thème clair/sombre existant.
+   --border-color, --text-main, --fg-overlay-rgb...) : ce fichier ne les
+   redéfinit pas, il s'appuie sur le thème clair/sombre existant. Seule
+   exception : --pickle-yellow ci-dessous, surchargée en doré pour donner à
+   ce mode sa propre couleur d'accent (voir plus bas).
 -------------------------------------------------- */
+
+/* --------------------------------------------------
+   COULEUR D'ACCENT DU MODE TOURNOI (doré, au lieu du jaune-vert "pickle" du
+   mode Rotation) — pour distinguer les deux modes en un coup d'œil, y
+   compris quand on bascule entre les deux onglets. --pickle-yellow est déjà
+   utilisée partout dans styles.css (boutons, titres, bordures actives,
+   badges...) : la surcharger ici suffit à teinter tout le mode Tournoi sans
+   toucher aux règles individuelles. Reprend les mêmes sélecteurs que
+   styles.css (:root / [data-theme="light"]), chargés APRÈS lui : mêmes
+   valeurs par défaut (sombre) et mêmes bascules pour le thème clair.
+   Couleur choisie : le doré déjà utilisé pour la marche "or" du podium
+   (#ffd700), pour une cohérence avec les médailles. --pickle-yellow-rgb
+   (canal RGB, utilisé pour tous les halos/ombres translucides de styles.css)
+   est surchargée en même temps, pour que ces halos suivent aussi le doré au
+   lieu de rester teintés en vert-jaune.
+-------------------------------------------------- */
+:root {
+  --pickle-yellow: #ffd700;
+  --pickle-yellow-hover: #e6c200;
+  --pickle-yellow-rgb: 255, 215, 0;
+}
+
+[data-theme="light"] {
+  /* Même logique que le jaune-vert du mode Rotation en thème clair : une
+     version bien plus sombre, lisible en texte sur fond clair. */
+  --pickle-yellow: #7a5c00;
+  --pickle-yellow-hover: #654b00;
+  --pickle-yellow-rgb: 122, 92, 0;
+}
 
 /* --------------------------------------------------
    MENUS DEROULANTS (select)
@@ -25,7 +56,7 @@ select {
 
 select:focus {
   border-color: var(--pickle-yellow);
-  box-shadow: 0 0 0 3px rgba(204, 255, 0, 0.15);
+  box-shadow: 0 0 0 3px rgba(var(--pickle-yellow-rgb), 0.15);
 }
 
 /* .group-save-row (réutilisé depuis styles.css) ne cible que <input> pour le
