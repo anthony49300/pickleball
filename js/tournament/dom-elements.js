@@ -1,0 +1,36 @@
+"use strict"; // Chaque <script> classique a son propre mode strict : on le réactive dans chaque fichier.
+
+// =============================================================================
+// MODE TOURNOI — ELEMENTS DU DOM
+// =============================================================================
+
+const elTeams = document.getElementById("teams");
+const elTeamCountBadge = document.getElementById("teamCountBadge");
+const elImportGroupSelect = document.getElementById("importGroupSelect");
+const btnImportGroup = document.getElementById("importGroupBtn");
+const elTeamsWarning = document.getElementById("teamsWarning");
+const elTeamsError = document.getElementById("teamsError");
+
+const elNumPools = document.getElementById("numPools");
+const elQualifiersPerPool = document.getElementById("qualifiersPerPool");
+const elPoolAssignMode = document.getElementById("poolAssignMode");
+const btnGeneratePools = document.getElementById("generatePools");
+
+const elManualAssignSection = document.getElementById("manualAssignSection");
+const elManualAssignList = document.getElementById("manualAssignList");
+const btnConfirmManualAssign = document.getElementById("confirmManualAssign");
+
+const elPoolsSection = document.getElementById("poolsSection");
+const elPoolsContainer = document.getElementById("poolsContainer");
+
+const elPoolStandingsSection = document.getElementById("poolStandingsSection");
+const elPoolStandingsContainer = document.getElementById("poolStandingsContainer");
+
+const elAutosaveBadge = document.getElementById("autosaveBadge");
+
+// Etat en mémoire de la répartition manuelle en cours (avant validation), et du
+// tournoi une fois les poules générées. Voir js/tournament/state.js pour la
+// sauvegarde/le chargement, et js/tournament/engine.js pour la structure exacte.
+window.__PT_TEAMS__ = [];
+window.__PT_MANUAL_ASSIGNMENT__ = null;
+window.__PT_TOURNAMENT__ = null;

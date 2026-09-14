@@ -331,10 +331,12 @@
   <script src="js/vendor/html2canvas.min.js"></script>
 
   <!-- Modules partagés avec les autres pages du site (voir tournoi.html) : modale
-       générique et thème clair/sombre. Chargés avant js/app/ car plusieurs de ses
-       fichiers les utilisent (confirmModal, alertModal, copyTextRobust...). -->
+       générique, thème clair/sombre et câblage des steppers/sliders. Chargés
+       avant js/app/ car plusieurs de ses fichiers les utilisent (confirmModal,
+       alertModal, copyTextRobust...). -->
   <script src="js/shared/modal.js"></script>
   <script src="js/shared/theme.js"></script>
+  <script src="js/shared/ui-controls.js"></script>
 
   <!-- Découpage de l'ancien js/app.js en modules thématiques, chargés en scripts
        classiques (pas type="module") pour rester utilisable en file:// sans serveur.

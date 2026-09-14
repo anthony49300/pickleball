@@ -1,0 +1,183 @@
+/* --------------------------------------------------
+   MODE TOURNOI — styles propres aux poules & à la phase finale.
+   Réutilise les variables de thème déjà définies dans styles.css (--bg-card,
+   --border-color, --text-main, --pickle-yellow, --fg-overlay-rgb...) : ce
+   fichier n'en redéfinit aucune, il s'appuie sur le thème clair/sombre existant.
+-------------------------------------------------- */
+
+/* --------------------------------------------------
+   MENUS DEROULANTS (select)
+   Le mode Rotation n'utilise aucun <select> : pas de style existant à
+   réutiliser depuis styles.css (contrairement aux textarea/input, déjà
+   habillés là-bas). Repris ici avec le même langage visuel.
+-------------------------------------------------- */
+select {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text-main);
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  outline: none;
+}
+
+select:focus {
+  border-color: var(--pickle-yellow);
+  box-shadow: 0 0 0 3px rgba(204, 255, 0, 0.15);
+}
+
+/* .group-save-row (réutilisé depuis styles.css) ne cible que <input> pour le
+   flex-grow ; on ajoute le même traitement pour le <select> d'import de groupe. */
+.group-save-row select {
+  flex: 1;
+  min-width: 160px;
+}
+
+/* --------------------------------------------------
+   REPARTITION MANUELLE DES EQUIPES EN POULES
+-------------------------------------------------- */
+.manual-assign-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.manual-assign-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(var(--fg-overlay-rgb), 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+.manual-assign-row .team-name {
+  font-weight: 700;
+}
+
+.manual-assign-row select {
+  width: auto;
+  min-width: 140px;
+}
+
+/* --------------------------------------------------
+   PHASE DE POULES : une carte par poule, calendrier + scores
+-------------------------------------------------- */
+.pools-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.pool-card {
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 16px;
+  background: var(--round-bg);
+}
+
+.pool-card h3 {
+  margin: 0 0 12px;
+  font-size: 1.05rem;
+  color: var(--pickle-yellow);
+}
+
+.pool-round {
+  margin-bottom: 14px;
+}
+
+.pool-round-title {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-subtle);
+  margin-bottom: 6px;
+}
+
+.pool-match {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  margin-bottom: 6px;
+}
+
+.pool-match .pool-team-name {
+  flex: 1;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.pool-match .pool-team-name:last-child {
+  text-align: right;
+}
+
+.pool-match .pool-score-input {
+  width: 40px;
+  min-width: 40px;
+  max-width: 40px;
+  height: 32px;
+  text-align: center;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: rgba(var(--fg-overlay-rgb), 0.08);
+  color: var(--text-main);
+  font-size: 0.95rem;
+  padding: 2px;
+}
+
+.pool-match .pool-vs-badge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--pickle-yellow);
+  padding: 2px 6px;
+}
+
+.pool-match.bye {
+  opacity: 0.6;
+  font-style: italic;
+  justify-content: center;
+}
+
+/* --------------------------------------------------
+   CLASSEMENTS DE POULE
+-------------------------------------------------- */
+.pool-standings-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.pool-standing-card {
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 16px;
+  background: var(--round-bg);
+  overflow-x: auto;
+}
+
+.pool-standing-card h3 {
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+  color: var(--pickle-yellow);
+}
+
+.pool-standing-card .ranking-table td.qualified-team {
+  position: relative;
+}
+
+.pool-standing-card tr.qualified {
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.pool-standing-card tr.qualified td:first-child {
+  border-left: 3px solid var(--court-green);
+}
