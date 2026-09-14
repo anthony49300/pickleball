@@ -76,6 +76,40 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  row-gap: 10px;
+}
+
+/* --------------------------------------------------
+   ONGLETS DE MODE (Rotation / Tournoi) — présents dans l'en-tête des deux
+   pages du site (index.html, tournoi.html), avec l'onglet de la page
+   courante marqué .active.
+-------------------------------------------------- */
+.mode-tabs {
+  display: flex;
+  gap: 4px;
+  background: rgba(var(--fg-overlay-rgb), 0.06);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  padding: 4px;
+}
+
+.mode-tab {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--text-subtle);
+  white-space: nowrap;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.mode-tab:hover { color: var(--text-main); }
+
+.mode-tab.active {
+  background: var(--pickle-yellow);
+  color: #000;
 }
 
 header h1 {
