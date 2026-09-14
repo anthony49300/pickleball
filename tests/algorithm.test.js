@@ -18,12 +18,21 @@ const path = require("path");
 const vm = require("vm");
 const assert = require("assert");
 
+// Important : vm.runInThisContext (et non vm.createContext + vm.runInContext)
+// exécute le script dans le MÊME realm V8 que ce fichier de test. Avec un
+// contexte séparé, les tableaux/objets créés par algorithm.js appartiennent à
+// un autre realm (Array/Object différents bien qu'identiques structurellement) :
+// assert.deepStrictEqual les considère alors comme non égaux ("Values have
+// same structure but are not reference-equal"), même quand les valeurs sont
+// réellement identiques — voir le test "6 joueurs / 2 terrains" plus bas, dont
+// le contournement (assert.strictEqual par valeur plutôt que deepStrictEqual
+// sur le tableau) n'est donc plus strictement nécessaire, mais reste correct.
+// algorithm.js ne déclare que des fonctions au niveau racine (aucun const/let
+// global) : elles s'attachent normalement à `global`.
 const algoPath = path.join(__dirname, "..", "js", "app", "algorithm.js");
 const code = fs.readFileSync(algoPath, "utf8");
-const sandbox = {};
-vm.createContext(sandbox);
-vm.runInContext(code, sandbox, { filename: algoPath });
-const { scheduleRotations } = sandbox;
+vm.runInThisContext(code, { filename: algoPath });
+const { scheduleRotations } = global;
 
 let passed = 0;
 let failed = 0;

@@ -16,11 +16,17 @@ const path = require("path");
 const vm = require("vm");
 const assert = require("assert");
 
+// Important : vm.runInThisContext (et non vm.createContext + vm.runInContext)
+// exécute le script dans le MÊME realm V8 que ce fichier de test. Avec un
+// contexte séparé, les tableaux/objets créés par engine.js appartiennent à un
+// autre realm (Array/Object différents bien qu'identiques structurellement) :
+// assert.deepStrictEqual les considère alors comme non égaux ("Values have
+// same structure but are not reference-equal"), même quand les valeurs sont
+// réellement identiques. engine.js ne déclare que des fonctions au niveau
+// racine (aucun const/let global) : elles s'attachent normalement à `global`.
 const enginePath = path.join(__dirname, "..", "js", "tournament", "engine.js");
 const code = fs.readFileSync(enginePath, "utf8");
-const sandbox = {};
-vm.createContext(sandbox);
-vm.runInContext(code, sandbox, { filename: enginePath });
+vm.runInThisContext(code, { filename: enginePath });
 const {
   parseTeams,
   generateRoundRobin,
@@ -29,7 +35,7 @@ const {
   buildPools,
   computePoolStandings,
   isPoolComplete
-} = sandbox;
+} = global;
 
 let passed = 0;
 let failed = 0;
