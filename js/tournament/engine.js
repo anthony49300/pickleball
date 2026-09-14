@@ -171,6 +171,17 @@ function allocateCourtsToPools(pools, numCourts) {
  * Si le nombre d'équipes est impair, une équipe est exemptée ("bye") à tour de
  * rôle sur une journée (représenté par `{ bye: true, team }` à la place du
  * match — `team` est l'équipe au repos ce tour-là, pour pouvoir l'afficher).
+ *
+ * L'ordre des matchs DANS chaque journée est ensuite tourné (voir en bas de
+ * fonction) : la méthode du cercle laisse structurellement une équipe fixe
+ * ("fixed", toujours `teams[0]`) dans le tout premier match généré, à
+ * CHAQUE journée. Sans terrains en nombre suffisant pour jouer tous les
+ * matchs d'une journée en même temps (voir poolCourts dans renderPools),
+ * l'ordre des matchs détermine l'ordre d'appel des terrains — `teams[0]`
+ * serait alors systématiquement appelée en premier terrain à chaque
+ * journée, et une autre équipe systématiquement en dernier, tournoi après
+ * tournoi. La rotation ci-dessous ne change JAMAIS qui joue contre qui
+ * (seul le calendrier compte pour ça), seulement l'ordre d'affichage/appel.
  * @param {Array} teams - équipes de la poule
  * @returns {Array<Array<{a:object,b:object}|{bye:true,team:object}>>} - journées
  */
@@ -200,7 +211,13 @@ function generateRoundRobin(teams) {
     rotation = [rotation[rotation.length - 1], ...rotation.slice(0, -1)];
   }
 
-  return rounds;
+  // Rotation de l'ordre d'appel (voir commentaire ci-dessus) : décalage
+  // croissant d'une journée à l'autre, sans jamais toucher au contenu des
+  // matchs (juste leur position dans le tableau de la journée).
+  return rounds.map((matches, r) => {
+    const offset = r % matches.length;
+    return [...matches.slice(offset), ...matches.slice(0, offset)];
+  });
 }
 
 /**

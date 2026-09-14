@@ -240,6 +240,28 @@ test("generateRoundRobin : calendrier correct pour un nombre impair d'équipes (
   assertRoundRobinCorrect(3);
 });
 
+test("generateRoundRobin : l'ordre d'appel dans chaque journée tourne, pour ne pas toujours mettre la même équipe en 1re position", () => {
+  // 6 équipes -> 5 journées de 3 matchs. Sans rotation, l'algorithme du
+  // cercle laisse toujours team0 ("fixed") dans le tout premier match de
+  // CHAQUE journée (voir le commentaire de generateRoundRobin) : sans
+  // assez de terrains pour jouer une journée entière en même temps, elle
+  // serait alors systématiquement appelée en premier terrain, jour après
+  // jour, tandis qu'une autre équipe serait systématiquement en dernier.
+  const teams = makeTeams(6);
+  const rounds = generateRoundRobin(teams);
+
+  const roundsWithTeam0First = rounds.filter(matches => {
+    const first = matches[0];
+    const ids = first.bye ? [first.team.id] : [first.a.id, first.b.id];
+    return ids.includes(0);
+  }).length;
+
+  assert.ok(
+    roundsWithTeam0First < rounds.length,
+    `team0 ne devrait pas être en 1re position à chaque journée (l'est à ${roundsWithTeam0First}/${rounds.length})`
+  );
+});
+
 test("generateRoundRobin : renvoie un tableau vide pour moins de 2 équipes", () => {
   assert.deepStrictEqual(generateRoundRobin(makeTeams(1)), []);
   assert.deepStrictEqual(generateRoundRobin(makeTeams(0)), []);
