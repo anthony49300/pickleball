@@ -72,10 +72,17 @@ select:focus {
    mêmes classes .round/.roundTitle/.matches-list/.match-card/.court-badge/
    .team-score/.team/.vs/.score-input, pour une apparence identique entre les
    deux modes. Rien n'est redéfini ici pour ces éléments.
+
+   Poules empilées en une seule colonne (pas de grille côte à côte) : le badge
+   "terrain" de .match-card est positionné en absolu par-dessus le texte, et ne
+   laisse assez de place au nom des équipes que dans une carte suffisamment
+   large — comme la zone de planning du mode Rotation, déjà pleine largeur.
+   Des cartes de poule côte à côte (donc plus étroites) recréaient ce
+   chevauchement avec des noms d'équipe un peu longs.
 -------------------------------------------------- */
 .pools-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  grid-template-columns: 1fr;
   gap: 20px;
 }
 
