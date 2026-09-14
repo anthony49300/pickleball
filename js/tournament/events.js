@@ -10,14 +10,26 @@ function clearTeamsMessages() {
 }
 
 /**
- * Le tournoi actuel a-t-il déjà au moins un score saisi ? Sert à avertir avant
- * de régénérer les poules et perdre ces scores.
+ * La phase finale a-t-elle déjà une progression (au moins un tour joué, ou
+ * un score en cours de saisie) ? Sert à avertir avant de l'écraser.
+ */
+function finalPhaseHasAnyProgress(finalPhase) {
+  if (!finalPhase) return false;
+  if (finalPhase.rounds.length > 0) return true;
+  return finalPhase.segments.some(s => Object.keys(s.scores).length > 0);
+}
+
+/**
+ * Le tournoi actuel a-t-il déjà une progression (score de poule ou de phase
+ * finale) ? Sert à avertir avant de régénérer les poules et tout perdre.
  */
 function tournamentHasAnyScore(tournament) {
   if (!tournament) return false;
-  return tournament.pools.some(pool =>
+  const poolsHaveScores = tournament.pools.some(pool =>
     Object.values(pool.scores).some(s => s && (s.a != null || s.b != null))
   );
+  if (poolsHaveScores) return true;
+  return finalPhaseHasAnyProgress(tournament.finalPhase);
 }
 
 // --------------------------------------------------
@@ -256,5 +268,77 @@ elPoolsContainer.addEventListener("input", (e) => {
   pool.scores[key][side] = Number.isNaN(val) ? null : val;
 
   renderPoolStandings(tournament.pools, tournament.qualifiersPerPool);
+  autoSaveTournamentState();
+});
+
+// --------------------------------------------------
+// PHASE FINALE
+// --------------------------------------------------
+
+btnGenerateFinalPhase.addEventListener("click", async () => {
+  const tournament = window.__PT_TOURNAMENT__;
+  if (!tournament) {
+    await alertModal("Générez d'abord les poules.", { title: "Poules manquantes", icon: "⚠️" });
+    return;
+  }
+
+  if (!tournament.pools.every(isPoolComplete)) {
+    await alertModal(
+      "Tous les matchs de poule doivent être terminés (scores saisis) avant de lancer la phase finale.",
+      { title: "Poules non terminées", icon: "⚠️" }
+    );
+    return;
+  }
+
+  const seeded = seedQualifiedTeams(tournament.pools, tournament.qualifiersPerPool);
+  if (seeded.length < 2) {
+    await alertModal("Il faut au moins 2 équipes qualifiées pour lancer une phase finale.", { title: "Pas assez de qualifiés", icon: "⚠️" });
+    return;
+  }
+
+  if (finalPhaseHasAnyProgress(tournament.finalPhase)) {
+    const confirmed = await confirmModal(
+      "Une phase finale est déjà en cours. La régénérer effacera sa progression. Continuer ?",
+      { title: "Régénérer la phase finale ?", confirmText: "Régénérer", icon: "⚠️" }
+    );
+    if (!confirmed) return;
+  }
+
+  tournament.finalPhase = buildFinalPhase(seeded);
+  progressFinalPhase(tournament.finalPhase);
+
+  renderFinalPhase(tournament.finalPhase);
+  renderFinalRanking(tournament.finalPhase);
+  autoSaveTournamentState();
+});
+
+// Délégation d'événement pour la saisie des scores de la phase finale. On ne
+// réaffiche PAS finalPhaseContainer à chaque frappe (ça ferait perdre le
+// focus du champ en cours de saisie) : uniquement quand un segment vient
+// réellement de se terminer et de produire de nouveaux segments enfants.
+elFinalPhaseContainer.addEventListener("input", (e) => {
+  if (!e.target.classList.contains("bracket-score-input") || e.target.readOnly) return;
+
+  const tournament = window.__PT_TOURNAMENT__;
+  if (!tournament || !tournament.finalPhase) return;
+
+  const segmentId = e.target.dataset.segment;
+  const matchIdx = e.target.dataset.match;
+  const side = e.target.dataset.side;
+  const val = parseInt(e.target.value, 10);
+
+  const segment = tournament.finalPhase.segments.find(s => s.id === segmentId);
+  if (!segment) return;
+
+  if (!segment.scores[matchIdx]) segment.scores[matchIdx] = {};
+  segment.scores[matchIdx][side] = Number.isNaN(val) ? null : val;
+
+  const roundsBefore = tournament.finalPhase.rounds.length;
+  progressFinalPhase(tournament.finalPhase);
+
+  if (tournament.finalPhase.rounds.length !== roundsBefore) {
+    renderFinalPhase(tournament.finalPhase);
+  }
+  renderFinalRanking(tournament.finalPhase);
   autoSaveTournamentState();
 });

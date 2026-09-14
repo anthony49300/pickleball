@@ -157,3 +157,97 @@ function renderPoolStandings(pools, qualifiersPerPool) {
     `;
   }).join("");
 }
+
+/**
+ * Affiche les affiches d'un tour/segment de phase finale. Reprend les mêmes
+ * classes que les matchs de poule (match-card, team-score, team, vs,
+ * score-input) pour une apparence cohérente.
+ * @param {Array} pairs - paires [a, b] où a/b sont {team} ou {bye:true}
+ * @param {Object} scores - scores saisis, indexés par position dans `pairs`
+ * @param {boolean} editable - true pour le tour en cours (saisie active),
+ *   false pour l'historique (déjà joué, affiché en lecture seule)
+ * @param {string|null} segmentId - identifiant du segment (nécessaire si editable)
+ */
+function renderBracketPairs(pairs, scores, editable, segmentId) {
+  return pairs.map(([a, b], idx) => {
+    if (a.bye && b.bye) return "";
+
+    if (a.bye || b.bye) {
+      const realTeam = a.bye ? b.team : a.team;
+      return `<div class="subtle" style="padding: 6px 2px;">🪑 <strong>${escapeHtml(realTeam.name)}</strong> qualifié(e) sans jouer (repos)</div>`;
+    }
+
+    const score = scores[idx] || {};
+    const readonlyAttr = editable ? "" : "readonly";
+    const dataAttrs = editable ? `data-segment="${segmentId}" data-match="${idx}"` : "";
+    return `
+      <div class="match-card">
+        <div class="team-score">
+          <span class="team">${escapeHtml(a.team.name)}</span>
+          <input type="number" class="score-input bracket-score-input" min="0" placeholder="-" ${dataAttrs} data-side="a" ${readonlyAttr} value="${score.a ?? ""}" />
+        </div>
+        <span class="vs">VS</span>
+        <div class="team-score">
+          <input type="number" class="score-input bracket-score-input" min="0" placeholder="-" ${dataAttrs} data-side="b" ${readonlyAttr} value="${score.b ?? ""}" />
+          <span class="team">${escapeHtml(b.team.name)}</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+/**
+ * Affiche l'intégralité de la phase finale : l'historique des tours déjà
+ * joués (en lecture seule) suivi des segments encore en cours (saisie active).
+ */
+function renderFinalPhase(finalPhase) {
+  if (!finalPhase) {
+    elFinalPhaseContainer.innerHTML = "";
+    return;
+  }
+
+  const historyCards = finalPhase.rounds.map(round => `
+    <div class="pool-card">
+      <h3 class="pool-card-title">${escapeHtml(round.label)}</h3>
+      <div class="round">
+        <div class="matches-list">${renderBracketPairs(round.pairs, round.scores, false, null)}</div>
+      </div>
+    </div>
+  `);
+
+  const activeCards = finalPhase.segments
+    .filter(segment => segment.slots.length > 1)
+    .map(segment => `
+      <div class="pool-card">
+        <h3 class="pool-card-title">${escapeHtml(segmentLabel(segment))}</h3>
+        <div class="round">
+          <div class="matches-list">${renderBracketPairs(segmentPairs(segment), segment.scores, true, segment.id)}</div>
+        </div>
+      </div>
+    `);
+
+  elFinalPhaseContainer.innerHTML = [...historyCards, ...activeCards].join("");
+}
+
+/**
+ * Affiche (ou masque) le classement final complet du tournoi, une fois la
+ * phase finale entièrement résolue.
+ */
+function renderFinalRanking(finalPhase) {
+  if (!finalPhase || !finalPhase.finalRanking) {
+    elFinalRankingSection.hidden = true;
+    return;
+  }
+
+  const rows = finalPhase.finalRanking
+    .map(r => `<tr><td>${r.rank}</td><td>${escapeHtml(r.team.name)}</td></tr>`)
+    .join("");
+
+  elFinalRankingContainer.innerHTML = `
+    <table class="ranking-table">
+      <thead><tr><th>Rang</th><th>Équipe</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+  elFinalRankingSection.hidden = false;
+}

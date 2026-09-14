@@ -163,10 +163,22 @@
       <div id="poolStandingsContainer" class="pool-standings-container"></div>
     </section>
 
-    <!-- PHASE FINALE (à venir) -->
+    <!-- PHASE FINALE -->
     <section class="card" style="grid-column: 1 / -1;">
-      <h2>🥇 Phase finale</h2>
-      <p class="subtle">À venir : bracket à élimination avec matchs de classement pour toutes les équipes éliminées, à partir des qualifiés de chaque poule.</p>
+      <div class="headerRow">
+        <h2>🥇 Phase finale</h2>
+        <button id="generateFinalPhase" class="secondary" type="button">⚡ Générer la phase finale</button>
+      </div>
+      <p class="subtle" style="font-size: 0.85rem;">
+        À partir des équipes qualifiées de chaque poule (tous les matchs de poule doivent être terminés). Élimination directe, mais les équipes battues continuent à jouer entre elles pour se classer, jusqu'à ce que tout le monde ait une place précise — personne ne s'arrête après une seule défaite.
+      </p>
+      <div id="finalPhaseContainer" class="pools-container"></div>
+    </section>
+
+    <!-- CLASSEMENT FINAL DU TOURNOI -->
+    <section class="card" id="finalRankingSection" style="grid-column: 1 / -1;" hidden>
+      <h2>🏆 Classement final du tournoi</h2>
+      <div id="finalRankingContainer"></div>
     </section>
   </main>
 

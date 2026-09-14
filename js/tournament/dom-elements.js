@@ -30,6 +30,11 @@ const elPoolsContainer = document.getElementById("poolsContainer");
 const elPoolStandingsSection = document.getElementById("poolStandingsSection");
 const elPoolStandingsContainer = document.getElementById("poolStandingsContainer");
 
+const btnGenerateFinalPhase = document.getElementById("generateFinalPhase");
+const elFinalPhaseContainer = document.getElementById("finalPhaseContainer");
+const elFinalRankingSection = document.getElementById("finalRankingSection");
+const elFinalRankingContainer = document.getElementById("finalRankingContainer");
+
 const elAutosaveBadge = document.getElementById("autosaveBadge");
 
 // Etat en mémoire de la répartition manuelle en cours (avant validation), et du

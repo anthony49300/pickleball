@@ -331,3 +331,237 @@ function isPoolComplete(pool) {
     })
   );
 }
+
+
+// =============================================================================
+// PHASE FINALE : bracket à élimination AVEC classement complet des perdants
+// =============================================================================
+// Principe : à chaque tour, les vainqueurs continuent vers le haut du
+// classement (parmi eux, "places 1 à N/2"), et les perdants ne sortent PAS du
+// tournoi — ils s'affrontent entre eux pour se départager sur la moitié
+// inférieure des places restantes ("places N/2+1 à N"). Ce découpage se
+// répète récursivement jusqu'à ce que chaque équipe ait une place précise :
+// tout le monde joue exactement le même nombre de tours (contrairement à une
+// élimination directe classique, où la moitié du tableau s'arrête au 1er
+// tour). La finale (places 1-2) et la petite finale (places 3-4) tombent
+// naturellement de cet algorithme, sans cas particulier à coder.
+
+/**
+ * Plus petite puissance de 2 supérieure ou égale à n (n >= 1).
+ */
+function nextPowerOfTwo(n) {
+  let p = 1;
+  while (p < n) p *= 2;
+  return p;
+}
+
+/**
+ * Ordre de tirage au sort standard d'un tableau à élimination directe (celui
+ * qui écarte le plus longtemps possible les meilleures têtes de série) :
+ * pour une taille de 8, renvoie [1,8,4,5,2,7,3,6] — les affiches du 1er tour
+ * sont donc 1v8, 4v5, 2v7, 3v6.
+ * @param {number} size - puissance de 2
+ * @returns {number[]} les numéros de tête de série (1 = la meilleure), dans
+ *   l'ordre des places du tableau.
+ */
+function seedOrder(size) {
+  let order = [1];
+  while (order.length < size) {
+    const n = order.length * 2;
+    const next = [];
+    for (const s of order) {
+      next.push(s);
+      next.push(n + 1 - s);
+    }
+    order = next;
+  }
+  return order;
+}
+
+/**
+ * Construit le classement global des équipes qualifiées, tous poules
+ * confondues : d'abord tous les 1ers de poule (départagés entre eux comme un
+ * classement de poule normal : victoires → différentiel → points marqués),
+ * puis tous les 2èmes de poule, etc. Sert de base au tirage au sort de la
+ * phase finale (seed 1 = la meilleure équipe qualifiée).
+ * @param {Array} pools
+ * @param {number} qualifiersPerPool
+ * @returns {Array} équipes qualifiées, dans l'ordre du seeding (meilleure en premier)
+ */
+function seedQualifiedTeams(pools, qualifiersPerPool) {
+  const byRank = [];
+
+  pools.forEach(pool => {
+    const standings = computePoolStandings(pool);
+    for (let i = 0; i < qualifiersPerPool && i < standings.length; i++) {
+      if (!byRank[i]) byRank[i] = [];
+      byRank[i].push(standings[i]);
+    }
+  });
+
+  const seeded = [];
+  byRank.forEach(bandTeams => {
+    if (!bandTeams) return;
+    const sorted = [...bandTeams].sort((a, b) => {
+      if (b.w !== a.w) return b.w - a.w;
+      if (b.diff !== a.diff) return b.diff - a.diff;
+      return b.pf - a.pf;
+    });
+    seeded.push(...sorted.map(s => s.team));
+  });
+
+  return seeded;
+}
+
+/**
+ * Construit l'état initial de la phase finale à partir des équipes classées
+ * par ordre de seeding (voir seedQualifiedTeams). Complète avec des repos
+ * ("bye") jusqu'à la prochaine puissance de 2, placés aux moins bonnes têtes
+ * de série selon la convention standard (elles sautent alors le 1er tour).
+ * @param {Array} seededTeams
+ * @returns {{bracketSize:number, segments:Array, rounds:Array, finalRanking:null}}
+ */
+function buildFinalPhase(seededTeams) {
+  const bracketSize = nextPowerOfTwo(seededTeams.length);
+  const order = seedOrder(bracketSize);
+  const slots = order.map(seedNum => {
+    const team = seededTeams[seedNum - 1];
+    return team ? { team } : { bye: true };
+  });
+
+  return {
+    bracketSize,
+    segments: [{ id: "seg-1", rankStart: 1, rankSize: bracketSize, slots, scores: {} }],
+    rounds: [],
+    finalRanking: null
+  };
+}
+
+/**
+ * Les affiches (paires) du tour courant d'un segment.
+ */
+function segmentPairs(segment) {
+  const pairs = [];
+  for (let i = 0; i < segment.slots.length; i += 2) {
+    pairs.push([segment.slots[i], segment.slots[i + 1]]);
+  }
+  return pairs;
+}
+
+/**
+ * Le tour courant d'un segment est-il terminé ? Une affiche impliquant un
+ * repos ("bye") n'a besoin d'aucune saisie (résolution automatique).
+ */
+function isSegmentRoundComplete(segment) {
+  return segmentPairs(segment).every(([a, b], idx) => {
+    if (a.bye || b.bye) return true;
+    const score = segment.scores[idx];
+    return score && score.a != null && score.b != null;
+  });
+}
+
+/**
+ * Fait avancer un segment terminé : construit les deux segments enfants
+ * (vainqueurs → moitié supérieure des places restantes, perdants → moitié
+ * inférieure). Un repos face à une vraie équipe résout automatiquement ce
+ * match (l'équipe avance sans jouer) ; un repos face à un repos ne produit
+ * rien de réel des deux côtés.
+ * @returns {Array} les 1 ou 2 segments enfants (1 seul si rankSize/2 === … en
+ *   pratique toujours 2, sauf tableau dégénéré à 1 équipe au total)
+ */
+function advanceSegment(segment) {
+  const pairs = segmentPairs(segment);
+  const winners = [];
+  const losers = [];
+
+  pairs.forEach(([a, b], idx) => {
+    if (a.bye && b.bye) {
+      winners.push({ bye: true });
+      losers.push({ bye: true });
+    } else if (a.bye) {
+      winners.push(b);
+      losers.push({ bye: true });
+    } else if (b.bye) {
+      winners.push(a);
+      losers.push({ bye: true });
+    } else {
+      const score = segment.scores[idx];
+      if (score.a > score.b) { winners.push(a); losers.push(b); }
+      else { winners.push(b); losers.push(a); }
+    }
+  });
+
+  const half = segment.rankSize / 2;
+  return [
+    { id: `${segment.id}-w`, rankStart: segment.rankStart, rankSize: half, slots: winners, scores: {} },
+    { id: `${segment.id}-l`, rankStart: segment.rankStart + half, rankSize: half, slots: losers, scores: {} }
+  ];
+}
+
+/**
+ * Libellé humain d'un segment, pour l'affichage (reconnaît la finale et la
+ * petite finale, qui tombent naturellement de l'algorithme).
+ */
+function segmentLabel(segment) {
+  if (segment.rankSize === 2 && segment.rankStart === 1) return "🥇 Finale (places 1-2)";
+  if (segment.rankSize === 2 && segment.rankStart === 3) return "🥉 Petite finale (places 3-4)";
+  return `Places ${segment.rankStart} à ${segment.rankStart + segment.rankSize - 1}`;
+}
+
+/**
+ * Calcule le classement final une fois tous les segments résolus à une seule
+ * équipe (ou repos). Les repos sont filtrés puis les places renumérotées en
+ * continu de 1 à N (les repos ne "mangent" jamais que les moins bonnes
+ * places, de par la convention de placement des têtes de série).
+ */
+function computeFinalRanking(segments) {
+  return segments
+    .filter(s => s.slots.length === 1 && s.slots[0].team)
+    .sort((a, b) => a.rankStart - b.rankStart)
+    .map((s, i) => ({ team: s.slots[0].team, rank: i + 1 }));
+}
+
+/**
+ * Fait avancer la phase finale d'autant de tours que possible dans l'état
+ * actuel : tout segment dont le tour courant est terminé se scinde en 2
+ * segments enfants, en cascade tant que de nouveaux segments se terminent
+ * aussitôt (cas des segments entièrement composés de repos). Recalcule le
+ * classement final si tout est résolu. Modifie `finalPhase` en place.
+ */
+function progressFinalPhase(finalPhase) {
+  let changed = true;
+  while (changed) {
+    changed = false;
+    const stillActive = [];
+    const newlyCreated = [];
+
+    finalPhase.segments.forEach(segment => {
+      if (segment.slots.length === 1) {
+        stillActive.push(segment);
+        return;
+      }
+      if (isSegmentRoundComplete(segment)) {
+        finalPhase.rounds.push({
+          segmentId: segment.id,
+          rankStart: segment.rankStart,
+          rankSize: segment.rankSize,
+          label: segmentLabel(segment),
+          pairs: segmentPairs(segment),
+          scores: segment.scores
+        });
+        newlyCreated.push(...advanceSegment(segment));
+        changed = true;
+      } else {
+        stillActive.push(segment);
+      }
+    });
+
+    finalPhase.segments = [...stillActive, ...newlyCreated];
+  }
+
+  if (finalPhase.segments.every(s => s.slots.length === 1)) {
+    finalPhase.finalRanking = computeFinalRanking(finalPhase.segments);
+  } else {
+    finalPhase.finalRanking = null;
+  }
+}

@@ -71,5 +71,10 @@ function loadTournamentState() {
     renderPoolStandings(state.tournament.pools, state.tournament.qualifiersPerPool);
     elPoolsSection.hidden = false;
     elPoolStandingsSection.hidden = false;
+
+    if (state.tournament.finalPhase) {
+      renderFinalPhase(state.tournament.finalPhase);
+      renderFinalRanking(state.tournament.finalPhase);
+    }
   }
 }
