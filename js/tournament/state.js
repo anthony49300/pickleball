@@ -14,9 +14,11 @@ const TOURNAMENT_STORAGE_KEY = "pb_tournament_autosave";
 function getTournamentState() {
   return {
     teamsText: elTeams.value,
+    individualPlayersText: elIndividualPlayers.value,
     numPools: elNumPools.value,
     qualifiersPerPool: elQualifiersPerPool.value,
     poolAssignMode: elPoolAssignMode.value,
+    courtNamesText: elCourtNames.value,
     tournament: window.__PT_TOURNAMENT__
   };
 }
@@ -50,13 +52,15 @@ function loadTournamentState() {
   if (!state) return;
 
   if (state.teamsText != null) elTeams.value = state.teamsText;
+  if (state.individualPlayersText != null) elIndividualPlayers.value = state.individualPlayersText;
   if (state.numPools != null) elNumPools.value = state.numPools;
   if (state.qualifiersPerPool != null) elQualifiersPerPool.value = state.qualifiersPerPool;
   if (state.poolAssignMode != null) elPoolAssignMode.value = state.poolAssignMode;
+  if (state.courtNamesText != null) elCourtNames.value = state.courtNamesText;
 
   if (state.tournament) {
     window.__PT_TOURNAMENT__ = state.tournament;
-    renderPools(state.tournament.pools);
+    renderPools(state.tournament.pools, state.tournament.courtNames || []);
     renderPoolStandings(state.tournament.pools, state.tournament.qualifiersPerPool);
     elPoolsSection.hidden = false;
     elPoolStandingsSection.hidden = false;

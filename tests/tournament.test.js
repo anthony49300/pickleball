@@ -29,6 +29,9 @@ const code = fs.readFileSync(enginePath, "utf8");
 vm.runInThisContext(code, { filename: enginePath });
 const {
   parseTeams,
+  parsePlayerList,
+  autoPairPlayers,
+  parseCourtNames,
   generateRoundRobin,
   dealRoundRobinIntoPools,
   dealSnakeIntoPools,
@@ -80,6 +83,51 @@ test("parseTeams : ignore les lignes vides", () => {
   assert.strictEqual(teams.length, 2);
 });
 
+test("parseTeams : signale un joueur présent dans plusieurs équipes (insensible à la casse)", () => {
+  const { duplicatePlayers } = parseTeams("Alice & Bob\nalice & Chloé");
+  assert.deepStrictEqual(duplicatePlayers, ["Alice"]);
+});
+
+test("parseTeams : aucun doublon signalé quand tous les joueurs sont uniques", () => {
+  const { duplicatePlayers } = parseTeams("Alice & Bob\nChloé & David");
+  assert.strictEqual(duplicatePlayers.length, 0);
+});
+
+// ---------------------------------------------------------------------------
+// parsePlayerList / autoPairPlayers / parseCourtNames
+// ---------------------------------------------------------------------------
+
+test("parsePlayerList : accepte une liste sur une ligne par joueur ou séparée par des virgules", () => {
+  const { players } = parsePlayerList("Alice\nBob, Chloé\n\nDavid");
+  assert.deepStrictEqual(players, ["Alice", "Bob", "Chloé", "David"]);
+});
+
+test("parsePlayerList : signale les doublons (insensible à la casse)", () => {
+  const { duplicatePlayers } = parsePlayerList("Alice\nBOB\nbob");
+  assert.deepStrictEqual(duplicatePlayers, ["BOB"]);
+});
+
+test("autoPairPlayers : associe tous les joueurs par 2, sans laissé-pour-compte si effectif pair", () => {
+  const players = ["Alice", "Bob", "Chloé", "David"];
+  const { pairs, leftover } = autoPairPlayers(players);
+  assert.strictEqual(pairs.length, 2);
+  assert.strictEqual(leftover, null);
+  const allPaired = pairs.flat().sort();
+  assert.deepStrictEqual(allPaired, [...players].sort());
+});
+
+test("autoPairPlayers : signale le joueur seul si l'effectif est impair", () => {
+  const players = ["Alice", "Bob", "Chloé"];
+  const { pairs, leftover } = autoPairPlayers(players);
+  assert.strictEqual(pairs.length, 1);
+  assert.ok(players.includes(leftover));
+});
+
+test("parseCourtNames : sépare sur les virgules et ignore les entrées vides", () => {
+  assert.deepStrictEqual(parseCourtNames("Court Central, Court 1,, Terrain A"), ["Court Central", "Court 1", "Terrain A"]);
+  assert.deepStrictEqual(parseCourtNames(""), []);
+});
+
 // ---------------------------------------------------------------------------
 // generateRoundRobin
 // ---------------------------------------------------------------------------
@@ -88,11 +136,12 @@ function assertRoundRobinCorrect(numTeams) {
   const teams = makeTeams(numTeams);
   const rounds = generateRoundRobin(teams);
 
-  // Aucune équipe ne joue deux fois sur une même journée.
+  // Aucune équipe ne joue deux fois sur une même journée (le repos éventuel
+  // ne compte pas comme un "match").
   rounds.forEach((matches, rIdx) => {
     const seen = new Set();
     matches.forEach(match => {
-      if (!match) return;
+      if (match.bye) return;
       for (const team of [match.a, match.b]) {
         assert.ok(!seen.has(team.id), `Team ${team.id} apparaît deux fois à la journée ${rIdx + 1} (N=${numTeams})`);
         seen.add(team.id);
@@ -100,11 +149,18 @@ function assertRoundRobinCorrect(numTeams) {
     });
   });
 
+  // Exactement une équipe au repos par journée si l'effectif est impair, aucune sinon.
+  rounds.forEach((matches, rIdx) => {
+    const byeCount = matches.filter(m => m.bye).length;
+    const expected = numTeams % 2 === 1 ? 1 : 0;
+    assert.strictEqual(byeCount, expected, `Nombre de repos inattendu à la journée ${rIdx + 1} (N=${numTeams})`);
+  });
+
   // Chaque paire d'équipes se rencontre exactement une fois sur l'ensemble des journées.
   const encounters = new Map();
   rounds.forEach(matches => {
     matches.forEach(match => {
-      if (!match) return;
+      if (match.bye) return;
       const key = [match.a.id, match.b.id].sort((a, b) => a - b).join("-");
       encounters.set(key, (encounters.get(key) ?? 0) + 1);
     });
@@ -190,7 +246,7 @@ test("computePoolStandings : classe par victoires puis différentiel puis points
     for (let r = 0; r < pool.rounds.length; r++) {
       for (let m = 0; m < pool.rounds[r].length; m++) {
         const match = pool.rounds[r][m];
-        if (match && ((match.a.id === idA && match.b.id === idB) || (match.a.id === idB && match.b.id === idA))) {
+        if (!match.bye && ((match.a.id === idA && match.b.id === idB) || (match.a.id === idB && match.b.id === idA))) {
           return { key: `${r}-${m}`, reversed: match.a.id === idB };
         }
       }
@@ -223,7 +279,7 @@ test("isPoolComplete : false tant qu'un score manque, true une fois tous saisis"
 
   pool.rounds.forEach((matches, rIdx) => {
     matches.forEach((match, mIdx) => {
-      if (match) pool.scores[`${rIdx}-${mIdx}`] = { a: 11, b: 5 };
+      if (!match.bye) pool.scores[`${rIdx}-${mIdx}`] = { a: 11, b: 5 };
     });
   });
   assert.strictEqual(isPoolComplete(pool), true);

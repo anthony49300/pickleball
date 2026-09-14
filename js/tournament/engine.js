@@ -22,7 +22,10 @@ function escapeHtml(str) {
 /**
  * Analyse le texte saisi dans #teams : une équipe par ligne, sous la forme
  * "Joueur A & Joueur B" (accepte aussi "," ou " et " comme séparateur).
- * @returns {{ teams: Array<{id:number, players:string[], name:string}>, invalidLines: string[] }}
+ * Signale aussi les joueurs qui apparaissent dans plusieurs équipes (doublon
+ * de prénom probable, ou vraie erreur de saisie) — comparaison insensible à
+ * la casse, comme la détection de doublons du mode Rotation.
+ * @returns {{ teams: Array<{id:number, players:string[], name:string}>, invalidLines: string[], duplicatePlayers: string[] }}
  */
 function parseTeams(text) {
   const lines = String(text ?? "")
@@ -46,22 +49,90 @@ function parseTeams(text) {
     }
   });
 
-  return { teams, invalidLines };
+  const countByKey = new Map();
+  const originalByKey = new Map();
+  teams.flatMap(t => t.players).forEach(p => {
+    const key = p.toLowerCase();
+    countByKey.set(key, (countByKey.get(key) ?? 0) + 1);
+    if (!originalByKey.has(key)) originalByKey.set(key, p);
+  });
+  const duplicatePlayers = [...countByKey.entries()]
+    .filter(([, count]) => count > 1)
+    .map(([key]) => originalByKey.get(key));
+
+  return { teams, invalidLines, duplicatePlayers };
+}
+
+/**
+ * Analyse une liste de joueurs individuels (un par ligne, ou séparés par des
+ * virgules) — comme le champ "Joueurs" du mode Rotation. Sert à former des
+ * paires automatiquement (voir autoPairPlayers) plutôt que de saisir
+ * directement des équipes.
+ * @returns {{ players: string[], duplicatePlayers: string[] }}
+ */
+function parsePlayerList(text) {
+  const players = String(text ?? "")
+    .split(/\r?\n|,/)
+    .map(p => p.trim())
+    .filter(Boolean);
+
+  const countByKey = new Map();
+  const originalByKey = new Map();
+  players.forEach(p => {
+    const key = p.toLowerCase();
+    countByKey.set(key, (countByKey.get(key) ?? 0) + 1);
+    if (!originalByKey.has(key)) originalByKey.set(key, p);
+  });
+  const duplicatePlayers = [...countByKey.entries()]
+    .filter(([, count]) => count > 1)
+    .map(([key]) => originalByKey.get(key));
+
+  return { players, duplicatePlayers };
+}
+
+/**
+ * Forme des paires aléatoires à partir d'une liste de joueurs individuels.
+ * @param {string[]} players
+ * @returns {{ pairs: Array<[string,string]>, leftover: string|null }} leftover
+ *   est le joueur resté seul si l'effectif est impair (à ajouter manuellement
+ *   à une équipe).
+ */
+function autoPairPlayers(players) {
+  const shuffled = shuffledCopy(players);
+  const pairs = [];
+  for (let i = 0; i + 1 < shuffled.length; i += 2) {
+    pairs.push([shuffled[i], shuffled[i + 1]]);
+  }
+  const leftover = shuffled.length % 2 === 1 ? shuffled[shuffled.length - 1] : null;
+  return { pairs, leftover };
+}
+
+/**
+ * Analyse la liste optionnelle de noms de terrains (mêmes conventions que le
+ * champ équivalent du mode Rotation : séparés par des virgules).
+ * @returns {string[]}
+ */
+function parseCourtNames(text) {
+  return String(text ?? "")
+    .split(",")
+    .map(n => n.trim())
+    .filter(Boolean);
 }
 
 /**
  * Génère un calendrier round-robin pour une poule : chaque équipe affronte
  * toutes les autres exactement une fois (algorithme du cercle / circle method).
  * Si le nombre d'équipes est impair, une équipe est exemptée ("bye") à tour de
- * rôle sur une journée (représenté par `null` à la place du match).
+ * rôle sur une journée (représenté par `{ bye: true, team }` à la place du
+ * match — `team` est l'équipe au repos ce tour-là, pour pouvoir l'afficher).
  * @param {Array} teams - équipes de la poule
- * @returns {Array<Array<{a:object,b:object}|null>>} - journées, une par élément
+ * @returns {Array<Array<{a:object,b:object}|{bye:true,team:object}>>} - journées
  */
 function generateRoundRobin(teams) {
   if (teams.length < 2) return [];
 
-  const BYE = { bye: true };
-  const list = teams.length % 2 === 0 ? [...teams] : [...teams, BYE];
+  const PLACEHOLDER = { isPlaceholder: true };
+  const list = teams.length % 2 === 0 ? [...teams] : [...teams, PLACEHOLDER];
   const n = list.length;
   const numRounds = n - 1;
 
@@ -75,7 +146,9 @@ function generateRoundRobin(teams) {
     for (let i = 0; i < n / 2; i++) {
       const a = current[i];
       const b = current[n - 1 - i];
-      matches.push(a.bye || b.bye ? null : { a, b });
+      if (a.isPlaceholder) matches.push({ bye: true, team: b });
+      else if (b.isPlaceholder) matches.push({ bye: true, team: a });
+      else matches.push({ a, b });
     }
     rounds.push(matches);
     rotation = [rotation[rotation.length - 1], ...rotation.slice(0, -1)];
@@ -177,7 +250,7 @@ function computePoolStandings(pool) {
 
   pool.rounds.forEach((matches, rIdx) => {
     matches.forEach((match, mIdx) => {
-      if (!match) return; // journée de bye
+      if (!match || match.bye) return; // journée de repos pour cette équipe
       const score = pool.scores[`${rIdx}-${mIdx}`];
       if (!score || score.a == null || score.b == null) return;
 
@@ -206,7 +279,7 @@ function computePoolStandings(pool) {
 function isPoolComplete(pool) {
   return pool.rounds.every((matches, rIdx) =>
     matches.every((match, mIdx) => {
-      if (!match) return true;
+      if (!match || match.bye) return true;
       const score = pool.scores[`${rIdx}-${mIdx}`];
       return score && score.a != null && score.b != null;
     })

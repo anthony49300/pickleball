@@ -66,11 +66,16 @@ select:focus {
 }
 
 /* --------------------------------------------------
-   PHASE DE POULES : une carte par poule, calendrier + scores
+   PHASE DE POULES : une carte par poule, calendrier + scores.
+   Le calendrier lui-même (journée = .round, match = .match-card, etc.) réutilise
+   TEL QUEL le visuel "terrain de pickleball" de styles.css (mode Rotation) :
+   mêmes classes .round/.roundTitle/.matches-list/.match-card/.court-badge/
+   .team-score/.team/.vs/.score-input, pour une apparence identique entre les
+   deux modes. Rien n'est redéfini ici pour ces éléments.
 -------------------------------------------------- */
 .pools-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
   gap: 20px;
 }
 
@@ -79,72 +84,15 @@ select:focus {
   border-radius: 14px;
   padding: 16px;
   background: var(--round-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.pool-card h3 {
-  margin: 0 0 12px;
+.pool-card-title {
+  margin: 0;
   font-size: 1.05rem;
   color: var(--pickle-yellow);
-}
-
-.pool-round {
-  margin-bottom: 14px;
-}
-
-.pool-round-title {
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-subtle);
-  margin-bottom: 6px;
-}
-
-.pool-match {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  margin-bottom: 6px;
-}
-
-.pool-match .pool-team-name {
-  flex: 1;
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.pool-match .pool-team-name:last-child {
-  text-align: right;
-}
-
-.pool-match .pool-score-input {
-  width: 40px;
-  min-width: 40px;
-  max-width: 40px;
-  height: 32px;
-  text-align: center;
-  border-radius: 6px;
-  border: 1px solid var(--border-color);
-  background: rgba(var(--fg-overlay-rgb), 0.08);
-  color: var(--text-main);
-  font-size: 0.95rem;
-  padding: 2px;
-}
-
-.pool-match .pool-vs-badge {
-  font-size: 0.72rem;
-  font-weight: 800;
-  color: var(--pickle-yellow);
-  padding: 2px 6px;
-}
-
-.pool-match.bye {
-  opacity: 0.6;
-  font-style: italic;
-  justify-content: center;
 }
 
 /* --------------------------------------------------
@@ -168,10 +116,6 @@ select:focus {
   margin: 0 0 10px;
   font-size: 1.05rem;
   color: var(--pickle-yellow);
-}
-
-.pool-standing-card .ranking-table td.qualified-team {
-  position: relative;
 }
 
 .pool-standing-card tr.qualified {

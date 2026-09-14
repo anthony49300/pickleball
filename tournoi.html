@@ -58,15 +58,28 @@
       </label>
       <textarea id="teams" rows="6" placeholder="Alice &amp; Bob&#10;Chloé &amp; David&#10;Émilie &amp; Farid"></textarea>
 
-      <div class="group-save-row" style="margin-top: 10px;">
-        <select id="importGroupSelect">
-          <option value="">— Importer depuis un groupe enregistré —</option>
-        </select>
-        <button id="importGroupBtn" class="secondary" type="button">📥 Importer (paires successives)</button>
-      </div>
-      <p class="subtle" style="font-size: 0.78rem; margin-top: 6px;">
-        L'import forme des paires en associant les joueurs du groupe deux par deux, dans l'ordre — à ajuster ensuite si besoin directement dans le champ ci-dessus.
-      </p>
+      <!-- FORMATION AUTOMATIQUE DES EQUIPES -->
+      <details class="details" id="autoFormTeamsDetails" style="margin-top: 10px;">
+        <summary>🎲 Générer les équipes automatiquement</summary>
+
+        <p class="subtle" style="font-size: 0.82rem; margin: 6px 0 8px;">Depuis un groupe de joueurs déjà enregistré (mode Rotation) :</p>
+        <div class="group-save-row">
+          <select id="importGroupSelect">
+            <option value="">— Choisir un groupe enregistré —</option>
+          </select>
+          <button id="importGroupBtn" class="secondary" type="button">📥 Importer (paires successives)</button>
+        </div>
+
+        <p class="subtle" style="font-size: 0.82rem; margin: 14px 0 8px;">Ou depuis une liste libre de joueurs individuels (un par ligne, ou séparés par des virgules) :</p>
+        <textarea id="individualPlayers" rows="4" placeholder="Alice&#10;Bob&#10;Chloé&#10;David"></textarea>
+        <div class="actions-secondary" style="margin-top: 8px;">
+          <button id="formPairsBtn" class="secondary" type="button">🎲 Former des paires aléatoirement</button>
+        </div>
+
+        <p class="subtle" style="font-size: 0.78rem; margin-top: 10px;">
+          Dans les deux cas, les paires formées remplacent le champ "Équipes" ci-dessus — à ajuster ensuite si besoin.
+        </p>
+      </details>
 
       <p id="teamsWarning" class="warning" hidden></p>
       <p id="teamsError" class="error" hidden></p>
@@ -101,6 +114,9 @@
         <option value="seeded">Tête de série (l'ordre de la liste ci-dessus = le classement des têtes de série)</option>
         <option value="manual">Manuelle (je choisis moi-même la poule de chaque équipe)</option>
       </select>
+
+      <label class="label" for="courtNames" style="margin-top: 14px;">🏷️ Noms des terrains (optionnel, séparés par des virgules)</label>
+      <input id="courtNames" type="text" placeholder="ex: Court Central, Court 1, Terrain A" />
 
       <div class="actions" style="margin-top: 16px;">
         <button id="generatePools" class="btn-primary-lg">⚡ Générer les poules</button>

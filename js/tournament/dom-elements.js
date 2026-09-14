@@ -8,12 +8,15 @@ const elTeams = document.getElementById("teams");
 const elTeamCountBadge = document.getElementById("teamCountBadge");
 const elImportGroupSelect = document.getElementById("importGroupSelect");
 const btnImportGroup = document.getElementById("importGroupBtn");
+const elIndividualPlayers = document.getElementById("individualPlayers");
+const btnFormPairs = document.getElementById("formPairsBtn");
 const elTeamsWarning = document.getElementById("teamsWarning");
 const elTeamsError = document.getElementById("teamsError");
 
 const elNumPools = document.getElementById("numPools");
 const elQualifiersPerPool = document.getElementById("qualifiersPerPool");
 const elPoolAssignMode = document.getElementById("poolAssignMode");
+const elCourtNames = document.getElementById("courtNames");
 const btnGeneratePools = document.getElementById("generatePools");
 
 const elManualAssignSection = document.getElementById("manualAssignSection");

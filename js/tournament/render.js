@@ -55,37 +55,49 @@ function renderManualAssignList(teams, numPools, currentAssignment) {
 
 /**
  * Affiche le calendrier de chaque poule avec les champs de saisie des scores.
+ * Reprend exactement le visuel "terrain de pickleball" du mode Rotation
+ * (mêmes classes : match-card, court-badge, team-score, team, vs, score-input)
+ * pour une apparence cohérente entre les deux modes.
+ * @param {Array} pools
+ * @param {string[]} courtNames - noms de terrains optionnels (voir #courtNames)
  */
-function renderPools(pools) {
+function renderPools(pools, courtNames = []) {
   elPoolsContainer.innerHTML = pools.map((pool, poolIdx) => {
     const roundsHtml = pool.rounds.map((matches, rIdx) => {
       const matchesHtml = matches.map((match, mIdx) => {
-        if (!match) {
-          return `<div class="pool-match bye">Exempt(e) ce tour</div>`;
+        if (match.bye) {
+          return `<div class="subtle" style="padding: 6px 2px;">🪑 Repos ce tour : <strong>${escapeHtml(match.team.name)}</strong></div>`;
         }
+
         const score = pool.scores[`${rIdx}-${mIdx}`] || {};
+        const courtLabel = escapeHtml(courtNames[mIdx] || `Terrain ${mIdx + 1}`);
         return `
-          <div class="pool-match">
-            <span class="pool-team-name">${escapeHtml(match.a.name)}</span>
-            <input type="number" inputmode="numeric" class="pool-score-input" data-pool="${poolIdx}" data-round="${rIdx}" data-match="${mIdx}" data-side="a" value="${score.a ?? ""}" />
-            <span class="pool-vs-badge">VS</span>
-            <input type="number" inputmode="numeric" class="pool-score-input" data-pool="${poolIdx}" data-round="${rIdx}" data-match="${mIdx}" data-side="b" value="${score.b ?? ""}" />
-            <span class="pool-team-name">${escapeHtml(match.b.name)}</span>
+          <div class="match-card">
+            <span class="court-badge">${courtLabel}</span>
+            <div class="team-score">
+              <span class="team">${escapeHtml(match.a.name)}</span>
+              <input type="number" class="score-input" min="0" placeholder="-" data-pool="${poolIdx}" data-round="${rIdx}" data-match="${mIdx}" data-side="a" value="${score.a ?? ""}" />
+            </div>
+            <span class="vs">VS</span>
+            <div class="team-score">
+              <input type="number" class="score-input" min="0" placeholder="-" data-pool="${poolIdx}" data-round="${rIdx}" data-match="${mIdx}" data-side="b" value="${score.b ?? ""}" />
+              <span class="team">${escapeHtml(match.b.name)}</span>
+            </div>
           </div>
         `;
       }).join("");
 
       return `
-        <div class="pool-round">
-          <div class="pool-round-title">Journée ${rIdx + 1}</div>
-          ${matchesHtml}
+        <div class="round">
+          <div class="roundTitle"><h3>Journée ${rIdx + 1}</h3></div>
+          <div class="matches-list">${matchesHtml}</div>
         </div>
       `;
     }).join("");
 
     return `
       <div class="pool-card">
-        <h3>${escapeHtml(pool.name)}</h3>
+        <h3 class="pool-card-title">${escapeHtml(pool.name)}</h3>
         ${roundsHtml}
       </div>
     `;
