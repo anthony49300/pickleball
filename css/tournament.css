@@ -59,6 +59,18 @@ select:focus {
   box-shadow: 0 0 0 3px rgba(var(--pickle-yellow-rgb), 0.15);
 }
 
+/* Le menu déroulant natif (liste d'options ouverte) suit le rendu de l'OS et
+   ignore la plupart des styles du <select> lui-même. background-color/color
+   sur <option> restent honorés par Chrome/Edge/Firefox sur Windows et
+   évitent la liste blanche par défaut, en désaccord avec le thème sombre.
+   --bg-dark (opaque) plutôt que --bg-card (translucide) : cette popup ne
+   fait pas partie de la pile de rendu de la page, une couleur avec alpha
+   se mélangerait avec un fond hors de notre contrôle. */
+select option {
+  background: var(--bg-dark);
+  color: var(--text-main);
+}
+
 /* .group-save-row (réutilisé depuis styles.css) ne cible que <input> pour le
    flex-grow ; on ajoute le même traitement pour le <select> d'import de groupe. */
 .group-save-row select {
