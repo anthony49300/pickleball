@@ -77,9 +77,11 @@ function renderPools(pools, courtNames = [], courtAllocation = []) {
         const score = pool.scores[`${rIdx}-${mIdx}`] || {};
         const globalCourtIdx = poolCourts[mIdx % poolCourts.length];
         const courtLabel = escapeHtml(courtNames[globalCourtIdx] || `Terrain ${globalCourtIdx + 1}`);
+        const forfeitBadge = score.forfeit ? `<span class="forfeit-badge" title="Résultat automatique (forfait)">🚫 Forfait</span>` : "";
         return `
           <div class="match-card">
             <span class="court-badge">${courtLabel}</span>
+            ${forfeitBadge}
             <div class="team-score">
               <span class="team">${escapeHtml(match.a.name)}</span>
               <input type="number" class="score-input" min="0" placeholder="-" data-pool="${poolIdx}" data-round="${rIdx}" data-match="${mIdx}" data-side="a" value="${score.a ?? ""}" />
@@ -112,19 +114,33 @@ function renderPools(pools, courtNames = [], courtAllocation = []) {
 
 /**
  * Affiche le tableau de classement de chaque poule, en surlignant les équipes
- * actuellement qualifiées pour la phase finale.
+ * actuellement qualifiées pour la phase finale. Chaque équipe peut y être
+ * renommée (✏️) ou déclarée forfait (🚫) — seul endroit où chaque équipe est
+ * listée individuellement quel que soit l'avancement du tournoi (voir
+ * events.js, section "RENOMMAGE ET FORFAIT D'UNE EQUIPE").
+ * @param {Array} pools
+ * @param {number} qualifiersPerPool
+ * @param {Set<number>} forfeitedTeamIds
  */
-function renderPoolStandings(pools, qualifiersPerPool) {
+function renderPoolStandings(pools, qualifiersPerPool, forfeitedTeamIds = new Set()) {
   elPoolStandingsContainer.innerHTML = pools.map(pool => {
     const standings = computePoolStandings(pool);
 
     const rows = standings.map((s, i) => {
       const qualified = i < qualifiersPerPool;
+      const forfeited = forfeitedTeamIds.has(s.team.id);
       const diffSign = s.diff > 0 ? "+" : "";
+      const teamNameEscaped = escapeHtml(s.team.name);
       return `
-        <tr class="${qualified ? "qualified" : ""}">
+        <tr class="${qualified ? "qualified" : ""} ${forfeited ? "forfeited" : ""}">
           <td>${i + 1}</td>
-          <td>${escapeHtml(s.team.name)}</td>
+          <td>
+            <span class="team-name-text">${teamNameEscaped}</span>
+            <span class="team-name-actions">
+              <button type="button" class="icon-btn team-rename-btn" data-team-id="${s.team.id}" title="Renommer l'équipe" aria-label="Renommer ${teamNameEscaped}">✏️</button>
+              <button type="button" class="icon-btn team-forfeit-btn ${forfeited ? "active" : ""}" data-team-id="${s.team.id}" data-team-name="${teamNameEscaped}" title="${forfeited ? "Annuler le forfait" : "Déclarer forfait"}" aria-label="${forfeited ? "Annuler le forfait de" : "Déclarer forfait pour"} ${teamNameEscaped}">🚫</button>
+            </span>
+          </td>
           <td>${s.m}</td>
           <td>${s.w}</td>
           <td>${s.l}</td>
@@ -178,14 +194,27 @@ function renderPoolStandings(pools, qualifiersPerPool) {
  *   consolationPhase...) : les ids de segment ne sont PAS uniques entre deux
  *   phases (buildFinalPhase part toujours de "seg-1"), phaseIdx désambiguïse
  *   la clé de recherche dans activeCourtAssignment.
+ * @param {Set<number>|null} forfeitedTeamIds - voir setTeamForfeited
+ *   (engine.js) : une affiche impliquant l'une de ces équipes n'a jamais de
+ *   score saisi (elle est résolue automatiquement dès qu'elle apparaît, voir
+ *   progressFinalPhase), on l'affiche donc comme le repos ci-dessus plutôt
+ *   que comme un match à saisir.
  */
-function renderBracketPairs(pairs, scores, editable, segmentId, courtNames = [], activeCourtAssignment = null, phaseIdx = 0) {
+function renderBracketPairs(pairs, scores, editable, segmentId, courtNames = [], activeCourtAssignment = null, phaseIdx = 0, forfeitedTeamIds = null) {
   return pairs.map(([a, b], idx) => {
     if (a.bye && b.bye) return "";
 
     if (a.bye || b.bye) {
       const realTeam = a.bye ? b.team : a.team;
       return `<div class="subtle" style="padding: 6px 2px;">🪑 <strong>${escapeHtml(realTeam.name)}</strong> qualifié(e) sans jouer (repos)</div>`;
+    }
+
+    const aForfeited = forfeitedTeamIds?.has(a.team.id);
+    const bForfeited = forfeitedTeamIds?.has(b.team.id);
+    if (aForfeited || bForfeited) {
+      const winner = aForfeited ? b.team : a.team;
+      const loser = aForfeited ? a.team : b.team;
+      return `<div class="subtle" style="padding: 6px 2px;">🚫 <strong>${escapeHtml(loser.name)}</strong> forfait — <strong>${escapeHtml(winner.name)}</strong> qualifié(e) sans jouer</div>`;
     }
 
     const score = scores[idx] || {};
@@ -224,8 +253,9 @@ function renderBracketPairs(pairs, scores, editable, segmentId, courtNames = [],
  * @param {number} phaseIdx - voir renderBracketPairs (0 pour finalPhase, 1
  *   pour consolationPhase — doit correspondre à l'ordre passé à
  *   assignCourtsToActiveMatches pour que les clés se retrouvent).
+ * @param {Set<number>|null} forfeitedTeamIds - voir renderBracketPairs
  */
-function renderBracketPhase(phase, container, courtNames = [], activeCourtAssignment = null, phaseIdx = 0) {
+function renderBracketPhase(phase, container, courtNames = [], activeCourtAssignment = null, phaseIdx = 0, forfeitedTeamIds = null) {
   if (!phase) {
     container.innerHTML = "";
     return;
@@ -235,7 +265,7 @@ function renderBracketPhase(phase, container, courtNames = [], activeCourtAssign
     <div class="pool-card">
       <h3 class="pool-card-title">${escapeHtml(round.label)}</h3>
       <div class="round">
-        <div class="matches-list">${renderBracketPairs(round.pairs, round.scores, false, null, courtNames)}</div>
+        <div class="matches-list">${renderBracketPairs(round.pairs, round.scores, false, null, courtNames, null, phaseIdx, forfeitedTeamIds)}</div>
       </div>
     </div>
   `);
@@ -246,7 +276,7 @@ function renderBracketPhase(phase, container, courtNames = [], activeCourtAssign
       <div class="pool-card">
         <h3 class="pool-card-title">${escapeHtml(segmentLabel(segment))}</h3>
         <div class="round">
-          <div class="matches-list">${renderBracketPairs(segmentPairs(segment), segment.scores, true, segment.id, courtNames, activeCourtAssignment, phaseIdx)}</div>
+          <div class="matches-list">${renderBracketPairs(segmentPairs(segment), segment.scores, true, segment.id, courtNames, activeCourtAssignment, phaseIdx, forfeitedTeamIds)}</div>
         </div>
       </div>
     `);
@@ -268,8 +298,9 @@ function renderBothBracketPhases(tournament) {
     [tournament.finalPhase, tournament.consolationPhase],
     tournament.numCourts
   );
-  renderBracketPhase(tournament.finalPhase, elFinalPhaseContainer, tournament.courtNames, assignment, 0);
-  renderBracketPhase(tournament.consolationPhase, elConsolationPhaseContainer, tournament.courtNames, assignment, 1);
+  const forfeitedTeamIds = new Set(tournament.forfeitedTeamIds || []);
+  renderBracketPhase(tournament.finalPhase, elFinalPhaseContainer, tournament.courtNames, assignment, 0, forfeitedTeamIds);
+  renderBracketPhase(tournament.consolationPhase, elConsolationPhaseContainer, tournament.courtNames, assignment, 1, forfeitedTeamIds);
 }
 
 /**

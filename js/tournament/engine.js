@@ -480,12 +480,27 @@ function segmentPairs(segment) {
 }
 
 /**
- * Le tour courant d'un segment est-il terminé ? Une affiche impliquant un
- * repos ("bye") n'a besoin d'aucune saisie (résolution automatique).
+ * Une équipe présente dans un créneau (slot) de bracket est-elle forfait ?
+ * Un `{bye:true}` (créneau vide, sans équipe) n'est jamais "forfait" — voir
+ * isSegmentRoundComplete/advanceSegment pour la distinction entre les deux.
+ * @param {Object} slot - {team} ou {bye:true}
+ * @param {Set<number>|null} forfeitedTeamIds
  */
-function isSegmentRoundComplete(segment) {
+function isForfeitedSlot(slot, forfeitedTeamIds) {
+  return !!(slot?.team && forfeitedTeamIds && forfeitedTeamIds.has(slot.team.id));
+}
+
+/**
+ * Le tour courant d'un segment est-il terminé ? Une affiche impliquant un
+ * repos ("bye") n'a besoin d'aucune saisie (résolution automatique) — de
+ * même pour une affiche impliquant une équipe déclarée forfait : elle perd
+ * automatiquement, sans qu'un score soit à saisir (voir setTeamForfeited).
+ * @param {Set<number>|null} forfeitedTeamIds
+ */
+function isSegmentRoundComplete(segment, forfeitedTeamIds) {
   return segmentPairs(segment).every(([a, b], idx) => {
     if (a.bye || b.bye) return true;
+    if (isForfeitedSlot(a, forfeitedTeamIds) || isForfeitedSlot(b, forfeitedTeamIds)) return true;
     const score = segment.scores[idx];
     return score && score.a != null && score.b != null;
   });
@@ -496,25 +511,40 @@ function isSegmentRoundComplete(segment) {
  * (vainqueurs → moitié supérieure des places restantes, perdants → moitié
  * inférieure). Un repos face à une vraie équipe résout automatiquement ce
  * match (l'équipe avance sans jouer) ; un repos face à un repos ne produit
- * rien de réel des deux côtés.
+ * rien de réel des deux côtés. Une équipe forfait face à une équipe active
+ * perd automatiquement (comme un repos, mais l'équipe forfait elle-même
+ * garde sa place — voir plus bas — au lieu de disparaître comme un repos) ;
+ * si les deux équipes d'une affiche sont forfait, `a` avance nominalement
+ * (choix arbitraire mais déterministe : cas très marginal, les deux équipes
+ * continueront de toute façon à perdre automatiquement par la suite).
+ * @param {Set<number>|null} forfeitedTeamIds
  * @returns {Array} les 1 ou 2 segments enfants (1 seul si rankSize/2 === … en
  *   pratique toujours 2, sauf tableau dégénéré à 1 équipe au total)
  */
-function advanceSegment(segment) {
+function advanceSegment(segment, forfeitedTeamIds) {
   const pairs = segmentPairs(segment);
   const winners = [];
   const losers = [];
 
   pairs.forEach(([a, b], idx) => {
+    const aForfeited = isForfeitedSlot(a, forfeitedTeamIds);
+    const bForfeited = isForfeitedSlot(b, forfeitedTeamIds);
+
     if (a.bye && b.bye) {
       winners.push({ bye: true });
       losers.push({ bye: true });
     } else if (a.bye) {
-      winners.push(b);
-      losers.push({ bye: true });
+      // b est une vraie équipe : si elle est elle-même forfait, personne ne
+      // profite du repos (elle garde sa place côté perdants malgré tout).
+      if (bForfeited) { winners.push({ bye: true }); losers.push(b); }
+      else { winners.push(b); losers.push({ bye: true }); }
     } else if (b.bye) {
-      winners.push(a);
-      losers.push({ bye: true });
+      if (aForfeited) { winners.push({ bye: true }); losers.push(a); }
+      else { winners.push(a); losers.push({ bye: true }); }
+    } else if (aForfeited || bForfeited) {
+      if (aForfeited && bForfeited) { winners.push(a); losers.push(b); }
+      else if (aForfeited) { winners.push(b); losers.push(a); }
+      else { winners.push(a); losers.push(b); }
     } else {
       const score = segment.scores[idx];
       if (score.a > score.b) { winners.push(a); losers.push(b); }
@@ -558,10 +588,15 @@ function computeFinalRanking(segments, rankOffset = 0) {
  * Fait avancer la phase finale d'autant de tours que possible dans l'état
  * actuel : tout segment dont le tour courant est terminé se scinde en 2
  * segments enfants, en cascade tant que de nouveaux segments se terminent
- * aussitôt (cas des segments entièrement composés de repos). Recalcule le
- * classement final si tout est résolu. Modifie `finalPhase` en place.
+ * aussitôt (cas des segments entièrement composés de repos, ou d'équipes
+ * forfait). Recalcule le classement final si tout est résolu. Modifie
+ * `finalPhase` en place.
+ * @param {Object} finalPhase
+ * @param {Set<number>|null} forfeitedTeamIds - ids d'équipes forfait (voir
+ *   setTeamForfeited) ; une affiche impliquant l'une d'elles se résout
+ *   automatiquement, sans score à saisir.
  */
-function progressFinalPhase(finalPhase) {
+function progressFinalPhase(finalPhase, forfeitedTeamIds) {
   let changed = true;
   while (changed) {
     changed = false;
@@ -573,7 +608,7 @@ function progressFinalPhase(finalPhase) {
         stillActive.push(segment);
         return;
       }
-      if (isSegmentRoundComplete(segment)) {
+      if (isSegmentRoundComplete(segment, forfeitedTeamIds)) {
         finalPhase.rounds.push({
           segmentId: segment.id,
           rankStart: segment.rankStart,
@@ -582,7 +617,7 @@ function progressFinalPhase(finalPhase) {
           pairs: segmentPairs(segment),
           scores: segment.scores
         });
-        newlyCreated.push(...advanceSegment(segment));
+        newlyCreated.push(...advanceSegment(segment, forfeitedTeamIds));
         changed = true;
       } else {
         stillActive.push(segment);
@@ -690,4 +725,92 @@ function assignCourtsToActiveMatches(phases, numCourts) {
   });
 
   return assignment;
+}
+
+// =============================================================================
+// EDITION D'UNE EQUIPE : RENOMMAGE ET FORFAIT
+// =============================================================================
+// Un même id d'équipe apparaît dans PLUSIEURS objets distincts du tournoi (le
+// calendrier de poule copie les mêmes équipes que pool.teams, chaque round de
+// bracket déjà joué garde un instantané de l'équipe à l'époque, le classement
+// final calculé aussi...). En mémoire ce sont souvent les mêmes références,
+// mais plus après un rechargement depuis localStorage (JSON.stringify/parse
+// duplique tout, sans jamais préserver le partage de référence) : les
+// fonctions ci-dessous parcourent donc TOUJOURS l'ensemble de ces endroits et
+// comparent par `id`, sans jamais supposer une identité d'objet partagée.
+
+/**
+ * Renomme une équipe partout où elle apparaît dans l'état du tournoi.
+ * @param {Object} tournament
+ * @param {number} teamId
+ * @param {string} newName
+ */
+function renameTeamEverywhere(tournament, teamId, newName) {
+  const applyToTeam = team => { if (team && team.id === teamId) team.name = newName; };
+  const applyToSlot = slot => applyToTeam(slot?.team);
+
+  (tournament.teams || []).forEach(applyToTeam);
+
+  (tournament.pools || []).forEach(pool => {
+    pool.teams.forEach(applyToTeam);
+    pool.rounds.forEach(round => {
+      round.forEach(match => {
+        if (!match) return;
+        if (match.bye) applyToTeam(match.team);
+        else { applyToTeam(match.a); applyToTeam(match.b); }
+      });
+    });
+  });
+
+  [tournament.finalPhase, tournament.consolationPhase].forEach(phase => {
+    if (!phase) return;
+    phase.segments.forEach(segment => segment.slots.forEach(applyToSlot));
+    phase.rounds.forEach(round => round.pairs.forEach(([a, b]) => { applyToSlot(a); applyToSlot(b); }));
+    (phase.finalRanking || []).forEach(applyToTeam);
+  });
+}
+
+/**
+ * Déclare (ou annule) le forfait d'une équipe :
+ * - `tournament.forfeitedTeamIds` (liste d'ids, sérialisable telle quelle
+ *   dans localStorage) est mise à jour en conséquence ;
+ * - en phase de poules, tout match PAS ENCORE joué impliquant cette équipe
+ *   est immédiatement résolu en faveur de l'adversaire, avec un score
+ *   conventionnel 1-0 (`{a, b, forfeit:true}` — le score minimal possible,
+ *   pour ne pas fausser excessivement le différentiel de points des autres
+ *   équipes de la poule) ; annuler le forfait retire uniquement CES scores
+ *   auto-résolus (repère `forfeit:true`), jamais un vrai résultat déjà saisi.
+ * - en phase finale / matchs de classement, la résolution des affiches en
+ *   cours n'est PAS faite ici : elle se fait structurellement (comme un
+ *   repos) via isSegmentRoundComplete/advanceSegment, il suffit à l'appelant
+ *   de relancer progressFinalPhase(phase, new Set(tournament.forfeitedTeamIds))
+ *   sur chaque phase existante juste après cet appel.
+ * @param {Object} tournament
+ * @param {number} teamId
+ * @param {boolean} forfeited
+ */
+function setTeamForfeited(tournament, teamId, forfeited) {
+  const ids = new Set(tournament.forfeitedTeamIds || []);
+  if (forfeited) ids.add(teamId); else ids.delete(teamId);
+  tournament.forfeitedTeamIds = [...ids];
+
+  (tournament.pools || []).forEach(pool => {
+    pool.rounds.forEach((matches, rIdx) => {
+      matches.forEach((match, mIdx) => {
+        if (!match || match.bye) return;
+        if (match.a.id !== teamId && match.b.id !== teamId) return;
+
+        const key = `${rIdx}-${mIdx}`;
+        const existing = pool.scores[key];
+
+        if (forfeited) {
+          if (existing && existing.a != null && existing.b != null && !existing.forfeit) return; // vrai résultat déjà saisi : on n'écrase pas
+          const aWins = match.b.id === teamId; // l'équipe qui N'EST PAS forfait gagne
+          pool.scores[key] = { a: aWins ? 1 : 0, b: aWins ? 0 : 1, forfeit: true };
+        } else if (existing && existing.forfeit) {
+          delete pool.scores[key];
+        }
+      });
+    });
+  });
 }

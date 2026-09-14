@@ -187,11 +187,11 @@ btnGeneratePools.addEventListener("click", async () => {
   const numCourts = Math.max(1, parseInt(elNumCourts.value || "1", 10));
   const courtNames = parseCourtNames(elCourtNames.value);
   const courtAllocation = allocateCourtsToPools(pools, numCourts);
-  window.__PT_TOURNAMENT__ = { teams, numPools, qualifiersPerPool, poolAssignMode: mode, numCourts, courtNames, courtAllocation, pools };
+  window.__PT_TOURNAMENT__ = { teams, numPools, qualifiersPerPool, poolAssignMode: mode, numCourts, courtNames, courtAllocation, pools, forfeitedTeamIds: [] };
 
   elManualAssignSection.hidden = true;
   renderPools(pools, courtNames, courtAllocation);
-  renderPoolStandings(pools, qualifiersPerPool);
+  renderPoolStandings(pools, qualifiersPerPool, new Set());
   elPoolsSection.hidden = false;
   elPoolStandingsSection.hidden = false;
   autoSaveTournamentState();
@@ -216,11 +216,11 @@ btnConfirmManualAssign.addEventListener("click", () => {
   const numCourts = Math.max(1, parseInt(elNumCourts.value || "1", 10));
   const courtNames = parseCourtNames(elCourtNames.value);
   const courtAllocation = allocateCourtsToPools(pools, numCourts);
-  window.__PT_TOURNAMENT__ = { teams, numPools, qualifiersPerPool, poolAssignMode: "manual", numCourts, courtNames, courtAllocation, pools };
+  window.__PT_TOURNAMENT__ = { teams, numPools, qualifiersPerPool, poolAssignMode: "manual", numCourts, courtNames, courtAllocation, pools, forfeitedTeamIds: [] };
 
   elManualAssignSection.hidden = true;
   renderPools(pools, courtNames, courtAllocation);
-  renderPoolStandings(pools, qualifiersPerPool);
+  renderPoolStandings(pools, qualifiersPerPool, new Set());
   elPoolsSection.hidden = false;
   elPoolStandingsSection.hidden = false;
   autoSaveTournamentState();
@@ -268,9 +268,98 @@ elPoolsContainer.addEventListener("input", (e) => {
   const key = `${roundIdx}-${matchIdx}`;
   if (!pool.scores[key]) pool.scores[key] = {};
   pool.scores[key][side] = Number.isNaN(val) ? null : val;
+  // Un score saisi à la main écrase la résolution automatique de forfait,
+  // le cas échéant (voir setTeamForfeited) : ce n'est plus un forfait, c'est
+  // un vrai résultat.
+  delete pool.scores[key].forfeit;
 
-  renderPoolStandings(tournament.pools, tournament.qualifiersPerPool);
+  renderPoolStandings(tournament.pools, tournament.qualifiersPerPool, new Set(tournament.forfeitedTeamIds || []));
   autoSaveTournamentState();
+});
+
+// --------------------------------------------------
+// RENOMMAGE ET FORFAIT D'UNE EQUIPE (depuis le tableau de classement de poule,
+// seul endroit où chaque équipe apparaît individuellement quel que soit
+// l'état d'avancement du tournoi — poules seules, phase finale en cours...)
+// --------------------------------------------------
+
+/**
+ * Réaffiche tout ce qui peut dépendre du nom ou du statut forfait d'une
+ * équipe (poules, classements de poule, phase finale et matchs de
+ * classement, classement final) et sauvegarde.
+ */
+function refreshAfterTeamEdit(tournament) {
+  const forfeitedTeamIds = new Set(tournament.forfeitedTeamIds || []);
+  renderPools(tournament.pools, tournament.courtNames, tournament.courtAllocation);
+  renderPoolStandings(tournament.pools, tournament.qualifiersPerPool, forfeitedTeamIds);
+  renderBothBracketPhases(tournament);
+  renderFinalRanking(tournament);
+  autoSaveTournamentState();
+}
+
+elPoolStandingsContainer.addEventListener("click", (e) => {
+  const renameBtn = e.target.closest(".team-rename-btn");
+  if (!renameBtn) return;
+
+  const tournament = window.__PT_TOURNAMENT__;
+  if (!tournament) return;
+
+  const teamId = parseInt(renameBtn.dataset.teamId, 10);
+  const cell = renameBtn.closest("td");
+  const nameSpan = cell.querySelector(".team-name-text");
+  const previousName = nameSpan.textContent;
+
+  cell.innerHTML = `<input type="text" class="team-rename-input" value="${escapeHtml(previousName)}" maxlength="80" />`;
+  const input = cell.querySelector(".team-rename-input");
+  input.focus();
+  input.select();
+
+  let settled = false;
+  const commit = () => {
+    if (settled) return;
+    settled = true;
+    const newName = input.value.trim();
+    if (newName && newName !== previousName) {
+      renameTeamEverywhere(tournament, teamId, newName);
+      refreshAfterTeamEdit(tournament);
+    } else {
+      renderPoolStandings(tournament.pools, tournament.qualifiersPerPool, new Set(tournament.forfeitedTeamIds || []));
+    }
+  };
+
+  input.addEventListener("blur", commit);
+  input.addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter") input.blur();
+    else if (ev.key === "Escape") { settled = true; renderPoolStandings(tournament.pools, tournament.qualifiersPerPool, new Set(tournament.forfeitedTeamIds || [])); }
+  });
+});
+
+elPoolStandingsContainer.addEventListener("click", async (e) => {
+  const forfeitBtn = e.target.closest(".team-forfeit-btn");
+  if (!forfeitBtn) return;
+
+  const tournament = window.__PT_TOURNAMENT__;
+  if (!tournament) return;
+
+  const teamId = parseInt(forfeitBtn.dataset.teamId, 10);
+  const teamName = forfeitBtn.dataset.teamName || "cette équipe";
+  const alreadyForfeited = (tournament.forfeitedTeamIds || []).includes(teamId);
+
+  if (!alreadyForfeited) {
+    const confirmed = await confirmModal(
+      `Les matchs restants de "${teamName}" (poules et/ou phase finale) seront automatiquement comptés perdus. Continuer ?`,
+      { title: "Déclarer forfait ?", confirmText: "Déclarer forfait", icon: "🚫" }
+    );
+    if (!confirmed) return;
+  }
+
+  setTeamForfeited(tournament, teamId, !alreadyForfeited);
+
+  const forfeitedTeamIds = new Set(tournament.forfeitedTeamIds || []);
+  if (tournament.finalPhase) progressFinalPhase(tournament.finalPhase, forfeitedTeamIds);
+  if (tournament.consolationPhase) progressFinalPhase(tournament.consolationPhase, forfeitedTeamIds);
+
+  refreshAfterTeamEdit(tournament);
 });
 
 // --------------------------------------------------
@@ -314,7 +403,7 @@ function wireBracketGenerateButton(button, { phaseKey, getSeededTeams, getRankOf
     }
 
     tournament[phaseKey] = buildFinalPhase(seeded, getRankOffset(tournament));
-    progressFinalPhase(tournament[phaseKey]);
+    progressFinalPhase(tournament[phaseKey], new Set(tournament.forfeitedTeamIds || []));
 
     renderBothBracketPhases(tournament);
     renderFinalRanking(tournament);
@@ -348,7 +437,7 @@ function wireBracketScoreInputs(container, phaseKey) {
     segment.scores[matchIdx][side] = Number.isNaN(val) ? null : val;
 
     const roundsBefore = phase.rounds.length;
-    progressFinalPhase(phase);
+    progressFinalPhase(phase, new Set(tournament.forfeitedTeamIds || []));
 
     if (phase.rounds.length !== roundsBefore) {
       renderBothBracketPhases(tournament);

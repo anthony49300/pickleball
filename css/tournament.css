@@ -177,6 +177,78 @@ select option {
 }
 
 /* --------------------------------------------------
+   RENOMMAGE ET FORFAIT D'UNE EQUIPE (boutons ✏️/🚫 à côté du nom, dans le
+   tableau de classement de poule — voir events.js).
+-------------------------------------------------- */
+.team-name-actions {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 6px;
+}
+
+.icon-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 6px;
+  opacity: 0.55;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.icon-btn:hover {
+  opacity: 1;
+  background: rgba(var(--fg-overlay-rgb), 0.08);
+}
+
+.team-forfeit-btn.active {
+  opacity: 1;
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.team-rename-input {
+  width: 100%;
+  min-width: 140px;
+  border-radius: 8px;
+  border: 1px solid var(--pickle-yellow);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text-main);
+  padding: 4px 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+
+.pool-standing-card tr.forfeited {
+  opacity: 0.6;
+}
+
+.pool-standing-card tr.forfeited .team-name-text {
+  text-decoration: line-through;
+}
+
+/* Badge affiché sur un match de poule résolu automatiquement (forfait).
+   .match-card (styles.css, mode Rotation) est une grille à 2 colonnes dont
+   les seuls enfants "dans le flux" attendus sont les deux .team-score : tout
+   le reste (.court-badge, .vs) y est déjà positionné en absolu pour ne pas
+   perturber cette grille. Ce badge suit la même règle (sinon il prendrait
+   la place d'un des deux .team-score et casserait la mise en page) — placé
+   au-dessus du badge terrain, qui reste centré verticalement à gauche. */
+.forfeit-badge {
+  position: absolute;
+  top: 6px;
+  left: 14px;
+  z-index: 3;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #ef4444;
+  background: rgba(10, 15, 24, 0.85);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+/* --------------------------------------------------
    PODIUM DU CLASSEMENT FINAL
    .podium-step (styles.css, mode Rotation) a une hauteur FIXE par marche,
    pensée pour un prénom simple tenant sur une seule ligne. Les noms d'équipe

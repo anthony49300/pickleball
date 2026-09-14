@@ -67,8 +67,11 @@ function loadTournamentState() {
     if (!state.tournament.courtAllocation) {
       state.tournament.courtAllocation = allocateCourtsToPools(state.tournament.pools, state.tournament.numCourts || 1);
     }
+    // Compatibilité avec un tournoi sauvegardé avant l'introduction des forfaits.
+    if (!state.tournament.forfeitedTeamIds) state.tournament.forfeitedTeamIds = [];
+
     renderPools(state.tournament.pools, state.tournament.courtNames || [], state.tournament.courtAllocation);
-    renderPoolStandings(state.tournament.pools, state.tournament.qualifiersPerPool);
+    renderPoolStandings(state.tournament.pools, state.tournament.qualifiersPerPool, new Set(state.tournament.forfeitedTeamIds));
     elPoolsSection.hidden = false;
     elPoolStandingsSection.hidden = false;
 

@@ -50,7 +50,9 @@ const {
   progressFinalPhase,
   computeFinalRanking,
   computeOverallTeamStats,
-  assignCourtsToActiveMatches
+  assignCourtsToActiveMatches,
+  renameTeamEverywhere,
+  setTeamForfeited
 } = global;
 
 let passed = 0;
@@ -615,6 +617,153 @@ test("assignCourtsToActiveMatches : ignore les segments déjà résolus et les a
   const byeSegment = { id: "bye", slots: [{ team: makeTeams(1)[0] }, { bye: true }] };
   const assignment = assignCourtsToActiveMatches([{ segments: [resolvedSegment, byeSegment] }], 4);
   assert.strictEqual(assignment.size, 0);
+});
+
+// ---------------------------------------------------------------------------
+// FORFAIT : isSegmentRoundComplete / advanceSegment / progressFinalPhase
+// ---------------------------------------------------------------------------
+
+test("advanceSegment : une équipe forfait perd automatiquement face à une équipe active (sans score)", () => {
+  const teams = makeTeams(2);
+  const segment = { id: "s", rankStart: 1, rankSize: 2, slots: [{ team: teams[0] }, { team: teams[1] }], scores: {} };
+  const forfeitedTeamIds = new Set([teams[0].id]);
+
+  assert.strictEqual(isSegmentRoundComplete(segment, forfeitedTeamIds), true);
+  const [winnerSeg, loserSeg] = advanceSegment(segment, forfeitedTeamIds);
+  assert.strictEqual(winnerSeg.slots[0].team.id, teams[1].id);
+  assert.strictEqual(loserSeg.slots[0].team.id, teams[0].id);
+});
+
+test("advanceSegment : deux équipes forfait dans la même affiche restent toutes les deux suivies (aucune ne disparaît)", () => {
+  const teams = makeTeams(2);
+  const segment = { id: "s", rankStart: 1, rankSize: 2, slots: [{ team: teams[0] }, { team: teams[1] }], scores: {} };
+  const forfeitedTeamIds = new Set([teams[0].id, teams[1].id]);
+
+  assert.strictEqual(isSegmentRoundComplete(segment, forfeitedTeamIds), true);
+  const [winnerSeg, loserSeg] = advanceSegment(segment, forfeitedTeamIds);
+  assert.strictEqual(winnerSeg.slots[0].team.id, teams[0].id);
+  assert.strictEqual(loserSeg.slots[0].team.id, teams[1].id);
+});
+
+test("advanceSegment : une équipe forfait face à un repos (bye) ne profite pas du repos", () => {
+  const teams = makeTeams(1);
+  const segment = { id: "s", rankStart: 1, rankSize: 2, slots: [{ team: teams[0] }, { bye: true }], scores: {} };
+  const forfeitedTeamIds = new Set([teams[0].id]);
+
+  const [winnerSeg, loserSeg] = advanceSegment(segment, forfeitedTeamIds);
+  assert.strictEqual(winnerSeg.slots[0].bye, true);
+  assert.strictEqual(loserSeg.slots[0].team.id, teams[0].id);
+});
+
+test("progressFinalPhase : une équipe forfait perd automatiquement à chaque tour, jusqu'à finir dernière au classement", () => {
+  const teams = makeTeams(4);
+  const finalPhase = buildFinalPhase(teams, 0);
+  const forfeitedTeamIds = new Set([teams[0].id]); // tête de série n°1 -> 1er créneau du tableau
+
+  // 1er tour : seule l'affiche Team0(forfait) vs Team3 se résout automatiquement.
+  // L'autre affiche (Team1 vs Team2) attend toujours un vrai score : le tour
+  // entier n'est donc pas encore complet, rien n'avance.
+  progressFinalPhase(finalPhase, forfeitedTeamIds);
+  assert.strictEqual(finalPhase.rounds.length, 0);
+  assert.strictEqual(finalPhase.segments.length, 1);
+
+  finalPhase.segments[0].scores[1] = { a: 11, b: 5 }; // Team1 bat Team2
+  progressFinalPhase(finalPhase, forfeitedTeamIds);
+
+  assert.strictEqual(finalPhase.rounds.length, 1);
+  const winnerFinal = finalPhase.segments.find(s => s.rankStart === 1);
+  const loserFinal = finalPhase.segments.find(s => s.rankStart === 3);
+  assert.ok(winnerFinal.slots.some(s => s.team?.id === teams[3].id), "Team3 doit avoir avancé sans jouer");
+  assert.ok(!winnerFinal.slots.some(s => s.team?.id === teams[0].id), "Team0 (forfait) ne doit pas être côté vainqueurs");
+
+  // Dernier tour : la vraie finale a besoin d'un score, la "finale" des places
+  // 3-4 se résout seule (Team0 y est toujours forfait).
+  winnerFinal.scores[0] = { a: 11, b: 9 };
+  progressFinalPhase(finalPhase, forfeitedTeamIds);
+
+  assert.ok(finalPhase.finalRanking, "le classement final devrait être entièrement résolu");
+  const team0Rank = finalPhase.finalRanking.find(r => r.team.id === teams[0].id).rank;
+  assert.strictEqual(team0Rank, 4, "l'équipe forfait doit finir dernière");
+  assert.ok(!loserFinal || loserFinal.slots.length === 2, "sanity : le segment 3-4 existait bien avant ce dernier tour");
+});
+
+// ---------------------------------------------------------------------------
+// renameTeamEverywhere
+// ---------------------------------------------------------------------------
+
+test("renameTeamEverywhere : renomme l'équipe partout, même quand chaque structure a sa PROPRE copie de l'équipe (cas d'un tournoi rechargé depuis localStorage, où JSON casse le partage de référence)", () => {
+  const cloneTeam = t => ({ ...t });
+  const teams = makeTeams(2);
+
+  const pool = {
+    teams: [cloneTeam(teams[0]), cloneTeam(teams[1])],
+    rounds: [[{ a: cloneTeam(teams[0]), b: cloneTeam(teams[1]) }]],
+    scores: {}
+  };
+
+  const finalPhase = {
+    segments: [{ id: "seg-1", rankStart: 1, rankSize: 2, slots: [{ team: cloneTeam(teams[0]) }, { team: cloneTeam(teams[1]) }], scores: {} }],
+    rounds: [{
+      segmentId: "old", rankStart: 1, rankSize: 2, label: "x",
+      pairs: [[{ team: cloneTeam(teams[0]) }, { team: cloneTeam(teams[1]) }]],
+      scores: {}
+    }],
+    finalRanking: [{ team: cloneTeam(teams[0]), rank: 1 }, { team: cloneTeam(teams[1]), rank: 2 }]
+  };
+
+  const tournament = { teams: [cloneTeam(teams[0]), cloneTeam(teams[1])], pools: [pool], finalPhase };
+
+  renameTeamEverywhere(tournament, 0, "Nouveau Nom");
+
+  assert.strictEqual(tournament.teams.find(t => t.id === 0).name, "Nouveau Nom");
+  assert.strictEqual(pool.teams.find(t => t.id === 0).name, "Nouveau Nom");
+  assert.strictEqual(pool.rounds[0][0].a.name, "Nouveau Nom");
+  assert.strictEqual(finalPhase.segments[0].slots[0].team.name, "Nouveau Nom");
+  assert.strictEqual(finalPhase.rounds[0].pairs[0][0].team.name, "Nouveau Nom");
+  assert.strictEqual(finalPhase.finalRanking[0].team.name, "Nouveau Nom");
+
+  // L'autre équipe (id 1) n'est jamais touchée.
+  assert.strictEqual(pool.teams.find(t => t.id === 1).name, "Team1");
+  assert.strictEqual(finalPhase.finalRanking[1].team.name, "Team1");
+});
+
+// ---------------------------------------------------------------------------
+// setTeamForfeited
+// ---------------------------------------------------------------------------
+
+test("setTeamForfeited : résout automatiquement les matchs de poule restants (1-0), sans écraser un score déjà saisi ; l'annulation ne retire que la résolution automatique", () => {
+  const teams = makeTeams(3);
+  const pool = { teams, rounds: generateRoundRobin(teams), scores: {} };
+  const tournament = { pools: [pool] };
+
+  // Round-robin à 3 équipes : chacune joue 2 vrais matchs (+ 1 repos).
+  const team0Matches = [];
+  pool.rounds.forEach((matches, rIdx) => matches.forEach((match, mIdx) => {
+    if (!match.bye && (match.a.id === 0 || match.b.id === 0)) team0Matches.push({ rIdx, mIdx, match });
+  }));
+  assert.strictEqual(team0Matches.length, 2);
+
+  // Le 1er des 2 matchs de Team0 est déjà joué (vrai résultat) avant le forfait.
+  const [{ rIdx: rIdx0, mIdx: mIdx0, match: match0 }, { rIdx: rIdx1, mIdx: mIdx1, match: match1 }] = team0Matches;
+  const key0 = `${rIdx0}-${mIdx0}`;
+  const realScore = match0.a.id === 0 ? { a: 11, b: 3 } : { a: 3, b: 11 };
+  pool.scores[key0] = realScore;
+
+  setTeamForfeited(tournament, 0, true);
+
+  assert.deepStrictEqual(tournament.forfeitedTeamIds, [0]);
+  assert.deepStrictEqual(pool.scores[key0], realScore); // le vrai résultat n'a pas bougé
+
+  const key1 = `${rIdx1}-${mIdx1}`;
+  const opponentIsA = match1.b.id === 0;
+  assert.strictEqual(pool.scores[key1].forfeit, true);
+  assert.strictEqual(pool.scores[key1][opponentIsA ? "a" : "b"], 1);
+  assert.strictEqual(pool.scores[key1][opponentIsA ? "b" : "a"], 0);
+
+  setTeamForfeited(tournament, 0, false);
+  assert.deepStrictEqual(tournament.forfeitedTeamIds, []);
+  assert.strictEqual(pool.scores[key1], undefined); // résolution automatique annulée
+  assert.deepStrictEqual(pool.scores[key0], realScore); // le vrai résultat, lui, reste intact
 });
 
 // ---------------------------------------------------------------------------
