@@ -598,3 +598,58 @@ function progressFinalPhase(finalPhase) {
     finalPhase.finalRanking = null;
   }
 }
+
+/**
+ * Calcule, pour chaque équipe, ses statistiques sur l'ENSEMBLE du tournoi
+ * (poules + phase finale + matchs de classement confondus) : matchs joués,
+ * victoires, défaites, points marqués/encaissés. Sert à enrichir le
+ * classement final combiné avec de vraies statistiques plutôt qu'un simple
+ * rang. Une équipe n'appartenant qu'à une seule poule, il n'y a pas
+ * d'ambiguïté à agréger ainsi tous ses matchs.
+ * @param {Object} tournament
+ * @returns {Map<number, {team:object, m:number, w:number, l:number, pf:number, pa:number}>}
+ */
+function computeOverallTeamStats(tournament) {
+  const stats = new Map();
+
+  const ensure = team => {
+    if (!stats.has(team.id)) stats.set(team.id, { team, m: 0, w: 0, l: 0, pf: 0, pa: 0 });
+    return stats.get(team.id);
+  };
+
+  const addResult = (team, ptsFor, ptsAgainst) => {
+    const s = ensure(team);
+    s.m++;
+    s.pf += ptsFor;
+    s.pa += ptsAgainst;
+    if (ptsFor > ptsAgainst) s.w++;
+    else if (ptsFor < ptsAgainst) s.l++;
+  };
+
+  (tournament.pools || []).forEach(pool => {
+    pool.rounds.forEach((matches, rIdx) => {
+      matches.forEach((match, mIdx) => {
+        if (!match || match.bye) return;
+        const score = pool.scores[`${rIdx}-${mIdx}`];
+        if (!score || score.a == null || score.b == null) return;
+        addResult(match.a, score.a, score.b);
+        addResult(match.b, score.b, score.a);
+      });
+    });
+  });
+
+  [tournament.finalPhase, tournament.consolationPhase].forEach(phase => {
+    if (!phase) return;
+    phase.rounds.forEach(round => {
+      round.pairs.forEach(([a, b], idx) => {
+        if (a.bye || b.bye) return;
+        const score = round.scores[idx];
+        if (!score || score.a == null || score.b == null) return;
+        addResult(a.team, score.a, score.b);
+        addResult(b.team, score.b, score.a);
+      });
+    });
+  });
+
+  return stats;
+}

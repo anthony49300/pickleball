@@ -234,10 +234,47 @@ function renderBracketPhase(phase, container) {
 }
 
 /**
+ * Podium visuel des 3 premiers du classement final (mêmes classes que le
+ * podium du mode Rotation : podium-container/podium-step/gold/silver/bronze).
+ */
+function renderFinalPodium(combined, statsByTeamId) {
+  if (combined.length < 3) return "";
+
+  const statLine = r => {
+    const s = statsByTeamId.get(r.team.id) || { w: 0, pf: 0, pa: 0 };
+    const diff = s.pf - s.pa;
+    return `${s.w}V · ${diff > 0 ? "+" : ""}${diff}`;
+  };
+
+  const [p1, p2, p3] = combined;
+  return `
+    <div class="podium-container">
+      <div class="podium-step silver">
+        <div class="podium-avatar">🥈</div>
+        <div class="podium-name">${escapeHtml(p2.team.name)}</div>
+        <div class="podium-stats">${statLine(p2)}</div>
+      </div>
+      <div class="podium-step gold">
+        <div class="podium-avatar">🥇</div>
+        <div class="podium-name">${escapeHtml(p1.team.name)}</div>
+        <div class="podium-stats">${statLine(p1)}</div>
+      </div>
+      <div class="podium-step bronze">
+        <div class="podium-avatar">🥉</div>
+        <div class="podium-name">${escapeHtml(p3.team.name)}</div>
+        <div class="podium-stats">${statLine(p3)}</div>
+      </div>
+    </div>
+  `;
+}
+
+/**
  * Affiche (ou masque) le classement final complet du tournoi, en fusionnant
  * la phase finale (places 1..N) et les matchs de classement des non-qualifiés
  * (places N+1..) — ce qui est déjà résolu s'affiche au fur et à mesure, même
- * si l'autre bracket n'est pas encore terminé (ou pas encore lancé).
+ * si l'autre bracket n'est pas encore terminé (ou pas encore lancé). Podium
+ * pour le top 3, tableau avec les statistiques agrégées sur tout le tournoi
+ * (poules + phase finale + matchs de classement).
  */
 function renderFinalRanking(tournament) {
   const fromFinalPhase = tournament?.finalPhase?.finalRanking || [];
@@ -249,15 +286,47 @@ function renderFinalRanking(tournament) {
     return;
   }
 
-  const rows = combined
-    .map(r => `<tr><td>${r.rank}</td><td>${escapeHtml(r.team.name)}</td></tr>`)
-    .join("");
+  const statsByTeamId = computeOverallTeamStats(tournament);
+  const zeroStats = { m: 0, w: 0, l: 0, pf: 0, pa: 0 };
+
+  const rows = combined.map(r => {
+    const s = statsByTeamId.get(r.team.id) || zeroStats;
+    const diff = s.pf - s.pa;
+    const diffClass = diff > 0 ? "diff-positive" : diff < 0 ? "diff-negative" : "";
+    const diffSign = diff > 0 ? "+" : "";
+    return `
+      <tr>
+        <td>${r.rank}</td>
+        <td>${escapeHtml(r.team.name)}</td>
+        <td>${s.m}</td>
+        <td>${s.w}</td>
+        <td>${s.l}</td>
+        <td>${s.pf}</td>
+        <td>${s.pa}</td>
+        <td class="${diffClass}">${diffSign}${diff}</td>
+      </tr>
+    `;
+  }).join("");
 
   elFinalRankingContainer.innerHTML = `
-    <table class="ranking-table">
-      <thead><tr><th>Rang</th><th>Équipe</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
+    ${renderFinalPodium(combined, statsByTeamId)}
+    <div style="overflow-x:auto;">
+      <table class="ranking-table">
+        <thead>
+          <tr>
+            <th>Rang</th>
+            <th>Équipe</th>
+            <th>MJ</th>
+            <th>V</th>
+            <th>D</th>
+            <th>PP</th>
+            <th>PC</th>
+            <th>+/-</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
   `;
   elFinalRankingSection.hidden = false;
 }

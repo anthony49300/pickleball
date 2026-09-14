@@ -46,6 +46,7 @@
     "buildShareableUrl": "readonly",
     "clearMessages": "readonly",
     "computeFinalRanking": "readonly",
+    "computeOverallTeamStats": "readonly",
     "computePoolStandings": "readonly",
     "confirmModal": "readonly",
     "copyFallbackModal": "readonly",

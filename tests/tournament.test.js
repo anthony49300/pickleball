@@ -48,7 +48,8 @@ const {
   isSegmentRoundComplete,
   advanceSegment,
   progressFinalPhase,
-  computeFinalRanking
+  computeFinalRanking,
+  computeOverallTeamStats
 } = global;
 
 let passed = 0;
@@ -501,6 +502,61 @@ test("computeFinalRanking : filtre les repos et renumérote les places en contin
   const ranking = computeFinalRanking(segments);
   assert.deepStrictEqual(ranking.map(r => r.team.id), [1, 2]);
   assert.deepStrictEqual(ranking.map(r => r.rank), [1, 2]);
+});
+
+test("computeOverallTeamStats : agrège les matchs de poule et de bracket pour chaque équipe", () => {
+  const team1 = { id: 1, name: "Team1" };
+  const team2 = { id: 2, name: "Team2" };
+
+  const tournament = {
+    pools: [{
+      teams: [team1, team2],
+      rounds: [[{ a: team1, b: team2 }]],
+      scores: { "0-0": { a: 11, b: 5 } }
+    }],
+    finalPhase: {
+      rounds: [{
+        pairs: [[{ team: team1 }, { team: team2 }]],
+        scores: { 0: { a: 11, b: 9 } }
+      }]
+    },
+    consolationPhase: null
+  };
+
+  const stats = computeOverallTeamStats(tournament);
+  const s1 = stats.get(1);
+  const s2 = stats.get(2);
+
+  assert.strictEqual(s1.m, 2);
+  assert.strictEqual(s1.w, 2);
+  assert.strictEqual(s1.l, 0);
+  assert.strictEqual(s1.pf, 22);
+  assert.strictEqual(s1.pa, 14);
+
+  assert.strictEqual(s2.m, 2);
+  assert.strictEqual(s2.w, 0);
+  assert.strictEqual(s2.l, 2);
+  assert.strictEqual(s2.pf, 14);
+  assert.strictEqual(s2.pa, 22);
+});
+
+test("computeOverallTeamStats : ignore les affiches de repos (bye) dans les brackets", () => {
+  const team1 = { id: 1, name: "Team1" };
+  const tournament = {
+    pools: [],
+    finalPhase: {
+      rounds: [{
+        pairs: [[{ team: team1 }, { bye: true }]],
+        scores: {}
+      }]
+    },
+    consolationPhase: null
+  };
+
+  const stats = computeOverallTeamStats(tournament);
+  // L'équipe n'a joué aucun vrai match (juste un repos) : pas d'entrée du tout,
+  // plutôt qu'une entrée à 0 — au rendu, on retombe sur des stats à zéro par défaut.
+  assert.strictEqual(stats.has(1), false);
 });
 
 // ---------------------------------------------------------------------------
