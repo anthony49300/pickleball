@@ -49,7 +49,8 @@ const {
   advanceSegment,
   progressFinalPhase,
   computeFinalRanking,
-  computeOverallTeamStats
+  computeOverallTeamStats,
+  assignCourtsToActiveMatches
 } = global;
 
 let passed = 0;
@@ -557,6 +558,39 @@ test("computeOverallTeamStats : ignore les affiches de repos (bye) dans les brac
   // L'équipe n'a joué aucun vrai match (juste un repos) : pas d'entrée du tout,
   // plutôt qu'une entrée à 0 — au rendu, on retombe sur des stats à zéro par défaut.
   assert.strictEqual(stats.has(1), false);
+});
+
+test("assignCourtsToActiveMatches : répartit les terrains entre plusieurs brackets actifs en même temps", () => {
+  const makeSegment = (id, numRealTeams) => ({
+    id,
+    slots: makeTeams(numRealTeams).map(t => ({ team: t }))
+  });
+
+  const phaseA = { segments: [makeSegment("a1", 4)] };  // 2 vrais matchs
+  const phaseB = { segments: [makeSegment("b1", 4)] };  // 2 vrais matchs
+
+  // 4 terrains pour 4 matchs au total : chacun un terrain distinct, sans chevauchement.
+  const assignment = assignCourtsToActiveMatches([phaseA, phaseB], 4);
+  const used = [
+    assignment.get("a1-0"), assignment.get("a1-1"),
+    assignment.get("b1-0"), assignment.get("b1-1")
+  ];
+  assert.strictEqual(new Set(used).size, 4, `Les 4 matchs devraient utiliser 4 terrains distincts : ${used}`);
+  assert.deepStrictEqual([...new Set(used)].sort((x, y) => x - y), [0, 1, 2, 3]);
+});
+
+test("assignCourtsToActiveMatches : boucle si moins de terrains que de matchs simultanés", () => {
+  const segment = { id: "s1", slots: makeTeams(4).map(t => ({ team: t })) }; // 2 vrais matchs
+  const assignment = assignCourtsToActiveMatches([{ segments: [segment] }], 1);
+  assert.strictEqual(assignment.get("s1-0"), 0);
+  assert.strictEqual(assignment.get("s1-1"), 0);
+});
+
+test("assignCourtsToActiveMatches : ignore les segments déjà résolus et les affiches de repos", () => {
+  const resolvedSegment = { id: "done", slots: [{ team: makeTeams(1)[0] }] }; // taille 1 : plus actif
+  const byeSegment = { id: "bye", slots: [{ team: makeTeams(1)[0] }, { bye: true }] };
+  const assignment = assignCourtsToActiveMatches([{ segments: [resolvedSegment, byeSegment] }], 4);
+  assert.strictEqual(assignment.size, 0);
 });
 
 // ---------------------------------------------------------------------------

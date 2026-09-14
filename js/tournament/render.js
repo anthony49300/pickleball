@@ -167,10 +167,15 @@ function renderPoolStandings(pools, qualifiersPerPool) {
  * @param {boolean} editable - true pour le tour en cours (saisie active),
  *   false pour l'historique (déjà joué, affiché en lecture seule)
  * @param {string|null} segmentId - identifiant du segment (nécessaire si editable)
- * @param {string[]} courtNames - noms de terrains optionnels (voir #courtNames),
- *   cyclés par position dans `pairs` comme pour les matchs de poule.
+ * @param {string[]} courtNames - noms de terrains optionnels (voir #courtNames)
+ * @param {Map<string,number>|null} activeCourtAssignment - pour le tour en
+ *   cours uniquement (editable=true) : terrain (0-based) attribué à chaque
+ *   match, calculé globalement à travers tous les brackets actifs en même
+ *   temps (voir assignCourtsToActiveMatches). Sans elle, replie sur la
+ *   position locale dans `pairs` (historique : un terrain "réservé" n'a plus
+ *   d'importance pour un match déjà joué).
  */
-function renderBracketPairs(pairs, scores, editable, segmentId, courtNames = []) {
+function renderBracketPairs(pairs, scores, editable, segmentId, courtNames = [], activeCourtAssignment = null) {
   return pairs.map(([a, b], idx) => {
     if (a.bye && b.bye) return "";
 
@@ -182,7 +187,8 @@ function renderBracketPairs(pairs, scores, editable, segmentId, courtNames = [])
     const score = scores[idx] || {};
     const readonlyAttr = editable ? "" : "readonly";
     const dataAttrs = editable ? `data-segment="${segmentId}" data-match="${idx}"` : "";
-    const courtLabel = escapeHtml(courtNames[idx] || `Terrain ${idx + 1}`);
+    const courtIdx = activeCourtAssignment?.get(`${segmentId}-${idx}`) ?? idx;
+    const courtLabel = escapeHtml(courtNames[courtIdx] || `Terrain ${courtIdx + 1}`);
     return `
       <div class="match-card">
         <span class="court-badge">${courtLabel}</span>
@@ -208,8 +214,11 @@ function renderBracketPairs(pairs, scores, editable, segmentId, courtNames = [])
  * @param {Object} phase - finalPhase ou consolationPhase (voir engine.js)
  * @param {HTMLElement} container
  * @param {string[]} courtNames - noms de terrains optionnels (voir #courtNames)
+ * @param {Map<string,number>|null} activeCourtAssignment - voir renderBracketPairs
+ *   et assignCourtsToActiveMatches (calculée à travers tous les brackets
+ *   actifs en même temps, pas seulement celui-ci).
  */
-function renderBracketPhase(phase, container, courtNames = []) {
+function renderBracketPhase(phase, container, courtNames = [], activeCourtAssignment = null) {
   if (!phase) {
     container.innerHTML = "";
     return;
@@ -230,12 +239,28 @@ function renderBracketPhase(phase, container, courtNames = []) {
       <div class="pool-card">
         <h3 class="pool-card-title">${escapeHtml(segmentLabel(segment))}</h3>
         <div class="round">
-          <div class="matches-list">${renderBracketPairs(segmentPairs(segment), segment.scores, true, segment.id, courtNames)}</div>
+          <div class="matches-list">${renderBracketPairs(segmentPairs(segment), segment.scores, true, segment.id, courtNames, activeCourtAssignment)}</div>
         </div>
       </div>
     `);
 
   container.innerHTML = [...historyCards, ...activeCards].join("");
+}
+
+/**
+ * Réaffiche la phase finale ET les matchs de classement ensemble, avec une
+ * attribution de terrain partagée entre les deux (voir
+ * assignCourtsToActiveMatches) — sinon chacun recommence sa numérotation à
+ * "Terrain 1" indépendamment, alors qu'ils peuvent tourner en même temps et
+ * ne peuvent pas physiquement partager les mêmes terrains.
+ */
+function renderBothBracketPhases(tournament) {
+  const assignment = assignCourtsToActiveMatches(
+    [tournament.finalPhase, tournament.consolationPhase],
+    tournament.numCourts
+  );
+  renderBracketPhase(tournament.finalPhase, elFinalPhaseContainer, tournament.courtNames, assignment);
+  renderBracketPhase(tournament.consolationPhase, elConsolationPhaseContainer, tournament.courtNames, assignment);
 }
 
 /**

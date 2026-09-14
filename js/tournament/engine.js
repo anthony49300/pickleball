@@ -653,3 +653,36 @@ function computeOverallTeamStats(tournament) {
 
   return stats;
 }
+
+/**
+ * Attribue un terrain (index 0-based) à chaque match RÉELLEMENT en attente de
+ * saisie (segments encore actifs, hors repos), à travers PLUSIEURS brackets
+ * qui peuvent tourner en même temps (phase finale + matchs de classement).
+ * Sans ça, chaque bracket recommence sa numérotation à "Terrain 1" de façon
+ * indépendante, alors qu'ils ne peuvent pas physiquement partager les mêmes
+ * terrains en même temps. L'historique déjà joué n'est pas concerné (un
+ * match déjà joué n'a plus besoin d'un terrain "réservé").
+ * @param {Array<Object|null>} phases - ex: [tournament.finalPhase, tournament.consolationPhase]
+ * @param {number} numCourts
+ * @returns {Map<string, number>} clé "segmentId-pairIndex" -> index de terrain (0-based)
+ */
+function assignCourtsToActiveMatches(phases, numCourts) {
+  const assignment = new Map();
+  const n = Math.max(1, numCourts || 1);
+  let cursor = 0;
+
+  phases.forEach(phase => {
+    if (!phase) return;
+    phase.segments
+      .filter(segment => segment.slots.length > 1)
+      .forEach(segment => {
+        segmentPairs(segment).forEach(([a, b], idx) => {
+          if (a.bye || b.bye) return;
+          assignment.set(`${segment.id}-${idx}`, cursor % n);
+          cursor++;
+        });
+      });
+  });
+
+  return assignment;
+}

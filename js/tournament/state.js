@@ -72,12 +72,7 @@ function loadTournamentState() {
     elPoolsSection.hidden = false;
     elPoolStandingsSection.hidden = false;
 
-    if (state.tournament.finalPhase) {
-      renderBracketPhase(state.tournament.finalPhase, elFinalPhaseContainer, state.tournament.courtNames || []);
-    }
-    if (state.tournament.consolationPhase) {
-      renderBracketPhase(state.tournament.consolationPhase, elConsolationPhaseContainer, state.tournament.courtNames || []);
-    }
+    renderBothBracketPhases(state.tournament);
     renderFinalRanking(state.tournament);
   }
 }

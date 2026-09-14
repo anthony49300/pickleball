@@ -240,9 +240,7 @@ function refreshCourtsOnExistingTournament() {
   tournament.courtNames = parseCourtNames(elCourtNames.value);
   tournament.courtAllocation = allocateCourtsToPools(tournament.pools, tournament.numCourts);
   renderPools(tournament.pools, tournament.courtNames, tournament.courtAllocation);
-
-  if (tournament.finalPhase) renderBracketPhase(tournament.finalPhase, elFinalPhaseContainer, tournament.courtNames);
-  if (tournament.consolationPhase) renderBracketPhase(tournament.consolationPhase, elConsolationPhaseContainer, tournament.courtNames);
+  renderBothBracketPhases(tournament);
 }
 
 elCourtNames.addEventListener("input", refreshCourtsOnExistingTournament);
@@ -282,10 +280,10 @@ elPoolsContainer.addEventListener("input", (e) => {
 /**
  * Câble le bouton "Générer..." d'un bracket à classement complet (phase
  * finale ou matchs de classement des non-qualifiés — même moteur pour les
- * deux, voir engine.js) : mêmes vérifications, seules la source des équipes,
- * le décalage de classement et le conteneur d'affichage changent.
+ * deux, voir engine.js) : mêmes vérifications, seules la source des équipes
+ * et le décalage de classement changent.
  */
-function wireBracketGenerateButton(button, { phaseKey, getSeededTeams, getRankOffset, notEnoughMessage, container }) {
+function wireBracketGenerateButton(button, { phaseKey, getSeededTeams, getRankOffset, notEnoughMessage }) {
   button.addEventListener("click", async () => {
     const tournament = window.__PT_TOURNAMENT__;
     if (!tournament) {
@@ -318,7 +316,7 @@ function wireBracketGenerateButton(button, { phaseKey, getSeededTeams, getRankOf
     tournament[phaseKey] = buildFinalPhase(seeded, getRankOffset(tournament));
     progressFinalPhase(tournament[phaseKey]);
 
-    renderBracketPhase(tournament[phaseKey], container, tournament.courtNames);
+    renderBothBracketPhases(tournament);
     renderFinalRanking(tournament);
     autoSaveTournamentState();
   });
@@ -353,7 +351,7 @@ function wireBracketScoreInputs(container, phaseKey) {
     progressFinalPhase(phase);
 
     if (phase.rounds.length !== roundsBefore) {
-      renderBracketPhase(phase, container, tournament.courtNames);
+      renderBothBracketPhases(tournament);
     }
     renderFinalRanking(tournament);
     autoSaveTournamentState();
@@ -364,16 +362,14 @@ wireBracketGenerateButton(btnGenerateFinalPhase, {
   phaseKey: "finalPhase",
   getSeededTeams: t => seedQualifiedTeams(t.pools, t.qualifiersPerPool),
   getRankOffset: () => 0,
-  notEnoughMessage: "Il faut au moins 2 équipes qualifiées pour lancer une phase finale.",
-  container: elFinalPhaseContainer
+  notEnoughMessage: "Il faut au moins 2 équipes qualifiées pour lancer une phase finale."
 });
 
 wireBracketGenerateButton(btnGenerateConsolationPhase, {
   phaseKey: "consolationPhase",
   getSeededTeams: t => seedNonQualifiedTeams(t.pools, t.qualifiersPerPool),
   getRankOffset: t => seedQualifiedTeams(t.pools, t.qualifiersPerPool).length,
-  notEnoughMessage: "Il faut au moins 2 équipes non qualifiées pour générer des matchs de classement.",
-  container: elConsolationPhaseContainer
+  notEnoughMessage: "Il faut au moins 2 équipes non qualifiées pour générer des matchs de classement."
 });
 
 wireBracketScoreInputs(elFinalPhaseContainer, "finalPhase");
