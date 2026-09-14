@@ -174,8 +174,12 @@ function renderPoolStandings(pools, qualifiersPerPool) {
  *   temps (voir assignCourtsToActiveMatches). Sans elle, replie sur la
  *   position locale dans `pairs` (historique : un terrain "réservé" n'a plus
  *   d'importance pour un match déjà joué).
+ * @param {number} phaseIdx - index de la phase (0 = finalPhase, 1 =
+ *   consolationPhase...) : les ids de segment ne sont PAS uniques entre deux
+ *   phases (buildFinalPhase part toujours de "seg-1"), phaseIdx désambiguïse
+ *   la clé de recherche dans activeCourtAssignment.
  */
-function renderBracketPairs(pairs, scores, editable, segmentId, courtNames = [], activeCourtAssignment = null) {
+function renderBracketPairs(pairs, scores, editable, segmentId, courtNames = [], activeCourtAssignment = null, phaseIdx = 0) {
   return pairs.map(([a, b], idx) => {
     if (a.bye && b.bye) return "";
 
@@ -187,7 +191,7 @@ function renderBracketPairs(pairs, scores, editable, segmentId, courtNames = [],
     const score = scores[idx] || {};
     const readonlyAttr = editable ? "" : "readonly";
     const dataAttrs = editable ? `data-segment="${segmentId}" data-match="${idx}"` : "";
-    const courtIdx = activeCourtAssignment?.get(`${segmentId}-${idx}`) ?? idx;
+    const courtIdx = activeCourtAssignment?.get(`${phaseIdx}-${segmentId}-${idx}`) ?? idx;
     const courtLabel = escapeHtml(courtNames[courtIdx] || `Terrain ${courtIdx + 1}`);
     return `
       <div class="match-card">
@@ -217,8 +221,11 @@ function renderBracketPairs(pairs, scores, editable, segmentId, courtNames = [],
  * @param {Map<string,number>|null} activeCourtAssignment - voir renderBracketPairs
  *   et assignCourtsToActiveMatches (calculée à travers tous les brackets
  *   actifs en même temps, pas seulement celui-ci).
+ * @param {number} phaseIdx - voir renderBracketPairs (0 pour finalPhase, 1
+ *   pour consolationPhase — doit correspondre à l'ordre passé à
+ *   assignCourtsToActiveMatches pour que les clés se retrouvent).
  */
-function renderBracketPhase(phase, container, courtNames = [], activeCourtAssignment = null) {
+function renderBracketPhase(phase, container, courtNames = [], activeCourtAssignment = null, phaseIdx = 0) {
   if (!phase) {
     container.innerHTML = "";
     return;
@@ -239,7 +246,7 @@ function renderBracketPhase(phase, container, courtNames = [], activeCourtAssign
       <div class="pool-card">
         <h3 class="pool-card-title">${escapeHtml(segmentLabel(segment))}</h3>
         <div class="round">
-          <div class="matches-list">${renderBracketPairs(segmentPairs(segment), segment.scores, true, segment.id, courtNames, activeCourtAssignment)}</div>
+          <div class="matches-list">${renderBracketPairs(segmentPairs(segment), segment.scores, true, segment.id, courtNames, activeCourtAssignment, phaseIdx)}</div>
         </div>
       </div>
     `);
@@ -252,15 +259,17 @@ function renderBracketPhase(phase, container, courtNames = [], activeCourtAssign
  * attribution de terrain partagée entre les deux (voir
  * assignCourtsToActiveMatches) — sinon chacun recommence sa numérotation à
  * "Terrain 1" indépendamment, alors qu'ils peuvent tourner en même temps et
- * ne peuvent pas physiquement partager les mêmes terrains.
+ * ne peuvent pas physiquement partager les mêmes terrains. L'ordre passé ici
+ * (finalPhase = index 0, consolationPhase = index 1) doit correspondre à
+ * celui utilisé pour construire `assignment`.
  */
 function renderBothBracketPhases(tournament) {
   const assignment = assignCourtsToActiveMatches(
     [tournament.finalPhase, tournament.consolationPhase],
     tournament.numCourts
   );
-  renderBracketPhase(tournament.finalPhase, elFinalPhaseContainer, tournament.courtNames, assignment);
-  renderBracketPhase(tournament.consolationPhase, elConsolationPhaseContainer, tournament.courtNames, assignment);
+  renderBracketPhase(tournament.finalPhase, elFinalPhaseContainer, tournament.courtNames, assignment, 0);
+  renderBracketPhase(tournament.consolationPhase, elConsolationPhaseContainer, tournament.courtNames, assignment, 1);
 }
 
 /**

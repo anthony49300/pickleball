@@ -671,14 +671,19 @@ function assignCourtsToActiveMatches(phases, numCourts) {
   const n = Math.max(1, numCourts || 1);
   let cursor = 0;
 
-  phases.forEach(phase => {
+  // Les segments sont numérotés de la même façon dans n'importe quelle phase
+  // (buildFinalPhase part toujours de "seg-1", advanceSegment ajoute "-w"/"-l") :
+  // la phase finale et les matchs de classement partagent donc souvent le
+  // même id de segment. On préfixe la clé par l'index de la phase (0, 1...)
+  // pour ne jamais faire écraser l'attribution de l'une par celle de l'autre.
+  phases.forEach((phase, phaseIdx) => {
     if (!phase) return;
     phase.segments
       .filter(segment => segment.slots.length > 1)
       .forEach(segment => {
         segmentPairs(segment).forEach(([a, b], idx) => {
           if (a.bye || b.bye) return;
-          assignment.set(`${segment.id}-${idx}`, cursor % n);
+          assignment.set(`${phaseIdx}-${segment.id}-${idx}`, cursor % n);
           cursor++;
         });
       });

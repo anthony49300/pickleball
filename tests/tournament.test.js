@@ -572,18 +572,42 @@ test("assignCourtsToActiveMatches : répartit les terrains entre plusieurs brack
   // 4 terrains pour 4 matchs au total : chacun un terrain distinct, sans chevauchement.
   const assignment = assignCourtsToActiveMatches([phaseA, phaseB], 4);
   const used = [
-    assignment.get("a1-0"), assignment.get("a1-1"),
-    assignment.get("b1-0"), assignment.get("b1-1")
+    assignment.get("0-a1-0"), assignment.get("0-a1-1"),
+    assignment.get("1-b1-0"), assignment.get("1-b1-1")
   ];
   assert.strictEqual(new Set(used).size, 4, `Les 4 matchs devraient utiliser 4 terrains distincts : ${used}`);
   assert.deepStrictEqual([...new Set(used)].sort((x, y) => x - y), [0, 1, 2, 3]);
 });
 
+test("assignCourtsToActiveMatches : ne mélange pas deux phases dont les segments partagent le même id", () => {
+  // buildFinalPhase part TOUJOURS de l'id "seg-1" : la phase finale et les
+  // matchs de classement ont donc typiquement le même id de segment. Sans
+  // distinction par phase, la 2e phase traitée écraserait l'attribution de
+  // la 1re dans la map (même clé) — régression du bug remonté par l'utilisateur.
+  const makeSegment = numRealTeams => ({
+    id: "seg-1",
+    slots: makeTeams(numRealTeams).map(t => ({ team: t }))
+  });
+
+  const finalPhase = { segments: [makeSegment(4)] };       // 2 vrais matchs
+  const consolationPhase = { segments: [makeSegment(4)] }; // 2 vrais matchs, même id "seg-1"
+
+  const assignment = assignCourtsToActiveMatches([finalPhase, consolationPhase], 4);
+  const finalCourts = [assignment.get("0-seg-1-0"), assignment.get("0-seg-1-1")];
+  const consolationCourts = [assignment.get("1-seg-1-0"), assignment.get("1-seg-1-1")];
+
+  assert.ok(finalCourts.every(c => c != null), "Attribution manquante pour la phase finale");
+  assert.ok(consolationCourts.every(c => c != null), "Attribution manquante pour les matchs de classement");
+
+  const overlap = finalCourts.filter(c => consolationCourts.includes(c));
+  assert.strictEqual(overlap.length, 0, `Les deux phases partagent un terrain alors qu'il y en a assez : ${JSON.stringify({ finalCourts, consolationCourts })}`);
+});
+
 test("assignCourtsToActiveMatches : boucle si moins de terrains que de matchs simultanés", () => {
   const segment = { id: "s1", slots: makeTeams(4).map(t => ({ team: t })) }; // 2 vrais matchs
   const assignment = assignCourtsToActiveMatches([{ segments: [segment] }], 1);
-  assert.strictEqual(assignment.get("s1-0"), 0);
-  assert.strictEqual(assignment.get("s1-1"), 0);
+  assert.strictEqual(assignment.get("0-s1-0"), 0);
+  assert.strictEqual(assignment.get("0-s1-1"), 0);
 });
 
 test("assignCourtsToActiveMatches : ignore les segments déjà résolus et les affiches de repos", () => {
