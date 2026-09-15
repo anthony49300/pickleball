@@ -6,7 +6,7 @@
   <title>JF Pickleball — Mode Tournoi</title>
 
   <!-- Favicon Balle de Pickleball SVG (identique à index.html, pour une identité cohérente) -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2245%22 fill=%22%23ccff00%22/><circle cx=%2235%22 cy=%2235%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2265%22 cy=%2235%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2250%22 cy=%2250%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2235%22 cy=%2265%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2265%22 cy=%2265%22 r=%226%22 fill=%22%230a0f18%22/></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2245%22 fill=%22%23ffd700%22/><circle cx=%2235%22 cy=%2235%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2265%22 cy=%2235%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2250%22 cy=%2250%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2235%22 cy=%2265%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2265%22 cy=%2265%22 r=%226%22 fill=%22%230a0f18%22/></svg>">
 
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="stylesheet" href="css/tournament.css" />
@@ -28,7 +28,7 @@
   <header class="container header-bar">
     <h1>
       <svg width="32" height="32" viewBox="0 0 100 100" style="vertical-align: middle;">
-        <circle cx="50" cy="50" r="45" fill="#ccff00"/>
+        <circle cx="50" cy="50" r="45" fill="#ffd700"/>
         <circle cx="35" cy="35" r="5" fill="#0a0f18"/>
         <circle cx="65" cy="35" r="5" fill="#0a0f18"/>
         <circle cx="50" cy="50" r="5" fill="#0a0f18"/>
@@ -37,10 +37,13 @@
       </svg>
       JF Pickleball — Tournoi
     </h1>
+    <nav class="mode-tabs" aria-label="Mode de l'application">
+      <a href="index.html" class="mode-tab">⚡ Rotation</a>
+      <a href="tournoi.html" class="mode-tab active" aria-current="page">🏆 Tournoi</a>
+    </nav>
     <div class="header-actions" style="display:flex; align-items:center; gap:10px;">
       <div id="autosaveBadge" class="save-badge">💾 Sauvegardé</div>
       <button id="themeToggleBtn" class="secondary" style="font-size: 0.9rem; padding: 6px 10px;" title="Changer de thème (clair/sombre)" aria-label="Changer de thème">🌙</button>
-      <a href="index.html" class="secondary" style="font-size: 0.8rem; padding: 6px 12px; text-decoration:none; display:inline-flex; align-items:center;" title="Retour au générateur de rotations">🔄 Mode Rotation</a>
     </div>
   </header>
 
@@ -58,15 +61,28 @@
       </label>
       <textarea id="teams" rows="6" placeholder="Alice &amp; Bob&#10;Chloé &amp; David&#10;Émilie &amp; Farid"></textarea>
 
-      <div class="group-save-row" style="margin-top: 10px;">
-        <select id="importGroupSelect">
-          <option value="">— Importer depuis un groupe enregistré —</option>
-        </select>
-        <button id="importGroupBtn" class="secondary" type="button">📥 Importer (paires successives)</button>
-      </div>
-      <p class="subtle" style="font-size: 0.78rem; margin-top: 6px;">
-        L'import forme des paires en associant les joueurs du groupe deux par deux, dans l'ordre — à ajuster ensuite si besoin directement dans le champ ci-dessus.
-      </p>
+      <!-- FORMATION AUTOMATIQUE DES EQUIPES -->
+      <details class="details" id="autoFormTeamsDetails" style="margin-top: 10px;">
+        <summary>🎲 Générer les équipes automatiquement</summary>
+
+        <p class="subtle" style="font-size: 0.82rem; margin: 6px 0 8px;">Depuis un groupe de joueurs déjà enregistré (mode Rotation) :</p>
+        <div class="group-save-row">
+          <select id="importGroupSelect">
+            <option value="">— Choisir un groupe enregistré —</option>
+          </select>
+          <button id="importGroupBtn" class="secondary" type="button">📥 Importer (paires successives)</button>
+        </div>
+
+        <p class="subtle" style="font-size: 0.82rem; margin: 14px 0 8px;">Ou depuis une liste libre de joueurs individuels (un par ligne, ou séparés par des virgules) :</p>
+        <textarea id="individualPlayers" rows="4" placeholder="Alice&#10;Bob&#10;Chloé&#10;David"></textarea>
+        <div class="actions-secondary" style="margin-top: 8px;">
+          <button id="formPairsBtn" class="secondary" type="button">🎲 Former des paires aléatoirement</button>
+        </div>
+
+        <p class="subtle" style="font-size: 0.78rem; margin-top: 10px;">
+          Dans les deux cas, les paires formées remplacent le champ "Équipes" ci-dessus — à ajuster ensuite si besoin.
+        </p>
+      </details>
 
       <p id="teamsWarning" class="warning" hidden></p>
       <p id="teamsError" class="error" hidden></p>
@@ -78,7 +94,7 @@
 
       <div class="row">
         <div>
-          <label class="label" for="numPools">🏊 Nombre de poules</label>
+          <label class="label" for="numPools">👥 Nombre de poules</label>
           <div class="stepper" data-min="1" data-max="16">
             <button type="button" class="stepper-btn" data-step="-1" aria-label="Diminuer le nombre de poules">−</button>
             <input id="numPools" type="number" min="1" max="16" value="2" />
@@ -93,6 +109,14 @@
             <button type="button" class="stepper-btn" data-step="1" aria-label="Augmenter le nombre de qualifiés">+</button>
           </div>
         </div>
+        <div>
+          <label class="label" for="numCourts">🏟️ Nombre de terrains disponibles</label>
+          <div class="stepper" data-min="1" data-max="16">
+            <button type="button" class="stepper-btn" data-step="-1" aria-label="Diminuer le nombre de terrains">−</button>
+            <input id="numCourts" type="number" min="1" max="16" value="2" />
+            <button type="button" class="stepper-btn" data-step="1" aria-label="Augmenter le nombre de terrains">+</button>
+          </div>
+        </div>
       </div>
 
       <label class="label" for="poolAssignMode" style="margin-top: 14px;">🔀 Répartition des équipes en poules</label>
@@ -101,6 +125,12 @@
         <option value="seeded">Tête de série (l'ordre de la liste ci-dessus = le classement des têtes de série)</option>
         <option value="manual">Manuelle (je choisis moi-même la poule de chaque équipe)</option>
       </select>
+
+      <p class="subtle" style="font-size: 0.8rem; margin-top: 14px;">
+        Chaque poule reçoit au moins 1 terrain dédié dès qu'il y en a assez pour ça (les terrains en trop vont aux poules les plus grandes, pour paralléliser davantage) — sinon les poules se partagent les terrains disponibles, à tour de rôle.
+      </p>
+      <label class="label" for="courtNames">🏷️ Noms des terrains (optionnel, séparés par des virgules — sinon "Terrain 1", "Terrain 2"...)</label>
+      <input id="courtNames" type="text" placeholder="ex: Court Central, Court 1, Terrain A" />
 
       <div class="actions" style="margin-top: 16px;">
         <button id="generatePools" class="btn-primary-lg">⚡ Générer les poules</button>
@@ -120,7 +150,7 @@
     <!-- PHASE DE POULES : calendrier + saisie des scores -->
     <section class="card" id="poolsSection" style="grid-column: 1 / -1;" hidden>
       <div class="headerRow">
-        <h2>🏊 Phase de poules</h2>
+        <h2>👥 Phase de poules</h2>
       </div>
       <div id="poolsContainer" class="pools-container"></div>
     </section>
@@ -136,10 +166,37 @@
       <div id="poolStandingsContainer" class="pool-standings-container"></div>
     </section>
 
-    <!-- PHASE FINALE (à venir) -->
+    <!-- PHASE FINALE -->
     <section class="card" style="grid-column: 1 / -1;">
-      <h2>🥇 Phase finale</h2>
-      <p class="subtle">À venir : bracket à élimination avec matchs de classement pour toutes les équipes éliminées, à partir des qualifiés de chaque poule.</p>
+      <div class="headerRow">
+        <h2>🥇 Phase finale</h2>
+        <button id="generateFinalPhase" class="secondary" type="button">⚡ Générer la phase finale</button>
+      </div>
+      <p class="subtle" style="font-size: 0.85rem;">
+        À partir des équipes qualifiées de chaque poule (tous les matchs de poule doivent être terminés). Élimination directe, mais les équipes battues continuent à jouer entre elles pour se classer, jusqu'à ce que tout le monde ait une place précise — personne ne s'arrête après une seule défaite.
+      </p>
+      <div id="finalPhaseContainer" class="pools-container"></div>
+    </section>
+
+    <!-- MATCHS DE CLASSEMENT (équipes non qualifiées) -->
+    <section class="card" style="grid-column: 1 / -1;">
+      <div class="headerRow">
+        <h2>🥈 Matchs de classement</h2>
+        <button id="generateConsolationPhase" class="secondary" type="button">⚡ Générer les matchs de classement</button>
+      </div>
+      <p class="subtle" style="font-size: 0.85rem;">
+        Pour les équipes NON qualifiées : même principe que la phase finale, pour qu'elles continuent elles aussi à jouer et obtiennent une place précise (à la suite de celles de la phase finale) plutôt que de s'arrêter à la fin des poules.
+      </p>
+      <div id="consolationPhaseContainer" class="pools-container"></div>
+    </section>
+
+    <!-- CLASSEMENT FINAL DU TOURNOI -->
+    <section class="card" id="finalRankingSection" style="grid-column: 1 / -1;" hidden>
+      <div class="headerRow">
+        <h2>🏆 Classement final du tournoi</h2>
+        <button id="exportFinalRankingPng" class="secondary" type="button">📷 Exporter le classement</button>
+      </div>
+      <div id="finalRankingContainer"></div>
     </section>
   </main>
 
@@ -166,6 +223,10 @@
       </div>
     </div>
   </div>
+
+  <!-- Bibliothèque embarquée localement pour l'export du classement en image
+       (voir index.html) : l'app doit fonctionner hors-ligne. -->
+  <script src="js/vendor/html2canvas.min.js"></script>
 
   <!-- Modules partagés avec index.html : modale générique, thème clair/sombre
        et câblage des steppers (+/- sur "Nombre de poules", etc.). -->

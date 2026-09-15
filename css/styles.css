@@ -9,6 +9,11 @@
   --court-green: #10b981;
   --pickle-yellow: #ccff00;
   --pickle-yellow-hover: #b3e600;
+  /* Canal RGB de --pickle-yellow, pour les halos/ombres translucides
+     (rgba(var(--pickle-yellow-rgb), X)) — même principe que --fg-overlay-rgb.
+     Permet à une page qui surcharge --pickle-yellow (ex: tournoi.html, en
+     doré) de voir ses halos suivre automatiquement la même teinte. */
+  --pickle-yellow-rgb: 204, 255, 0;
   --heading-start: #ffffff;
   --text-main: #f8fafc;
   --text-subtle: #94a3b8;
@@ -39,6 +44,7 @@
      serait quasi illisible (contraste très insuffisant). */
   --pickle-yellow: #5c6900;
   --pickle-yellow-hover: #4a5400;
+  --pickle-yellow-rgb: 92, 105, 0;
   --heading-start: #0f172a;
   --text-main: #0f172a;
   --text-subtle: #475569;
@@ -49,7 +55,7 @@
      reprend une teinte pâle de l'accent jaune-vert, cohérente avec sa bordure
      et son halo (qui eux ne changent pas de couleur entre les deux thèmes). */
   --round-bg: rgba(15, 23, 42, 0.04);
-  --round-bg-active: rgba(204, 255, 0, 0.12);
+  --round-bg-active: rgba(var(--pickle-yellow-rgb), 0.12);
   --table-header-bg: rgba(0, 0, 0, 0.06);
 }
 
@@ -76,6 +82,40 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  row-gap: 10px;
+}
+
+/* --------------------------------------------------
+   ONGLETS DE MODE (Rotation / Tournoi) — présents dans l'en-tête des deux
+   pages du site (index.html, tournoi.html), avec l'onglet de la page
+   courante marqué .active.
+-------------------------------------------------- */
+.mode-tabs {
+  display: flex;
+  gap: 4px;
+  background: rgba(var(--fg-overlay-rgb), 0.06);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  padding: 4px;
+}
+
+.mode-tab {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--text-subtle);
+  white-space: nowrap;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.mode-tab:hover { color: var(--text-main); }
+
+.mode-tab.active {
+  background: var(--pickle-yellow);
+  color: #000;
 }
 
 header h1 {
@@ -132,7 +172,7 @@ h2 {
   font-size: 1.25rem;
   font-weight: 700;
   color: var(--text-main);
-  border-bottom: 2px solid rgba(204, 255, 0, 0.2);
+  border-bottom: 2px solid rgba(var(--pickle-yellow-rgb), 0.2);
   padding-bottom: 8px;
 }
 
@@ -155,9 +195,9 @@ h2 {
 }
 
 .count-badge {
-  background: rgba(204, 255, 0, 0.1);
+  background: rgba(var(--pickle-yellow-rgb), 0.1);
   color: var(--pickle-yellow);
-  border: 1px solid rgba(204, 255, 0, 0.25);
+  border: 1px solid rgba(var(--pickle-yellow-rgb), 0.25);
   padding: 2px 10px;
   border-radius: 20px;
   font-size: 0.72rem;
@@ -187,7 +227,7 @@ textarea, input[type="text"], input[type="number"] {
 
 textarea:focus, input:focus {
   border-color: var(--pickle-yellow);
-  box-shadow: 0 0 0 3px rgba(204, 255, 0, 0.15);
+  box-shadow: 0 0 0 3px rgba(var(--pickle-yellow-rgb), 0.15);
 }
 
 textarea { resize: vertical; min-height: 110px; }
@@ -247,12 +287,12 @@ textarea { resize: vertical; min-height: 110px; }
 }
 
 .stepper-btn:hover {
-  background: rgba(204, 255, 0, 0.15);
+  background: rgba(var(--pickle-yellow-rgb), 0.15);
   color: var(--pickle-yellow);
   transform: none;
 }
 
-.stepper-btn:active { background: rgba(204, 255, 0, 0.25); }
+.stepper-btn:active { background: rgba(var(--pickle-yellow-rgb), 0.25); }
 
 /* --------------------------------------------------
    SLIDER (RANGE) POUR LES OPTIONS D'ALGORITHME
@@ -282,7 +322,7 @@ textarea { resize: vertical; min-height: 110px; }
   border-radius: 50%;
   background: var(--pickle-yellow);
   border: 2px solid var(--bg-dark);
-  box-shadow: 0 0 8px rgba(204, 255, 0, 0.5);
+  box-shadow: 0 0 8px rgba(var(--pickle-yellow-rgb), 0.5);
   cursor: pointer;
   transition: transform 0.15s ease;
 }
@@ -295,7 +335,7 @@ textarea { resize: vertical; min-height: 110px; }
   border-radius: 50%;
   background: var(--pickle-yellow);
   border: 2px solid var(--bg-dark);
-  box-shadow: 0 0 8px rgba(204, 255, 0, 0.5);
+  box-shadow: 0 0 8px rgba(var(--pickle-yellow-rgb), 0.5);
   cursor: pointer;
 }
 
@@ -314,7 +354,7 @@ textarea { resize: vertical; min-height: 110px; }
   font-weight: 700;
   font-size: 0.85rem;
   color: var(--pickle-yellow);
-  background: rgba(204, 255, 0, 0.08);
+  background: rgba(var(--pickle-yellow-rgb), 0.08);
   border-radius: 6px;
   padding: 3px 6px;
   flex-shrink: 0;
@@ -482,7 +522,7 @@ button {
   font-weight: 700;
   font-size: 0.9rem;
   transition: transform 0.1s, background-color 0.2s, box-shadow 0.2s;
-  box-shadow: 0 4px 14px rgba(204, 255, 0, 0.2);
+  box-shadow: 0 4px 14px rgba(var(--pickle-yellow-rgb), 0.2);
 }
 
 button:hover {
@@ -576,7 +616,7 @@ button:disabled {
   background: var(--pickle-yellow);
   color: #000;
   border-color: var(--pickle-yellow);
-  box-shadow: 0 0 10px rgba(204, 255, 0, 0.4);
+  box-shadow: 0 0 10px rgba(var(--pickle-yellow-rgb), 0.4);
 }
 
 .step-item.completed {
@@ -630,7 +670,7 @@ button:disabled {
 
 .round.active-round {
   border-color: var(--pickle-yellow);
-  box-shadow: 0 0 20px rgba(204, 255, 0, 0.25), inset 0 0 15px rgba(204, 255, 0, 0.05);
+  box-shadow: 0 0 20px rgba(var(--pickle-yellow-rgb), 0.25), inset 0 0 15px rgba(var(--pickle-yellow-rgb), 0.05);
   background: var(--round-bg-active);
 }
 
@@ -643,14 +683,14 @@ button:disabled {
   border-radius: 10px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  box-shadow: 0 0 8px rgba(204, 255, 0, 0.6);
+  box-shadow: 0 0 8px rgba(var(--pickle-yellow-rgb), 0.6);
   animation: pulse-glow 2s infinite;
 }
 
 @keyframes pulse-glow {
-  0% { box-shadow: 0 0 4px rgba(204, 255, 0, 0.4); }
-  50% { box-shadow: 0 0 12px rgba(204, 255, 0, 0.8); }
-  100% { box-shadow: 0 0 4px rgba(204, 255, 0, 0.4); }
+  0% { box-shadow: 0 0 4px rgba(var(--pickle-yellow-rgb), 0.4); }
+  50% { box-shadow: 0 0 12px rgba(var(--pickle-yellow-rgb), 0.8); }
+  100% { box-shadow: 0 0 4px rgba(var(--pickle-yellow-rgb), 0.4); }
 }
 
 .roundTitle {
@@ -782,7 +822,7 @@ button:disabled {
   background: var(--pickle-yellow);
   border-radius: 4px;
   margin: 0;
-  box-shadow: 0 0 8px rgba(204, 255, 0, 0.5);
+  box-shadow: 0 0 8px rgba(var(--pickle-yellow-rgb), 0.5);
   pointer-events: none;
 }
 
@@ -878,7 +918,7 @@ button:disabled {
 
 .badge-icon {
   font-size: 1.8rem;
-  background: rgba(204, 255, 0, 0.1);
+  background: rgba(var(--pickle-yellow-rgb), 0.1);
   padding: 8px;
   border-radius: 10px;
 }

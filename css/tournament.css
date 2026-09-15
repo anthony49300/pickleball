@@ -1,9 +1,40 @@
 /* --------------------------------------------------
    MODE TOURNOI — styles propres aux poules & à la phase finale.
    Réutilise les variables de thème déjà définies dans styles.css (--bg-card,
-   --border-color, --text-main, --pickle-yellow, --fg-overlay-rgb...) : ce
-   fichier n'en redéfinit aucune, il s'appuie sur le thème clair/sombre existant.
+   --border-color, --text-main, --fg-overlay-rgb...) : ce fichier ne les
+   redéfinit pas, il s'appuie sur le thème clair/sombre existant. Seule
+   exception : --pickle-yellow ci-dessous, surchargée en doré pour donner à
+   ce mode sa propre couleur d'accent (voir plus bas).
 -------------------------------------------------- */
+
+/* --------------------------------------------------
+   COULEUR D'ACCENT DU MODE TOURNOI (doré, au lieu du jaune-vert "pickle" du
+   mode Rotation) — pour distinguer les deux modes en un coup d'œil, y
+   compris quand on bascule entre les deux onglets. --pickle-yellow est déjà
+   utilisée partout dans styles.css (boutons, titres, bordures actives,
+   badges...) : la surcharger ici suffit à teinter tout le mode Tournoi sans
+   toucher aux règles individuelles. Reprend les mêmes sélecteurs que
+   styles.css (:root / [data-theme="light"]), chargés APRÈS lui : mêmes
+   valeurs par défaut (sombre) et mêmes bascules pour le thème clair.
+   Couleur choisie : le doré déjà utilisé pour la marche "or" du podium
+   (#ffd700), pour une cohérence avec les médailles. --pickle-yellow-rgb
+   (canal RGB, utilisé pour tous les halos/ombres translucides de styles.css)
+   est surchargée en même temps, pour que ces halos suivent aussi le doré au
+   lieu de rester teintés en vert-jaune.
+-------------------------------------------------- */
+:root {
+  --pickle-yellow: #ffd700;
+  --pickle-yellow-hover: #e6c200;
+  --pickle-yellow-rgb: 255, 215, 0;
+}
+
+[data-theme="light"] {
+  /* Même logique que le jaune-vert du mode Rotation en thème clair : une
+     version bien plus sombre, lisible en texte sur fond clair. */
+  --pickle-yellow: #7a5c00;
+  --pickle-yellow-hover: #654b00;
+  --pickle-yellow-rgb: 122, 92, 0;
+}
 
 /* --------------------------------------------------
    MENUS DEROULANTS (select)
@@ -25,7 +56,19 @@ select {
 
 select:focus {
   border-color: var(--pickle-yellow);
-  box-shadow: 0 0 0 3px rgba(204, 255, 0, 0.15);
+  box-shadow: 0 0 0 3px rgba(var(--pickle-yellow-rgb), 0.15);
+}
+
+/* Le menu déroulant natif (liste d'options ouverte) suit le rendu de l'OS et
+   ignore la plupart des styles du <select> lui-même. background-color/color
+   sur <option> restent honorés par Chrome/Edge/Firefox sur Windows et
+   évitent la liste blanche par défaut, en désaccord avec le thème sombre.
+   --bg-dark (opaque) plutôt que --bg-card (translucide) : cette popup ne
+   fait pas partie de la pile de rendu de la page, une couleur avec alpha
+   se mélangerait avec un fond hors de notre contrôle. */
+select option {
+  background: var(--bg-dark);
+  color: var(--text-main);
 }
 
 /* .group-save-row (réutilisé depuis styles.css) ne cible que <input> pour le
@@ -66,11 +109,23 @@ select:focus {
 }
 
 /* --------------------------------------------------
-   PHASE DE POULES : une carte par poule, calendrier + scores
+   PHASE DE POULES : une carte par poule, calendrier + scores.
+   Le calendrier lui-même (journée = .round, match = .match-card, etc.) réutilise
+   TEL QUEL le visuel "terrain de pickleball" de styles.css (mode Rotation) :
+   mêmes classes .round/.roundTitle/.matches-list/.match-card/.court-badge/
+   .team-score/.team/.vs/.score-input, pour une apparence identique entre les
+   deux modes. Rien n'est redéfini ici pour ces éléments.
+
+   Poules empilées en une seule colonne (pas de grille côte à côte) : le badge
+   "terrain" de .match-card est positionné en absolu par-dessus le texte, et ne
+   laisse assez de place au nom des équipes que dans une carte suffisamment
+   large — comme la zone de planning du mode Rotation, déjà pleine largeur.
+   Des cartes de poule côte à côte (donc plus étroites) recréaient ce
+   chevauchement avec des noms d'équipe un peu longs.
 -------------------------------------------------- */
 .pools-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: 1fr;
   gap: 20px;
 }
 
@@ -79,72 +134,15 @@ select:focus {
   border-radius: 14px;
   padding: 16px;
   background: var(--round-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.pool-card h3 {
-  margin: 0 0 12px;
+.pool-card-title {
+  margin: 0;
   font-size: 1.05rem;
   color: var(--pickle-yellow);
-}
-
-.pool-round {
-  margin-bottom: 14px;
-}
-
-.pool-round-title {
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-subtle);
-  margin-bottom: 6px;
-}
-
-.pool-match {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  margin-bottom: 6px;
-}
-
-.pool-match .pool-team-name {
-  flex: 1;
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.pool-match .pool-team-name:last-child {
-  text-align: right;
-}
-
-.pool-match .pool-score-input {
-  width: 40px;
-  min-width: 40px;
-  max-width: 40px;
-  height: 32px;
-  text-align: center;
-  border-radius: 6px;
-  border: 1px solid var(--border-color);
-  background: rgba(var(--fg-overlay-rgb), 0.08);
-  color: var(--text-main);
-  font-size: 0.95rem;
-  padding: 2px;
-}
-
-.pool-match .pool-vs-badge {
-  font-size: 0.72rem;
-  font-weight: 800;
-  color: var(--pickle-yellow);
-  padding: 2px 6px;
-}
-
-.pool-match.bye {
-  opacity: 0.6;
-  font-style: italic;
-  justify-content: center;
 }
 
 /* --------------------------------------------------
@@ -170,10 +168,6 @@ select:focus {
   color: var(--pickle-yellow);
 }
 
-.pool-standing-card .ranking-table td.qualified-team {
-  position: relative;
-}
-
 .pool-standing-card tr.qualified {
   background: rgba(16, 185, 129, 0.1);
 }
@@ -181,3 +175,105 @@ select:focus {
 .pool-standing-card tr.qualified td:first-child {
   border-left: 3px solid var(--court-green);
 }
+
+/* --------------------------------------------------
+   RENOMMAGE ET FORFAIT D'UNE EQUIPE (boutons ✏️/🚫 à côté du nom, dans le
+   tableau de classement de poule — voir events.js).
+-------------------------------------------------- */
+.team-name-actions {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 6px;
+}
+
+.icon-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 6px;
+  opacity: 0.55;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.icon-btn:hover {
+  opacity: 1;
+  background: rgba(var(--fg-overlay-rgb), 0.08);
+}
+
+.team-forfeit-btn.active {
+  opacity: 1;
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.team-rename-input {
+  width: 100%;
+  min-width: 140px;
+  border-radius: 8px;
+  border: 1px solid var(--pickle-yellow);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text-main);
+  padding: 4px 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+
+/* Ligne d'une équipe forfait : dans le classement de poule (.pool-standing-card,
+   nom barré via .team-name-text) ET dans le classement final (.ranking-table,
+   voir renderFinalRanking — pas de .team-name-text là, juste la ligne grisée). */
+.pool-standing-card tr.forfeited,
+.ranking-table tr.forfeited {
+  opacity: 0.6;
+}
+
+.pool-standing-card tr.forfeited .team-name-text {
+  text-decoration: line-through;
+}
+
+.forfeit-badge-inline {
+  font-size: 0.75rem;
+  color: #ef4444;
+  font-weight: 700;
+}
+
+/* Badge affiché sur un match de poule résolu automatiquement (forfait).
+   .match-card (styles.css, mode Rotation) est une grille à 2 colonnes dont
+   les seuls enfants "dans le flux" attendus sont les deux .team-score : tout
+   le reste (.court-badge, .vs) y est déjà positionné en absolu pour ne pas
+   perturber cette grille. Ce badge suit la même règle (sinon il prendrait
+   la place d'un des deux .team-score et casserait la mise en page) — placé
+   au-dessus du badge terrain, qui reste centré verticalement à gauche. */
+.forfeit-badge {
+  position: absolute;
+  top: 6px;
+  left: 14px;
+  z-index: 3;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #ef4444;
+  background: rgba(10, 15, 24, 0.85);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+/* --------------------------------------------------
+   PODIUM DU CLASSEMENT FINAL
+   .podium-step (styles.css, mode Rotation) a une hauteur FIXE par marche,
+   pensée pour un prénom simple tenant sur une seule ligne. Les noms d'équipe
+   ("Alice & Bob") sont plus longs et repassent souvent à la ligne dans la
+   largeur fixe du podium, débordant alors de cette hauteur (les stats en
+   dessous du nom se retrouvaient coupées/à cheval sur le fond de page).
+   On passe en min-height ici (page tournoi uniquement, styles.css n'est pas
+   modifié : le podium du mode Rotation reste inchangé).
+-------------------------------------------------- */
+.podium-step.gold,
+.podium-step.silver,
+.podium-step.bronze {
+  height: auto;
+}
+
+.podium-step.gold { min-height: 140px; }
+.podium-step.silver { min-height: 110px; }
+.podium-step.bronze { min-height: 90px; }

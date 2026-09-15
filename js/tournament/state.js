@@ -14,9 +14,12 @@ const TOURNAMENT_STORAGE_KEY = "pb_tournament_autosave";
 function getTournamentState() {
   return {
     teamsText: elTeams.value,
+    individualPlayersText: elIndividualPlayers.value,
     numPools: elNumPools.value,
     qualifiersPerPool: elQualifiersPerPool.value,
+    numCourts: elNumCourts.value,
     poolAssignMode: elPoolAssignMode.value,
+    courtNamesText: elCourtNames.value,
     tournament: window.__PT_TOURNAMENT__
   };
 }
@@ -50,15 +53,29 @@ function loadTournamentState() {
   if (!state) return;
 
   if (state.teamsText != null) elTeams.value = state.teamsText;
+  if (state.individualPlayersText != null) elIndividualPlayers.value = state.individualPlayersText;
   if (state.numPools != null) elNumPools.value = state.numPools;
   if (state.qualifiersPerPool != null) elQualifiersPerPool.value = state.qualifiersPerPool;
+  if (state.numCourts != null) elNumCourts.value = state.numCourts;
   if (state.poolAssignMode != null) elPoolAssignMode.value = state.poolAssignMode;
+  if (state.courtNamesText != null) elCourtNames.value = state.courtNamesText;
 
   if (state.tournament) {
     window.__PT_TOURNAMENT__ = state.tournament;
-    renderPools(state.tournament.pools);
-    renderPoolStandings(state.tournament.pools, state.tournament.qualifiersPerPool);
+    // Compatibilité avec un tournoi sauvegardé avant l'introduction de
+    // l'allocation de terrains par poule : on la calcule si elle manque.
+    if (!state.tournament.courtAllocation) {
+      state.tournament.courtAllocation = allocateCourtsToPools(state.tournament.pools, state.tournament.numCourts || 1);
+    }
+    // Compatibilité avec un tournoi sauvegardé avant l'introduction des forfaits.
+    if (!state.tournament.forfeitedTeamIds) state.tournament.forfeitedTeamIds = [];
+
+    renderPools(state.tournament.pools, state.tournament.courtNames || [], state.tournament.courtAllocation);
+    renderPoolStandings(state.tournament.pools, state.tournament.qualifiersPerPool, new Set(state.tournament.forfeitedTeamIds));
     elPoolsSection.hidden = false;
     elPoolStandingsSection.hidden = false;
+
+    renderBothBracketPhases(state.tournament);
+    renderFinalRanking(state.tournament);
   }
 }
