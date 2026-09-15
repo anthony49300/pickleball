@@ -797,7 +797,10 @@ function renameTeamEverywhere(tournament, teamId, newName) {
     if (!phase) return;
     phase.segments.forEach(segment => segment.slots.forEach(applyToSlot));
     phase.rounds.forEach(round => round.pairs.forEach(([a, b]) => { applyToSlot(a); applyToSlot(b); }));
-    (phase.finalRanking || []).forEach(applyToTeam);
+    // finalRanking contient des entrées {team, rank}, pas des équipes
+    // directement : il faut déballer `.team` avant applyToTeam (qui
+    // s'attend à recevoir une équipe, pas son enveloppe de classement).
+    (phase.finalRanking || []).forEach(r => applyToTeam(r.team));
   });
 }
 

@@ -734,21 +734,28 @@ test("progressFinalPhase : une équipe forfait perd automatiquement à chaque to
   finalPhase.segments[0].scores[1] = { a: 11, b: 5 }; // Team1 bat Team2
   progressFinalPhase(finalPhase, forfeitedTeamIds);
 
-  assert.strictEqual(finalPhase.rounds.length, 1);
+  // Le 1er tour se termine (Team3 et Team1 avancent en demi-finale), ET la
+  // "petite finale" des places 3-4 (Team0 forfait vs Team2) se résout
+  // AUSSITÔT dans la foulée, sans qu'aucun score n'ait été saisi pour elle :
+  // progressFinalPhase avance en cascade tant que de nouveaux segments se
+  // terminent immédiatement (ici, tout segment impliquant Team0 se termine
+  // dès qu'il est créé). D'où 2 rounds enregistrés après ce seul appel, pas 1.
+  assert.strictEqual(finalPhase.rounds.length, 2);
   const winnerFinal = finalPhase.segments.find(s => s.rankStart === 1);
-  const loserFinal = finalPhase.segments.find(s => s.rankStart === 3);
+  const rank3Segment = finalPhase.segments.find(s => s.rankStart === 3);
+  const rank4Segment = finalPhase.segments.find(s => s.rankStart === 4);
   assert.ok(winnerFinal.slots.some(s => s.team?.id === teams[3].id), "Team3 doit avoir avancé sans jouer");
   assert.ok(!winnerFinal.slots.some(s => s.team?.id === teams[0].id), "Team0 (forfait) ne doit pas être côté vainqueurs");
+  assert.strictEqual(rank3Segment.slots[0].team.id, teams[2].id, "Team2 doit déjà être 3e (bat Team0, forfait, sans jouer)");
+  assert.strictEqual(rank4Segment.slots[0].team.id, teams[0].id, "Team0 (forfait) doit déjà être 4e");
 
-  // Dernier tour : la vraie finale a besoin d'un score, la "finale" des places
-  // 3-4 se résout seule (Team0 y est toujours forfait).
+  // Dernier tour : seule la vraie finale (Team3 vs Team1) a encore besoin d'un score.
   winnerFinal.scores[0] = { a: 11, b: 9 };
   progressFinalPhase(finalPhase, forfeitedTeamIds);
 
   assert.ok(finalPhase.finalRanking, "le classement final devrait être entièrement résolu");
   const team0Rank = finalPhase.finalRanking.find(r => r.team.id === teams[0].id).rank;
   assert.strictEqual(team0Rank, 4, "l'équipe forfait doit finir dernière");
-  assert.ok(!loserFinal || loserFinal.slots.length === 2, "sanity : le segment 3-4 existait bien avant ce dernier tour");
 });
 
 // ---------------------------------------------------------------------------
