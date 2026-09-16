@@ -118,6 +118,8 @@
     "getHistory": "readonly",
     "getPlayerGroups": "readonly",
     "html2canvas": "readonly",
+    "ICON_EYE_OFF_SVG": "readonly",
+    "ICON_EYE_SVG": "readonly",
     "imagePreviewModal": "readonly",
     "incCount": "readonly",
     "isPoolComplete": "readonly",

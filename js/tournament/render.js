@@ -4,6 +4,14 @@
 // MODE TOURNOI — RENDU (équipes, répartition manuelle, poules, classements)
 // =============================================================================
 
+// Icônes "œil" (masquer/afficher une poule ou un match, voir plus bas) en SVG
+// inline plutôt qu'en emoji : rendu identique et net sur toutes les
+// plateformes (contrairement aux emoji, dont le style varie beaucoup d'un
+// système à l'autre), et stroke="currentColor" suit automatiquement la
+// couleur du bouton (thème clair/sombre, survol...) sans rien coder en dur.
+const ICON_EYE_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+const ICON_EYE_OFF_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+
 /**
  * Met à jour le badge "X équipe(s)" à côté du champ de saisie.
  */
@@ -69,7 +77,7 @@ function wrapHideableMatch(hideKey, label, innerHtml, hiddenMatchKeys) {
   const isHidden = !!hiddenMatchKeys?.has(hideKey);
   return `
     <div class="match-wrapper ${isHidden ? "match-hidden" : ""}">
-      <button type="button" class="match-hide-btn" data-hide-key="${hideKey}" title="${isHidden ? "Afficher ce match" : "Masquer ce match"}" aria-label="${isHidden ? "Afficher" : "Masquer"} le match ${label}">${isHidden ? "👁️" : "🙈"}</button>
+      <button type="button" class="match-hide-btn" data-hide-key="${hideKey}" title="${isHidden ? "Afficher ce match" : "Masquer ce match"}" aria-label="${isHidden ? "Afficher" : "Masquer"} le match ${label}">${isHidden ? ICON_EYE_SVG : ICON_EYE_OFF_SVG}</button>
       <div class="match-hidden-label">${label}</div>
       <div class="match-hideable-content">${innerHtml}</div>
     </div>
@@ -137,7 +145,7 @@ function renderPools(pools, courtNames = [], courtAllocation = [], hiddenPoolInd
       <div class="pool-card ${isPoolHidden ? "pool-collapsed" : ""}">
         <div class="pool-card-header">
           <h3 class="pool-card-title">${escapeHtml(pool.name)}</h3>
-          <button type="button" class="round-hide-btn pool-hide-btn" data-pool-index="${poolIdx}" title="${isPoolHidden ? "Afficher cette poule" : "Masquer cette poule"}">${isPoolHidden ? "👁️ Afficher" : "🙈 Masquer"}</button>
+          <button type="button" class="round-hide-btn pool-hide-btn" data-pool-index="${poolIdx}" title="${isPoolHidden ? "Afficher cette poule" : "Masquer cette poule"}">${isPoolHidden ? ICON_EYE_SVG : ICON_EYE_OFF_SVG}<span>${isPoolHidden ? "Afficher" : "Masquer"}</span></button>
         </div>
         <div class="pool-content">${roundsHtml}</div>
       </div>

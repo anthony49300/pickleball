@@ -387,7 +387,7 @@ elPoolsContainer.addEventListener("click", (e) => {
 
   const poolCard = btn.closest(".pool-card");
   if (poolCard) poolCard.classList.toggle("pool-collapsed", nowHidden);
-  btn.textContent = nowHidden ? "👁️ Afficher" : "🙈 Masquer";
+  btn.innerHTML = `${nowHidden ? ICON_EYE_SVG : ICON_EYE_OFF_SVG}<span>${nowHidden ? "Afficher" : "Masquer"}</span>`;
   btn.title = nowHidden ? "Afficher cette poule" : "Masquer cette poule";
 
   autoSaveTournamentState();
@@ -416,7 +416,7 @@ function wireMatchHideButtons(container) {
 
     const wrapper = btn.closest(".match-wrapper");
     if (wrapper) wrapper.classList.toggle("match-hidden", nowHidden);
-    btn.textContent = nowHidden ? "👁️" : "🙈";
+    btn.innerHTML = nowHidden ? ICON_EYE_SVG : ICON_EYE_OFF_SVG;
     btn.title = nowHidden ? "Afficher ce match" : "Masquer ce match";
 
     autoSaveTournamentState();

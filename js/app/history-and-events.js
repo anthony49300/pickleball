@@ -242,7 +242,7 @@ elSchedule.addEventListener("click", (e) => {
 
   const roundEl = btn.closest(".round");
   if (roundEl) roundEl.classList.toggle("round-collapsed", nowHidden);
-  btn.textContent = nowHidden ? "👁️ Afficher" : "🙈 Masquer";
+  btn.innerHTML = `${nowHidden ? ICON_EYE_SVG : ICON_EYE_OFF_SVG}<span>${nowHidden ? "Afficher" : "Masquer"}</span>`;
   btn.title = nowHidden ? "Réafficher ce tour" : "Masquer ce tour (les scores restent enregistrés)";
 
   autoSaveState();

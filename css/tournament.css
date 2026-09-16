@@ -184,12 +184,14 @@ select option {
   top: 6px;
   right: 8px;
   z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   background: rgba(10, 15, 24, 0.85);
   color: var(--pickle-yellow);
-  font-size: 0.85rem;
   line-height: 1;
-  padding: 3px 6px;
+  padding: 4px;
   border-radius: 6px;
   cursor: pointer;
   opacity: 0.75;

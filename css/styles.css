@@ -741,6 +741,9 @@ button:disabled {
    form-and-render.js) est replié, les scores restent enregistrés.
 -------------------------------------------------- */
 .round-hide-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   background: rgba(var(--fg-overlay-rgb), 0.08);
   color: var(--text-subtle);
   padding: 4px 10px;
@@ -750,6 +753,10 @@ button:disabled {
   cursor: pointer;
   font-family: inherit;
   transition: background 0.15s ease, color 0.15s ease;
+}
+
+.round-hide-btn svg {
+  flex-shrink: 0;
 }
 
 .round-hide-btn:hover {
