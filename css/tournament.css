@@ -391,3 +391,57 @@ select option {
 .podium-step.gold { min-height: 140px; }
 .podium-step.silver { min-height: 110px; }
 .podium-step.bronze { min-height: 90px; }
+
+/* --------------------------------------------------
+   PROCHAINS MATCHS — liste consolidée des matchs sans score encore complet
+   (poules + brackets), voir collectNextMatches/renderNextMatches (render.js).
+   Volontairement compacte (une ligne par match, pas de .match-card complet) :
+   c'est une vue "quoi faire ensuite", pas une 2e interface de saisie.
+-------------------------------------------------- */
+.next-matches-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.next-match-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: rgba(var(--fg-overlay-rgb), 0.03);
+  font-size: 0.9rem;
+}
+
+.next-match-source {
+  flex: 1 1 100%;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--text-subtle);
+}
+
+.next-match-teams {
+  font-weight: 600;
+}
+
+.vs-inline {
+  color: var(--pickle-yellow);
+  font-weight: 800;
+  font-size: 0.75rem;
+}
+
+.next-match-court {
+  margin-left: auto;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--pickle-yellow);
+  background: rgba(var(--pickle-yellow-rgb), 0.12);
+  padding: 2px 8px;
+  border-radius: 20px;
+}

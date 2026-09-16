@@ -307,6 +307,11 @@ function render(result, players, numCourts, numRounds) {
     const hideBtn = document.createElement("button");
     hideBtn.type = "button";
     hideBtn.className = "round-hide-btn";
+    // Hors de l'ordre de tabulation : sinon, tabuler entre les champs de
+    // score d'un tour à l'autre passe systématiquement par ce bouton, ce qui
+    // casse le confort de saisie rapide au clavier (la touche Entrée, elle,
+    // saute directement au champ de score suivant — voir history-and-events.js).
+    hideBtn.tabIndex = -1;
     hideBtn.dataset.round = idx;
     hideBtn.innerHTML = `${isHidden ? ICON_EYE_SVG : ICON_EYE_OFF_SVG}<span>${isHidden ? "Afficher" : "Masquer"}</span>`;
     hideBtn.title = isHidden ? "Réafficher ce tour" : "Masquer ce tour (les scores restent enregistrés)";

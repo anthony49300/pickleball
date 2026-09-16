@@ -44,6 +44,7 @@
     <div class="header-actions" style="display:flex; align-items:center; gap:10px;">
       <div id="autosaveBadge" class="save-badge btn-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="20 6 9 17 4 12"/></svg><span>Sauvegardé</span></div>
       <button id="themeToggleBtn" class="secondary" style="font-size: 0.9rem; padding: 6px 10px;" title="Changer de thème (clair/sombre)" aria-label="Changer de thème">🌙</button>
+      <button id="copyTournamentLink" class="secondary btn-icon" style="font-size: 0.8rem; padding: 6px 12px;" type="button" title="Copier un lien de partage de ce tournoi"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span>Partager</span></button>
     </div>
   </header>
 
@@ -52,6 +53,15 @@
          (+ Matchs de classement, en parallèle) → Classement final. Masquée
          tant qu'aucune poule n'existe (voir renderTournamentProgress). -->
     <div id="tournamentProgress" class="session-stepper" style="grid-column: 1 / -1;" hidden></div>
+
+    <!-- PROCHAINS MATCHS : liste consolidée de tous les matchs (poules et
+         brackets confondus) sans score encore saisi, pour savoir en un coup
+         d'œil quoi faire ensuite sans naviguer entre les sections. Masquée
+         tant qu'il n'y a rien à jouer (voir renderNextMatches). -->
+    <section class="card" id="nextMatchesSection" style="grid-column: 1 / -1;" hidden>
+      <h2>👉 Prochains matchs</h2>
+      <div id="nextMatchesContainer" class="next-matches-list"></div>
+    </section>
 
     <!-- SECTION EQUIPES -->
     <section class="card">
@@ -203,6 +213,23 @@
       </div>
       <div id="finalRankingContainer"></div>
     </section>
+
+    <!-- HISTORIQUE DES TOURNOIS -->
+    <section class="card" style="grid-column: 1 / -1;">
+      <div class="headerRow">
+        <h2>📜 Historique des tournois</h2>
+        <div class="actions-secondary" style="margin: 0;">
+          <button id="saveTournamentToHistory" class="secondary btn-icon" type="button" style="font-size: 0.8rem; padding: 6px 12px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg><span>Enregistrer ce tournoi</span></button>
+          <button id="clearTournamentHistoryBtn" class="secondary" type="button" style="font-size: 0.8rem; padding: 6px 12px;">🗑️ Vider l'historique</button>
+        </div>
+      </div>
+      <p class="subtle" style="font-size: 0.85rem;">
+        Sauvegarde manuelle (distincte de la sauvegarde automatique) : utile pour retrouver un tournoi une fois qu'un nouveau a été généré à sa place.
+      </p>
+      <div id="tournamentHistoryList" class="history-grid">
+        <p class="subtle">Aucun tournoi enregistré pour le&nbsp;moment.</p>
+      </div>
+    </section>
   </main>
 
   <!-- BOUTON FLOTTANT "REVENIR À L'ÉTAPE EN COURS" (masqué tant qu'elle est
@@ -235,8 +262,10 @@
     </div>
   </div>
 
-  <!-- Bibliothèque embarquée localement pour l'export du classement en image
-       (voir index.html) : l'app doit fonctionner hors-ligne. -->
+  <!-- Bibliothèques embarquées localement (voir index.html) : l'app doit
+       fonctionner hors-ligne. lz-string sert au lien de partage (compresse
+       l'état dans l'URL), html2canvas à l'export du classement en image. -->
+  <script src="js/vendor/lz-string.min.js"></script>
   <script src="js/vendor/html2canvas.min.js"></script>
 
   <!-- Modules partagés avec index.html : modale générique, thème clair/sombre

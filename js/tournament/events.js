@@ -187,7 +187,7 @@ btnGeneratePools.addEventListener("click", async () => {
   const numCourts = Math.max(1, parseInt(elNumCourts.value || "1", 10));
   const courtNames = parseCourtNames(elCourtNames.value);
   const courtAllocation = allocateCourtsToPools(pools, numCourts);
-  window.__PT_TOURNAMENT__ = { teams, numPools, qualifiersPerPool, poolAssignMode: mode, numCourts, courtNames, courtAllocation, pools, forfeitedTeamIds: [], hiddenPoolIndices: [], hiddenMatchKeys: [] };
+  window.__PT_TOURNAMENT__ = { tournamentId: Date.now(), teams, numPools, qualifiersPerPool, poolAssignMode: mode, numCourts, courtNames, courtAllocation, pools, forfeitedTeamIds: [], hiddenPoolIndices: [], hiddenMatchKeys: [] };
 
   elManualAssignSection.hidden = true;
   renderPools(pools, courtNames, courtAllocation, [], new Set());
@@ -217,7 +217,7 @@ btnConfirmManualAssign.addEventListener("click", () => {
   const numCourts = Math.max(1, parseInt(elNumCourts.value || "1", 10));
   const courtNames = parseCourtNames(elCourtNames.value);
   const courtAllocation = allocateCourtsToPools(pools, numCourts);
-  window.__PT_TOURNAMENT__ = { teams, numPools, qualifiersPerPool, poolAssignMode: "manual", numCourts, courtNames, courtAllocation, pools, forfeitedTeamIds: [], hiddenPoolIndices: [], hiddenMatchKeys: [] };
+  window.__PT_TOURNAMENT__ = { tournamentId: Date.now(), teams, numPools, qualifiersPerPool, poolAssignMode: "manual", numCourts, courtNames, courtAllocation, pools, forfeitedTeamIds: [], hiddenPoolIndices: [], hiddenMatchKeys: [] };
 
   elManualAssignSection.hidden = true;
   renderPools(pools, courtNames, courtAllocation, [], new Set());
@@ -278,6 +278,21 @@ elPoolsContainer.addEventListener("input", (e) => {
   renderPoolStandings(tournament.pools, tournament.qualifiersPerPool, new Set(tournament.forfeitedTeamIds || []));
   renderTournamentProgress(tournament);
   autoSaveTournamentState();
+});
+
+// Navigation clavier rapide : Entrée passe au champ de score suivant, tous
+// conteneurs confondus (poules PUIS phase finale PUIS matchs de classement,
+// dans l'ordre de la page — .bracket-score-input porte aussi la classe
+// .score-input) — ces champs ne sont dans aucun <form>, Entrée n'a par
+// défaut aucun effet dessus. Un champ en lecture seule (historique de
+// bracket déjà joué) est ignoré : rien à y saisir.
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" || !e.target.classList.contains("score-input") || e.target.readOnly) return;
+  e.preventDefault();
+
+  const inputs = Array.from(document.querySelectorAll(".score-input:not([readonly])"));
+  const next = inputs[inputs.indexOf(e.target) + 1];
+  if (next) { next.focus(); next.select(); }
 });
 
 // --------------------------------------------------
@@ -589,5 +604,101 @@ if (btnExportFinalRankingPng) {
 if (btnScrollToActive) {
   btnScrollToActive.addEventListener("click", () => {
     activeScrollTarget?.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+}
+
+// --------------------------------------------------
+// LIEN DE PARTAGE (même principe que le mode Rotation, voir
+// js/app/history-and-events.js : compresse tout l'état dans l'URL via
+// lz-string — décodé au chargement de la page, voir init.js).
+// --------------------------------------------------
+
+function buildTournamentShareableUrl() {
+  const state = getTournamentState();
+  const jsonString = JSON.stringify(state);
+  const compressedData = LZString.compressToEncodedURIComponent(jsonString);
+  const urlBase = window.location.origin + window.location.pathname;
+  return `${urlBase}?d=${compressedData}`;
+}
+
+if (btnCopyTournamentLink) {
+  btnCopyTournamentLink.addEventListener("click", async () => {
+    let urlToShare;
+    try {
+      urlToShare = buildTournamentShareableUrl();
+    } catch (err) {
+      console.error(err);
+      await alertModal(
+        "Impossible de construire le lien de partage (une dépendance requise n'a peut-être pas pu se charger).",
+        { title: "Partage impossible", icon: "⚠️" }
+      );
+      return;
+    }
+
+    if (await copyTextRobust(urlToShare)) {
+      // innerHTML (pas textContent) pour restaurer l'icône SVG du bouton
+      // après le message de confirmation temporaire.
+      const originalHtml = btnCopyTournamentLink.innerHTML;
+      btnCopyTournamentLink.textContent = "Lien copié !";
+      setTimeout(() => { btnCopyTournamentLink.innerHTML = originalHtml; }, 1500);
+    } else {
+      await copyFallbackModal(urlToShare, { title: "Copier le lien de partage", icon: "🔗" });
+    }
+  });
+}
+
+// --------------------------------------------------
+// HISTORIQUE DES TOURNOIS (voir state.js pour le stockage/le rendu)
+// --------------------------------------------------
+
+if (elTournamentHistoryList) {
+  elTournamentHistoryList.addEventListener("click", (e) => {
+    const id = parseInt(e.target.dataset.id, 10);
+    if (!id) return;
+
+    let history = getTournamentHistory();
+
+    if (e.target.classList.contains("load-tournament-hist-btn")) {
+      const item = history.find(x => x.id === id);
+      if (item) {
+        applyTournamentState(item.state);
+        autoSaveTournamentState();
+      }
+    } else if (e.target.classList.contains("del-tournament-hist-btn")) {
+      history = history.filter(x => x.id !== id);
+      localStorage.setItem(TOURNAMENT_HISTORY_KEY, JSON.stringify(history));
+      renderTournamentHistory();
+    }
+  });
+}
+
+if (btnSaveTournamentToHistory) {
+  btnSaveTournamentToHistory.addEventListener("click", async () => {
+    const saved = saveTournamentToHistory();
+    if (!saved) {
+      await alertModal(
+        "Générez d'abord des poules avant d'enregistrer ce tournoi dans l'historique.",
+        { title: "Rien à enregistrer", icon: "⚠️" }
+      );
+      return;
+    }
+    // innerHTML (pas textContent) pour restaurer l'icône SVG du bouton après
+    // le message de confirmation temporaire.
+    const originalHtml = btnSaveTournamentToHistory.innerHTML;
+    btnSaveTournamentToHistory.textContent = "Tournoi enregistré !";
+    setTimeout(() => { btnSaveTournamentToHistory.innerHTML = originalHtml; }, 1200);
+  });
+}
+
+if (btnClearTournamentHistory) {
+  btnClearTournamentHistory.addEventListener("click", async () => {
+    const confirmed = await confirmModal(
+      "Voulez-vous vraiment vider l'historique des tournois enregistrés ? Cette action est irréversible.",
+      { title: "Vider l'historique ?", confirmText: "Vider l'historique", icon: "🗑️" }
+    );
+    if (confirmed) {
+      localStorage.removeItem(TOURNAMENT_HISTORY_KEY);
+      renderTournamentHistory();
+    }
   });
 }

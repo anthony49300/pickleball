@@ -231,6 +231,19 @@ btnGenerate.addEventListener("click", () => {
   });
 });
 
+// Navigation clavier rapide : Entrée passe au champ de score suivant (dans
+// l'ordre du DOM, donc match par match puis tour par tour) plutôt que de ne
+// rien faire (ces champs ne sont dans aucun <form>, Entrée n'a par défaut
+// aucun effet dessus) — pratique pour saisir beaucoup de scores d'affilée.
+elSchedule.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" || !e.target.classList.contains("score-input")) return;
+  e.preventDefault();
+
+  const inputs = Array.from(elSchedule.querySelectorAll(".score-input"));
+  const next = inputs[inputs.indexOf(e.target) + 1];
+  if (next) { next.focus(); next.select(); }
+});
+
 // Masquage/affichage manuel d'un tour (bouton dans l'en-tête de chaque tour,
 // voir render() dans form-and-render.js) : purement visuel, ne touche à
 // aucun score. On bascule juste la classe CSS + le libellé du bouton plutôt

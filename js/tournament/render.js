@@ -67,7 +67,9 @@ function renderManualAssignList(teams, numPools, currentAssignment) {
  * sans rien à replier) dans un conteneur muni d'un bouton masquer/afficher
  * (voir events.js, délégation `.match-hide-btn`). Masquer un match est
  * purement visuel : ça ne touche à aucun score, juste au rendu (`innerHtml`
- * replié en un intitulé compact "Équipe A vs Équipe B").
+ * replié en un intitulé compact "Équipe A vs Équipe B"). Le bouton est hors
+ * de l'ordre de tabulation (tabindex="-1") : sinon, tabuler entre les champs
+ * de score d'un match à l'autre passerait systématiquement par lui.
  * @param {string} hideKey - identifiant stable du match (voir appelants)
  * @param {string} label - intitulé affiché une fois replié
  * @param {string} innerHtml - rendu complet du match (déplié)
@@ -77,7 +79,7 @@ function wrapHideableMatch(hideKey, label, innerHtml, hiddenMatchKeys) {
   const isHidden = !!hiddenMatchKeys?.has(hideKey);
   return `
     <div class="match-wrapper ${isHidden ? "match-hidden" : ""}">
-      <button type="button" class="match-hide-btn" data-hide-key="${hideKey}" title="${isHidden ? "Afficher ce match" : "Masquer ce match"}" aria-label="${isHidden ? "Afficher" : "Masquer"} le match ${label}">${isHidden ? ICON_EYE_SVG : ICON_EYE_OFF_SVG}</button>
+      <button type="button" class="match-hide-btn" tabindex="-1" data-hide-key="${hideKey}" title="${isHidden ? "Afficher ce match" : "Masquer ce match"}" aria-label="${isHidden ? "Afficher" : "Masquer"} le match ${label}">${isHidden ? ICON_EYE_SVG : ICON_EYE_OFF_SVG}</button>
       <div class="match-hidden-label">${label}</div>
       <div class="match-hideable-content">${innerHtml}</div>
     </div>
@@ -145,7 +147,7 @@ function renderPools(pools, courtNames = [], courtAllocation = [], hiddenPoolInd
       <div class="pool-card ${isPoolHidden ? "pool-collapsed" : ""}">
         <div class="pool-card-header">
           <h3 class="pool-card-title">${escapeHtml(pool.name)}</h3>
-          <button type="button" class="round-hide-btn pool-hide-btn" data-pool-index="${poolIdx}" title="${isPoolHidden ? "Afficher cette poule" : "Masquer cette poule"}">${isPoolHidden ? ICON_EYE_SVG : ICON_EYE_OFF_SVG}<span>${isPoolHidden ? "Afficher" : "Masquer"}</span></button>
+          <button type="button" class="round-hide-btn pool-hide-btn" tabindex="-1" data-pool-index="${poolIdx}" title="${isPoolHidden ? "Afficher cette poule" : "Masquer cette poule"}">${isPoolHidden ? ICON_EYE_SVG : ICON_EYE_OFF_SVG}<span>${isPoolHidden ? "Afficher" : "Masquer"}</span></button>
         </div>
         <div class="pool-content">${roundsHtml}</div>
       </div>
@@ -386,6 +388,95 @@ function updateScrollToActiveSection(targetEl) {
 }
 
 /**
+ * Recense tous les matchs SANS score encore complet (poules et brackets
+ * confondus), pour la vue "Prochains matchs" (voir renderNextMatches). Un
+ * repos (bye) n'est jamais un match à jouer ; une affiche de bracket dont
+ * l'une des équipes est forfait ne l'est pas non plus (elle se résout
+ * automatiquement, voir progressFinalPhase — aucune saisie possible dessus).
+ * @param {Object} tournament
+ * @returns {Array<{source:string, teamA:string, teamB:string, court:string|null}>}
+ */
+function collectNextMatches(tournament) {
+  const items = [];
+  const courtNames = tournament.courtNames || [];
+
+  (tournament.pools || []).forEach((pool, poolIdx) => {
+    const poolCourts = tournament.courtAllocation?.[poolIdx]?.length ? tournament.courtAllocation[poolIdx] : [poolIdx];
+    pool.rounds.forEach((matches, rIdx) => {
+      matches.forEach((match, mIdx) => {
+        if (match.bye) return;
+        const score = pool.scores[`${rIdx}-${mIdx}`];
+        if (score && score.a != null && score.b != null) return;
+
+        const globalCourtIdx = poolCourts[mIdx % poolCourts.length];
+        items.push({
+          source: `${pool.name} · Journée ${rIdx + 1}`,
+          teamA: match.a.name,
+          teamB: match.b.name,
+          court: courtNames[globalCourtIdx] || `Terrain ${globalCourtIdx + 1}`
+        });
+      });
+    });
+  });
+
+  const forfeitedTeamIds = new Set(tournament.forfeitedTeamIds || []);
+  const assignment = assignCourtsToActiveMatches([tournament.finalPhase, tournament.consolationPhase], tournament.numCourts);
+
+  [
+    { phase: tournament.finalPhase, label: "Phase finale", phaseIdx: 0 },
+    { phase: tournament.consolationPhase, label: "Matchs de classement", phaseIdx: 1 }
+  ].forEach(({ phase, label, phaseIdx }) => {
+    if (!phase) return;
+    phase.segments
+      .filter(segment => segment.slots.length > 1)
+      .forEach(segment => {
+        segmentPairs(segment).forEach(([a, b], idx) => {
+          if (a.bye || b.bye) return;
+          if (forfeitedTeamIds.has(a.team.id) || forfeitedTeamIds.has(b.team.id)) return;
+
+          const courtIdx = assignment.get(`${phaseIdx}-${segment.id}-${idx}`);
+          items.push({
+            source: `${label} · ${segmentLabel(segment)}`,
+            teamA: a.team.name,
+            teamB: b.team.name,
+            court: courtIdx != null ? (courtNames[courtIdx] || `Terrain ${courtIdx + 1}`) : null
+          });
+        });
+      });
+  });
+
+  return items;
+}
+
+/**
+ * Affiche la liste consolidée des prochains matchs à jouer (voir
+ * collectNextMatches) : masquée s'il n'y a rien en attente (tournoi pas
+ * encore lancé, ou entièrement à jour).
+ * @param {Object|null} tournament
+ */
+function renderNextMatches(tournament) {
+  if (!elNextMatchesSection || !elNextMatchesContainer) return;
+
+  const items = tournament?.pools?.length ? collectNextMatches(tournament) : [];
+
+  if (!items.length) {
+    elNextMatchesSection.hidden = true;
+    elNextMatchesContainer.innerHTML = "";
+    return;
+  }
+
+  elNextMatchesContainer.innerHTML = items.map(item => `
+    <div class="next-match-row">
+      <span class="next-match-source">${escapeHtml(item.source)}</span>
+      <span class="next-match-teams">${escapeHtml(item.teamA)} <span class="vs-inline">vs</span> ${escapeHtml(item.teamB)}</span>
+      ${item.court ? `<span class="next-match-court">${escapeHtml(item.court)}</span>` : ""}
+    </div>
+  `).join("");
+
+  elNextMatchesSection.hidden = false;
+}
+
+/**
  * Affiche une vue d'ensemble de l'avancement du tournoi (Poules → Phase
  * finale → Matchs de classement → Classement final), sur le même principe
  * visuel que le stepper de tour du mode Rotation (classes .session-stepper/
@@ -398,6 +489,8 @@ function updateScrollToActiveSection(targetEl) {
  * @param {Object|null} tournament
  */
 function renderTournamentProgress(tournament) {
+  renderNextMatches(tournament);
+
   if (!elTournamentProgress) return;
 
   if (!tournament?.pools?.length) {

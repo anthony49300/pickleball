@@ -42,7 +42,14 @@ const btnExportFinalRankingPng = document.getElementById("exportFinalRankingPng"
 
 const elAutosaveBadge = document.getElementById("autosaveBadge");
 const elTournamentProgress = document.getElementById("tournamentProgress");
+const elNextMatchesSection = document.getElementById("nextMatchesSection");
+const elNextMatchesContainer = document.getElementById("nextMatchesContainer");
 const btnScrollToActive = document.getElementById("scrollToActiveBtn");
+const btnCopyTournamentLink = document.getElementById("copyTournamentLink");
+
+const elTournamentHistoryList = document.getElementById("tournamentHistoryList");
+const btnSaveTournamentToHistory = document.getElementById("saveTournamentToHistory");
+const btnClearTournamentHistory = document.getElementById("clearTournamentHistoryBtn");
 
 // Etat en mémoire de la répartition manuelle en cours (avant validation), et du
 // tournoi une fois les poules générées. Voir js/tournament/state.js pour la
