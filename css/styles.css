@@ -735,6 +735,38 @@ button:disabled {
   border: 1px solid rgba(148, 163, 184, 0.3);
 }
 
+/* --------------------------------------------------
+   MASQUAGE MANUEL D'UN TOUR (mode Rotation) — bouton dans l'en-tête,
+   purement visuel : le contenu (.round-content, voir render() dans
+   form-and-render.js) est replié, les scores restent enregistrés.
+-------------------------------------------------- */
+.round-hide-btn {
+  background: rgba(var(--fg-overlay-rgb), 0.08);
+  color: var(--text-subtle);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.round-hide-btn:hover {
+  background: rgba(var(--fg-overlay-rgb), 0.15);
+  color: var(--text-main);
+}
+
+.round.round-collapsed .round-content {
+  display: none;
+}
+
+.round.round-collapsed .roundTitle {
+  margin-bottom: 0;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
 .matches-list {
   display: grid;
   gap: 12px;

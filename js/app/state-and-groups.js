@@ -22,7 +22,8 @@ function getCurrentState() {
     sq: elSquare.checked,
     b2b: elAvoidB2B.checked,
     sc: window.__PB_SCORES__ || {},
-    pr: window.__PB_PRESENCE__ || {}
+    pr: window.__PB_PRESENCE__ || {},
+    hr: window.__PB_HIDDEN_ROUNDS__ || []
   };
 }
 
@@ -49,6 +50,7 @@ function generateSession(preserveScores = true) {
 
   if (!preserveScores) {
     window.__PB_SCORES__ = {};
+    window.__PB_HIDDEN_ROUNDS__ = [];
     if (elRankingSection) elRankingSection.hidden = true;
   }
 
@@ -129,6 +131,7 @@ function loadState(state) {
   if (state.sq !== undefined) elSquare.checked = state.sq;
   if (state.b2b !== undefined) elAvoidB2B.checked = state.b2b;
   if (state.pr) window.__PB_PRESENCE__ = state.pr;
+  window.__PB_HIDDEN_ROUNDS__ = Array.isArray(state.hr) ? state.hr : [];
 
   syncPresenceInputs();
 

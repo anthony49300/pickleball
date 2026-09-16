@@ -61,6 +61,10 @@ const btnSavePlayerGroup = document.getElementById("savePlayerGroupBtn");
 // Variables globales de mémoire
 window.__PB_SCORES__ = {};
 window.__PB_PRESENCE__ = {};
+// Index (0-based) des tours repliés manuellement par l'utilisateur (bouton
+// "Masquer" dans l'en-tête de chaque tour) — purement visuel, les scores
+// restent enregistrés normalement. Voir render() dans form-and-render.js.
+window.__PB_HIDDEN_ROUNDS__ = [];
 let currentHeatmapMode = "teammates";
 
 // Le câblage des steppers numériques (+/-) et des sliders est dans

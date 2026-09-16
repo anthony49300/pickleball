@@ -223,17 +223,20 @@ function render(result, players, numCourts, numRounds) {
 
   const activeRoundIndex = updateSessionStepper(rounds);
 
+  const hiddenRounds = Array.isArray(window.__PB_HIDDEN_ROUNDS__) ? window.__PB_HIDDEN_ROUNDS__ : [];
+
   rounds.forEach((matches, idx) => {
     const wrap = document.createElement("div");
     const isActiveRound = (idx === activeRoundIndex);
-    wrap.className = `round ${isActiveRound ? 'active-round' : ''}`;
+    const isHidden = hiddenRounds.includes(idx);
+    wrap.className = `round ${isActiveRound ? 'active-round' : ''} ${isHidden ? 'round-collapsed' : ''}`;
 
     const titleRow = document.createElement("div");
     titleRow.className = "roundTitle";
-    
+
     const h3 = document.createElement("h3");
     h3.textContent = `Tour ${idx + 1}`;
-    
+
     const tagsDiv = document.createElement("div");
     tagsDiv.className = "round-tags";
 
@@ -258,16 +261,31 @@ function render(result, players, numCourts, numRounds) {
       tagsDiv.appendChild(absent);
     }
 
+    // Masquage manuel d'un tour (les scores restent enregistrés normalement,
+    // voir window.__PB_HIDDEN_ROUNDS__ et la délégation de clic dans
+    // history-and-events.js) : pratique pour replier au fur et à mesure les
+    // tours déjà joués et ne garder à l'écran que ceux qui restent.
+    const hideBtn = document.createElement("button");
+    hideBtn.type = "button";
+    hideBtn.className = "round-hide-btn";
+    hideBtn.dataset.round = idx;
+    hideBtn.textContent = isHidden ? "👁️ Afficher" : "🙈 Masquer";
+    hideBtn.title = isHidden ? "Réafficher ce tour" : "Masquer ce tour (les scores restent enregistrés)";
+    tagsDiv.appendChild(hideBtn);
+
     titleRow.appendChild(h3);
     titleRow.appendChild(tagsDiv);
     wrap.appendChild(titleRow);
+
+    const content = document.createElement("div");
+    content.className = "round-content";
 
     if (!matches.length) {
       const p = document.createElement("div");
       p.className = "subtle";
       p.style.marginTop = "8px";
       p.textContent = "Pas assez de joueurs disponibles pour un match ce tour-ci.";
-      wrap.appendChild(p);
+      content.appendChild(p);
     } else {
       const matchesList = document.createElement("div");
       matchesList.className = "matches-list";
@@ -297,9 +315,10 @@ function render(result, players, numCourts, numRounds) {
         `;
         matchesList.appendChild(matchCard);
       });
-      wrap.appendChild(matchesList);
+      content.appendChild(matchesList);
     }
 
+    wrap.appendChild(content);
     elSchedule.appendChild(wrap);
   });
 

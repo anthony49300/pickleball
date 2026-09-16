@@ -146,6 +146,95 @@ select option {
 }
 
 /* --------------------------------------------------
+   MASQUAGE MANUEL D'UNE POULE (bouton .pool-hide-btn dans l'en-tête, réutilise
+   le style de .round-hide-btn du mode Rotation — voir styles.css) : replie
+   .pool-content (le calendrier de la poule), purement visuel.
+-------------------------------------------------- */
+.pool-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pool-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pool-card.pool-collapsed .pool-content {
+  display: none;
+}
+
+/* --------------------------------------------------
+   MASQUAGE MANUEL D'UN MATCH (poule ou bracket) — bouton .match-hide-btn en
+   coin, sur le même principe que .forfeit-badge (positionné en absolu pour
+   ne jamais perturber la grille 2 colonnes de .match-card, voir plus bas).
+   Replié, .match-card disparaît au profit de .match-hidden-label (intitulé
+   compact "Équipe A vs Équipe B").
+-------------------------------------------------- */
+.match-wrapper {
+  position: relative;
+}
+
+.match-hide-btn {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 4;
+  border: none;
+  background: rgba(10, 15, 24, 0.85);
+  color: var(--pickle-yellow);
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0.75;
+  transition: opacity 0.15s ease;
+}
+
+.match-hide-btn:hover {
+  opacity: 1;
+}
+
+/* Réserve de la place à droite pour .match-hide-btn (comme le padding-left
+   de .team-score:first-of-type dans styles.css réserve la place du badge
+   terrain à gauche) : sans ça, un nom d'équipe B un peu long peut passer
+   dessous, invisible — même bug déjà corrigé une fois pour le badge terrain. */
+.match-wrapper .team-score:last-of-type {
+  padding-right: 30px;
+}
+
+.match-hidden-label {
+  display: none;
+}
+
+.match-wrapper.match-hidden {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 8px 40px 8px 12px;
+  background: rgba(var(--fg-overlay-rgb), 0.03);
+}
+
+.match-wrapper.match-hidden .match-hideable-content {
+  display: none;
+}
+
+.match-wrapper.match-hidden .match-hidden-label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-subtle);
+}
+
+.match-wrapper.match-hidden .match-hide-btn {
+  background: transparent;
+  color: var(--text-subtle);
+}
+
+/* --------------------------------------------------
    CLASSEMENTS DE POULE
 -------------------------------------------------- */
 .pool-standings-container {
