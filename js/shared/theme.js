@@ -21,6 +21,12 @@ const THEME_STORAGE_KEY = "pb_theme";
 const THEME_COLOR_DARK = "#0a0f18";
 const THEME_COLOR_LIGHT = "#eef2f7";
 
+// Icônes soleil/lune en SVG inline plutôt qu'en emoji (☀️/🌙) : rendu
+// identique sur toutes les plateformes, et stroke="currentColor" suit
+// automatiquement la couleur du bouton (thème clair/sombre, survol...).
+const ICON_SUN_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
+const ICON_MOON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+
 /**
  * Applique le thème demandé (attribut sur <html>, icône du bouton, couleur de
  * la barre d'adresse mobile). N'écrit jamais dans localStorage lui-même : voir
@@ -29,10 +35,10 @@ const THEME_COLOR_LIGHT = "#eef2f7";
 function applyTheme(theme) {
   if (theme === "light") {
     document.documentElement.setAttribute("data-theme", "light");
-    if (btnThemeToggle) btnThemeToggle.textContent = "☀️";
+    if (btnThemeToggle) btnThemeToggle.innerHTML = ICON_SUN_SVG;
   } else {
     document.documentElement.removeAttribute("data-theme");
-    if (btnThemeToggle) btnThemeToggle.textContent = "🌙";
+    if (btnThemeToggle) btnThemeToggle.innerHTML = ICON_MOON_SVG;
   }
   if (elMetaThemeColor) {
     elMetaThemeColor.setAttribute("content", theme === "light" ? THEME_COLOR_LIGHT : THEME_COLOR_DARK);

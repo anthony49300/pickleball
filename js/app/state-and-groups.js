@@ -27,17 +27,31 @@ function getCurrentState() {
   };
 }
 
+let saveBadgePulseTimer = null;
+
+/**
+ * Fait "pulser" le badge de sauvegarde (bref pic d'opacité, voir la classe
+ * .save-badge-pulse dans styles.css) au lieu de changer son opacité en dur à
+ * chaque appel : un debounce (clearTimeout/setTimeout) évite qu'il clignote à
+ * chaque frappe lors d'une saisie rapide — il ne redescend au repos qu'une
+ * fois la saisie terminée.
+ */
+function pulseSaveBadge() {
+  if (!elAutosaveBadge) return;
+  elAutosaveBadge.classList.add("save-badge-pulse");
+  clearTimeout(saveBadgePulseTimer);
+  saveBadgePulseTimer = setTimeout(() => {
+    elAutosaveBadge.classList.remove("save-badge-pulse");
+  }, 900);
+}
+
 /**
  * Sauvegarde la session dans le stockage local (localStorage).
  */
 function autoSaveState() {
   const state = getCurrentState();
   localStorage.setItem("pb_autosave", JSON.stringify(state));
-  
-  if (elAutosaveBadge) {
-    elAutosaveBadge.style.opacity = "1";
-    setTimeout(() => { elAutosaveBadge.style.opacity = "0.5"; }, 1000);
-  }
+  pulseSaveBadge();
 }
 
 /**

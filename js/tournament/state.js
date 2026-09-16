@@ -7,6 +7,13 @@
 // pour que les deux modes ne se marchent jamais dessus.
 const TOURNAMENT_STORAGE_KEY = "pb_tournament_autosave";
 
+// Icônes du badge de sauvegarde (voir autoSaveTournamentState) : SVG inline,
+// même logique que les icônes "œil" (rendu identique partout, currentColor
+// suit la couleur du badge — vert en cas de succès, rouge en cas d'erreur).
+const ICON_CHECK_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="20 6 9 17 4 12"/></svg>';
+const ICON_ALERT_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+let tournamentSaveBadgePulseTimer = null;
+
 /**
  * Capture l'intégralité de l'état courant du tournoi (formulaire + poules
  * générées, si elles existent).
@@ -25,17 +32,32 @@ function getTournamentState() {
 }
 
 /**
- * Sauvegarde l'état courant dans localStorage et met à jour le badge d'en-tête.
+ * Sauvegarde l'état courant dans localStorage et met à jour le badge d'en-tête :
+ * bref pic d'opacité (.save-badge-pulse, voir styles.css) plutôt qu'un
+ * changement d'opacité en dur — un debounce (clearTimeout/setTimeout) évite
+ * qu'il clignote à chaque frappe lors d'une saisie rapide. En cas d'échec
+ * (localStorage indisponible), le badge reste affiché en rouge tant que le
+ * problème persiste (pas d'auto-masquage, contrairement au succès).
  */
 function autoSaveTournamentState() {
   try {
     localStorage.setItem(TOURNAMENT_STORAGE_KEY, JSON.stringify(getTournamentState()));
     if (elAutosaveBadge) {
-      elAutosaveBadge.textContent = "💾 Sauvegardé";
-      elAutosaveBadge.style.opacity = "1";
+      elAutosaveBadge.classList.remove("save-badge-error");
+      elAutosaveBadge.innerHTML = `${ICON_CHECK_SVG}<span>Sauvegardé</span>`;
+      elAutosaveBadge.classList.add("save-badge-pulse");
+      clearTimeout(tournamentSaveBadgePulseTimer);
+      tournamentSaveBadgePulseTimer = setTimeout(() => {
+        elAutosaveBadge.classList.remove("save-badge-pulse");
+      }, 900);
     }
   } catch (e) {
-    if (elAutosaveBadge) elAutosaveBadge.textContent = "⚠️ Sauvegarde impossible";
+    if (elAutosaveBadge) {
+      clearTimeout(tournamentSaveBadgePulseTimer);
+      elAutosaveBadge.classList.remove("save-badge-pulse");
+      elAutosaveBadge.classList.add("save-badge-error");
+      elAutosaveBadge.innerHTML = `${ICON_ALERT_SVG}<span>Sauvegarde impossible</span>`;
+    }
   }
 }
 
