@@ -3,9 +3,10 @@
 // =============================================================================
 // MODE TOURNOI — SAUVEGARDE ET CHARGEMENT (localStorage)
 // =============================================================================
-// Clé dédiée, distincte de celles du mode Rotation (pb_autosave, pb_history...)
+// Clés dédiées, distinctes de celles du mode Rotation (pb_autosave, pb_history...)
 // pour que les deux modes ne se marchent jamais dessus.
 const TOURNAMENT_STORAGE_KEY = "pb_tournament_autosave";
+const TOURNAMENT_HISTORY_KEY = "pb_tournament_history";
 
 // Icônes du badge de sauvegarde (voir autoSaveTournamentState) : SVG inline,
 // même logique que les icônes "œil" (rendu identique partout, currentColor
@@ -62,16 +63,13 @@ function autoSaveTournamentState() {
 }
 
 /**
- * Recharge l'état sauvegardé (s'il existe) au chargement de la page : formulaire
- * et, le cas échéant, poules déjà générées avec leurs scores.
+ * Applique un état complet (formulaire + poules déjà générées, le cas
+ * échéant) : utilisé aussi bien pour recharger l'autosave au démarrage que
+ * pour charger un tournoi depuis l'historique (voir loadTournamentState et
+ * la section HISTORIQUE DES TOURNOIS plus bas).
+ * @param {Object} state - voir getTournamentState pour la forme exacte
  */
-function loadTournamentState() {
-  let state;
-  try {
-    state = JSON.parse(localStorage.getItem(TOURNAMENT_STORAGE_KEY) || "null");
-  } catch {
-    state = null;
-  }
+function applyTournamentState(state) {
   if (!state) return;
 
   if (state.teamsText != null) elTeams.value = state.teamsText;
@@ -82,8 +80,9 @@ function loadTournamentState() {
   if (state.poolAssignMode != null) elPoolAssignMode.value = state.poolAssignMode;
   if (state.courtNamesText != null) elCourtNames.value = state.courtNamesText;
 
+  window.__PT_TOURNAMENT__ = state.tournament || null;
+
   if (state.tournament) {
-    window.__PT_TOURNAMENT__ = state.tournament;
     // Compatibilité avec un tournoi sauvegardé avant l'introduction de
     // l'allocation de terrains par poule : on la calcule si elle manque.
     if (!state.tournament.courtAllocation) {
@@ -106,9 +105,110 @@ function loadTournamentState() {
     renderPoolStandings(state.tournament.pools, state.tournament.qualifiersPerPool, new Set(state.tournament.forfeitedTeamIds));
     elPoolsSection.hidden = false;
     elPoolStandingsSection.hidden = false;
-
-    renderBothBracketPhases(state.tournament);
-    renderFinalRanking(state.tournament);
-    renderTournamentProgress(state.tournament);
+  } else {
+    // Etat sans tournoi généré (ex : historique sauvegardé pendant la seule
+    // saisie des équipes) : on repart d'un affichage propre plutôt que de
+    // garder à l'écran les poules du tournoi précédemment chargé.
+    renderPools([], [], []);
+    renderPoolStandings([], 1);
+    elPoolsSection.hidden = true;
+    elPoolStandingsSection.hidden = true;
   }
+
+  renderBothBracketPhases(state.tournament || {});
+  renderFinalRanking(state.tournament || {});
+  renderTournamentProgress(state.tournament);
+}
+
+/**
+ * Recharge l'état sauvegardé (s'il existe) au chargement de la page : formulaire
+ * et, le cas échéant, poules déjà générées avec leurs scores.
+ */
+function loadTournamentState() {
+  let state;
+  try {
+    state = JSON.parse(localStorage.getItem(TOURNAMENT_STORAGE_KEY) || "null");
+  } catch {
+    state = null;
+  }
+  if (!state) return;
+  applyTournamentState(state);
+}
+
+// =============================================================================
+// HISTORIQUE DES TOURNOIS (sauvegarde manuelle, distincte de l'autosave —
+// même principe que "Historique des sessions" en mode Rotation, voir
+// js/app/history-and-events.js)
+// =============================================================================
+
+function getTournamentHistory() {
+  try {
+    return JSON.parse(localStorage.getItem(TOURNAMENT_HISTORY_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Enregistre l'état courant dans l'historique des tournois. Un tournoi déjà
+ * enregistré une fois (même tournamentId — attribué à la génération des
+ * poules) met à jour son entrée existante au lieu d'en créer une nouvelle à
+ * chaque clic, comme l'historique de sessions du mode Rotation (qui, lui,
+ * utilise la seed comme identifiant stable).
+ * @returns {boolean} false si aucun tournoi n'est en cours (rien à enregistrer)
+ */
+function saveTournamentToHistory() {
+  const tournament = window.__PT_TOURNAMENT__;
+  if (!tournament) return false;
+
+  // Compatibilité : un tournoi généré avant l'introduction de tournamentId
+  // en reçoit un à la volée, pour que les sauvegardes suivantes le retrouvent.
+  if (!tournament.tournamentId) tournament.tournamentId = Date.now();
+
+  const history = getTournamentHistory();
+  const dateStr = new Date().toLocaleDateString("fr-FR", {
+    day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"
+  });
+
+  const existingIndex = history.findIndex(item => item.tournamentId === tournament.tournamentId);
+
+  const newItem = {
+    id: existingIndex !== -1 ? history[existingIndex].id : Date.now(),
+    tournamentId: tournament.tournamentId,
+    date: dateStr,
+    teamsCount: tournament.teams?.length || 0,
+    numPools: tournament.numPools || 1,
+    state: getTournamentState()
+  };
+
+  if (existingIndex !== -1) history.splice(existingIndex, 1);
+
+  history.unshift(newItem);
+  localStorage.setItem(TOURNAMENT_HISTORY_KEY, JSON.stringify(history.slice(0, 20)));
+  renderTournamentHistory();
+  return true;
+}
+
+function renderTournamentHistory() {
+  if (!elTournamentHistoryList) return;
+  const history = getTournamentHistory();
+  if (!history.length) {
+    elTournamentHistoryList.innerHTML = `<p class="subtle">Aucun tournoi enregistré pour le&nbsp;moment.</p>`;
+    return;
+  }
+
+  elTournamentHistoryList.innerHTML = history.map(item => `
+    <div class="history-card">
+      <div>
+        <h4>${escapeHtml(item.date)}</h4>
+        <div class="subtle" style="font-size: 0.8rem; margin-top: 4px;">
+          ⚔️ ${item.teamsCount} équipe${item.teamsCount > 1 ? "s" : ""} · 👥 ${item.numPools} poule${item.numPools > 1 ? "s" : ""}
+        </div>
+      </div>
+      <div class="history-actions">
+        <button class="secondary load-tournament-hist-btn" data-id="${item.id}">Charger</button>
+        <button class="secondary del-tournament-hist-btn" data-id="${item.id}" style="color: var(--danger);">Supprimer</button>
+      </div>
+    </div>
+  `).join("");
 }

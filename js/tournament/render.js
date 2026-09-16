@@ -386,6 +386,95 @@ function updateScrollToActiveSection(targetEl) {
 }
 
 /**
+ * Recense tous les matchs SANS score encore complet (poules et brackets
+ * confondus), pour la vue "Prochains matchs" (voir renderNextMatches). Un
+ * repos (bye) n'est jamais un match à jouer ; une affiche de bracket dont
+ * l'une des équipes est forfait ne l'est pas non plus (elle se résout
+ * automatiquement, voir progressFinalPhase — aucune saisie possible dessus).
+ * @param {Object} tournament
+ * @returns {Array<{source:string, teamA:string, teamB:string, court:string|null}>}
+ */
+function collectNextMatches(tournament) {
+  const items = [];
+  const courtNames = tournament.courtNames || [];
+
+  (tournament.pools || []).forEach((pool, poolIdx) => {
+    const poolCourts = tournament.courtAllocation?.[poolIdx]?.length ? tournament.courtAllocation[poolIdx] : [poolIdx];
+    pool.rounds.forEach((matches, rIdx) => {
+      matches.forEach((match, mIdx) => {
+        if (match.bye) return;
+        const score = pool.scores[`${rIdx}-${mIdx}`];
+        if (score && score.a != null && score.b != null) return;
+
+        const globalCourtIdx = poolCourts[mIdx % poolCourts.length];
+        items.push({
+          source: `${pool.name} · Journée ${rIdx + 1}`,
+          teamA: match.a.name,
+          teamB: match.b.name,
+          court: courtNames[globalCourtIdx] || `Terrain ${globalCourtIdx + 1}`
+        });
+      });
+    });
+  });
+
+  const forfeitedTeamIds = new Set(tournament.forfeitedTeamIds || []);
+  const assignment = assignCourtsToActiveMatches([tournament.finalPhase, tournament.consolationPhase], tournament.numCourts);
+
+  [
+    { phase: tournament.finalPhase, label: "Phase finale", phaseIdx: 0 },
+    { phase: tournament.consolationPhase, label: "Matchs de classement", phaseIdx: 1 }
+  ].forEach(({ phase, label, phaseIdx }) => {
+    if (!phase) return;
+    phase.segments
+      .filter(segment => segment.slots.length > 1)
+      .forEach(segment => {
+        segmentPairs(segment).forEach(([a, b], idx) => {
+          if (a.bye || b.bye) return;
+          if (forfeitedTeamIds.has(a.team.id) || forfeitedTeamIds.has(b.team.id)) return;
+
+          const courtIdx = assignment.get(`${phaseIdx}-${segment.id}-${idx}`);
+          items.push({
+            source: `${label} · ${segmentLabel(segment)}`,
+            teamA: a.team.name,
+            teamB: b.team.name,
+            court: courtIdx != null ? (courtNames[courtIdx] || `Terrain ${courtIdx + 1}`) : null
+          });
+        });
+      });
+  });
+
+  return items;
+}
+
+/**
+ * Affiche la liste consolidée des prochains matchs à jouer (voir
+ * collectNextMatches) : masquée s'il n'y a rien en attente (tournoi pas
+ * encore lancé, ou entièrement à jour).
+ * @param {Object|null} tournament
+ */
+function renderNextMatches(tournament) {
+  if (!elNextMatchesSection || !elNextMatchesContainer) return;
+
+  const items = tournament?.pools?.length ? collectNextMatches(tournament) : [];
+
+  if (!items.length) {
+    elNextMatchesSection.hidden = true;
+    elNextMatchesContainer.innerHTML = "";
+    return;
+  }
+
+  elNextMatchesContainer.innerHTML = items.map(item => `
+    <div class="next-match-row">
+      <span class="next-match-source">${escapeHtml(item.source)}</span>
+      <span class="next-match-teams">${escapeHtml(item.teamA)} <span class="vs-inline">vs</span> ${escapeHtml(item.teamB)}</span>
+      ${item.court ? `<span class="next-match-court">${escapeHtml(item.court)}</span>` : ""}
+    </div>
+  `).join("");
+
+  elNextMatchesSection.hidden = false;
+}
+
+/**
  * Affiche une vue d'ensemble de l'avancement du tournoi (Poules → Phase
  * finale → Matchs de classement → Classement final), sur le même principe
  * visuel que le stepper de tour du mode Rotation (classes .session-stepper/
@@ -398,6 +487,8 @@ function updateScrollToActiveSection(targetEl) {
  * @param {Object|null} tournament
  */
 function renderTournamentProgress(tournament) {
+  renderNextMatches(tournament);
+
   if (!elTournamentProgress) return;
 
   if (!tournament?.pools?.length) {
