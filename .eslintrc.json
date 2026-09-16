@@ -129,6 +129,7 @@
     "getHistory": "readonly",
     "getPlayerGroups": "readonly",
     "getTournamentHistory": "readonly",
+    "getTournamentState": "readonly",
     "html2canvas": "readonly",
     "ICON_EYE_OFF_SVG": "readonly",
     "ICON_EYE_SVG": "readonly",
