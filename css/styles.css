@@ -138,7 +138,33 @@ header h1 {
   padding: 4px 10px;
   border-radius: 20px;
   font-weight: 600;
-  transition: opacity 0.3s;
+  opacity: 0.6;
+  transition: opacity 0.3s ease, background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Bref pic d'opacité juste après une sauvegarde (voir autoSaveState/
+   autoSaveTournamentState) : redescend tout seul au repos une fois la
+   saisie terminée, au lieu de clignoter à chaque frappe. */
+.save-badge.save-badge-pulse {
+  opacity: 1;
+}
+
+.save-badge.save-badge-error {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--danger);
+  border-color: rgba(239, 68, 68, 0.3);
+  opacity: 1;
+}
+
+/* --------------------------------------------------
+   BOUTON AVEC ICONE SVG + LIBELLE (copier, exporter, rafraîchir, badge de
+   sauvegarde...) : alignement propre icône/texte, sans toucher au style des
+   boutons texte seul déjà existants (button, button.secondary...).
+-------------------------------------------------- */
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .grid {

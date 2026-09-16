@@ -541,7 +541,9 @@ if (btnExportFinalRankingPng) {
   btnExportFinalRankingPng.addEventListener("click", async () => {
     if (!elFinalRankingContainer.innerHTML.trim()) return;
 
-    const originalBtnText = btnExportFinalRankingPng.textContent;
+    // innerHTML (pas textContent) pour restaurer l'icône SVG du bouton une
+    // fois l'export terminé, sinon elle disparaîtrait.
+    const originalBtnHtml = btnExportFinalRankingPng.innerHTML;
     btnExportFinalRankingPng.textContent = "⏳ Génération...";
 
     // Fond de capture assorti au thème courant (sinon le texte du thème clair,
@@ -567,7 +569,7 @@ if (btnExportFinalRankingPng) {
         { title: "Export impossible", icon: "⚠️" }
       );
     } finally {
-      btnExportFinalRankingPng.textContent = originalBtnText;
+      btnExportFinalRankingPng.innerHTML = originalBtnHtml;
     }
   });
 }

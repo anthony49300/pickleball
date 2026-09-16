@@ -279,8 +279,11 @@ btnCopy.addEventListener("click", async () => {
 
   const text = lines.join("\n").trim();
   if (await copyTextRobust(text)) {
+    // innerHTML (pas textContent) pour restaurer l'icône SVG du bouton après
+    // le message de confirmation temporaire, sinon elle disparaîtrait.
+    const originalHtml = btnCopy.innerHTML;
     btnCopy.textContent = "Copié !";
-    setTimeout(() => (btnCopy.textContent = "📋 Copier"), 900);
+    setTimeout(() => { btnCopy.innerHTML = originalHtml; }, 900);
   } else {
     await copyFallbackModal(text, { title: "Copier le planning" });
   }
@@ -324,7 +327,9 @@ if (btnExportPng) {
     const targetArea = document.getElementById("rankingCaptureArea");
     if (!targetArea) return;
 
-    const originalBtnText = btnExportPng.textContent;
+    // innerHTML (pas textContent) pour restaurer l'icône SVG du bouton une
+    // fois l'export terminé, sinon elle disparaîtrait.
+    const originalBtnHtml = btnExportPng.innerHTML;
     btnExportPng.textContent = "⏳ Génération...";
 
     try {
@@ -350,7 +355,7 @@ if (btnExportPng) {
         { title: "Export impossible", icon: "⚠️" }
       );
     } finally {
-      btnExportPng.textContent = originalBtnText;
+      btnExportPng.innerHTML = originalBtnHtml;
     }
   });
 }
