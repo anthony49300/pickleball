@@ -69,8 +69,18 @@ function loadTournamentState() {
     }
     // Compatibilité avec un tournoi sauvegardé avant l'introduction des forfaits.
     if (!state.tournament.forfeitedTeamIds) state.tournament.forfeitedTeamIds = [];
+    // Compatibilité avec un tournoi sauvegardé avant l'introduction du
+    // masquage manuel des poules/matchs.
+    if (!state.tournament.hiddenPoolIndices) state.tournament.hiddenPoolIndices = [];
+    if (!state.tournament.hiddenMatchKeys) state.tournament.hiddenMatchKeys = [];
 
-    renderPools(state.tournament.pools, state.tournament.courtNames || [], state.tournament.courtAllocation);
+    renderPools(
+      state.tournament.pools,
+      state.tournament.courtNames || [],
+      state.tournament.courtAllocation,
+      state.tournament.hiddenPoolIndices,
+      new Set(state.tournament.hiddenMatchKeys)
+    );
     renderPoolStandings(state.tournament.pools, state.tournament.qualifiersPerPool, new Set(state.tournament.forfeitedTeamIds));
     elPoolsSection.hidden = false;
     elPoolStandingsSection.hidden = false;

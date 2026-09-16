@@ -4,6 +4,14 @@
 // MODE TOURNOI — RENDU (équipes, répartition manuelle, poules, classements)
 // =============================================================================
 
+// Icônes "œil" (masquer/afficher une poule ou un match, voir plus bas) en SVG
+// inline plutôt qu'en emoji : rendu identique et net sur toutes les
+// plateformes (contrairement aux emoji, dont le style varie beaucoup d'un
+// système à l'autre), et stroke="currentColor" suit automatiquement la
+// couleur du bouton (thème clair/sombre, survol...) sans rien coder en dur.
+const ICON_EYE_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+const ICON_EYE_OFF_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+
 /**
  * Met à jour le badge "X équipe(s)" à côté du champ de saisie.
  */
@@ -54,6 +62,29 @@ function renderManualAssignList(teams, numPools, currentAssignment) {
 }
 
 /**
+ * Enveloppe le rendu d'un match réel (score à saisir — pas un repos/bye, pas
+ * une affiche déjà résolue par forfait, qui restent déjà des lignes compactes
+ * sans rien à replier) dans un conteneur muni d'un bouton masquer/afficher
+ * (voir events.js, délégation `.match-hide-btn`). Masquer un match est
+ * purement visuel : ça ne touche à aucun score, juste au rendu (`innerHtml`
+ * replié en un intitulé compact "Équipe A vs Équipe B").
+ * @param {string} hideKey - identifiant stable du match (voir appelants)
+ * @param {string} label - intitulé affiché une fois replié
+ * @param {string} innerHtml - rendu complet du match (déplié)
+ * @param {Set<string>} hiddenMatchKeys
+ */
+function wrapHideableMatch(hideKey, label, innerHtml, hiddenMatchKeys) {
+  const isHidden = !!hiddenMatchKeys?.has(hideKey);
+  return `
+    <div class="match-wrapper ${isHidden ? "match-hidden" : ""}">
+      <button type="button" class="match-hide-btn" data-hide-key="${hideKey}" title="${isHidden ? "Afficher ce match" : "Masquer ce match"}" aria-label="${isHidden ? "Afficher" : "Masquer"} le match ${label}">${isHidden ? ICON_EYE_SVG : ICON_EYE_OFF_SVG}</button>
+      <div class="match-hidden-label">${label}</div>
+      <div class="match-hideable-content">${innerHtml}</div>
+    </div>
+  `;
+}
+
+/**
  * Affiche le calendrier de chaque poule avec les champs de saisie des scores.
  * Reprend exactement le visuel "terrain de pickleball" du mode Rotation
  * (mêmes classes : match-card, court-badge, team-score, team, vs, score-input)
@@ -63,10 +94,14 @@ function renderManualAssignList(teams, numPools, currentAssignment) {
  * @param {number[][]} courtAllocation - pour chaque poule, les index de
  *   terrain (0-based) qui lui sont attribués (voir allocateCourtsToPools) ;
  *   les matchs d'une même journée y cyclent dans l'ordre.
+ * @param {number[]} hiddenPoolIndices - index de poules repliées manuellement
+ *   (voir events.js, bouton `.pool-hide-btn`)
+ * @param {Set<string>} hiddenMatchKeys - voir wrapHideableMatch
  */
-function renderPools(pools, courtNames = [], courtAllocation = []) {
+function renderPools(pools, courtNames = [], courtAllocation = [], hiddenPoolIndices = [], hiddenMatchKeys = new Set()) {
   elPoolsContainer.innerHTML = pools.map((pool, poolIdx) => {
     const poolCourts = courtAllocation[poolIdx]?.length ? courtAllocation[poolIdx] : [poolIdx];
+    const isPoolHidden = hiddenPoolIndices.includes(poolIdx);
 
     const roundsHtml = pool.rounds.map((matches, rIdx) => {
       const matchesHtml = matches.map((match, mIdx) => {
@@ -78,7 +113,7 @@ function renderPools(pools, courtNames = [], courtAllocation = []) {
         const globalCourtIdx = poolCourts[mIdx % poolCourts.length];
         const courtLabel = escapeHtml(courtNames[globalCourtIdx] || `Terrain ${globalCourtIdx + 1}`);
         const forfeitBadge = score.forfeit ? `<span class="forfeit-badge" title="Résultat automatique (forfait)">🚫 Forfait</span>` : "";
-        return `
+        const matchCardHtml = `
           <div class="match-card">
             <span class="court-badge">${courtLabel}</span>
             ${forfeitBadge}
@@ -93,6 +128,9 @@ function renderPools(pools, courtNames = [], courtAllocation = []) {
             </div>
           </div>
         `;
+        const hideKey = `pool:${poolIdx}:${rIdx}:${mIdx}`;
+        const label = `${escapeHtml(match.a.name)} vs ${escapeHtml(match.b.name)}`;
+        return wrapHideableMatch(hideKey, label, matchCardHtml, hiddenMatchKeys);
       }).join("");
 
       return `
@@ -104,9 +142,12 @@ function renderPools(pools, courtNames = [], courtAllocation = []) {
     }).join("");
 
     return `
-      <div class="pool-card">
-        <h3 class="pool-card-title">${escapeHtml(pool.name)}</h3>
-        ${roundsHtml}
+      <div class="pool-card ${isPoolHidden ? "pool-collapsed" : ""}">
+        <div class="pool-card-header">
+          <h3 class="pool-card-title">${escapeHtml(pool.name)}</h3>
+          <button type="button" class="round-hide-btn pool-hide-btn" data-pool-index="${poolIdx}" title="${isPoolHidden ? "Afficher cette poule" : "Masquer cette poule"}">${isPoolHidden ? ICON_EYE_SVG : ICON_EYE_OFF_SVG}<span>${isPoolHidden ? "Afficher" : "Masquer"}</span></button>
+        </div>
+        <div class="pool-content">${roundsHtml}</div>
       </div>
     `;
   }).join("");
@@ -199,8 +240,11 @@ function renderPoolStandings(pools, qualifiersPerPool, forfeitedTeamIds = new Se
  *   score saisi (elle est résolue automatiquement dès qu'elle apparaît, voir
  *   progressFinalPhase), on l'affiche donc comme le repos ci-dessus plutôt
  *   que comme un match à saisir.
+ * @param {Set<string>|null} hiddenMatchKeys - voir wrapHideableMatch ; ne
+ *   s'applique qu'aux vrais matchs (score à saisir), pas aux affiches de
+ *   repos/forfait ci-dessus, déjà des lignes compactes.
  */
-function renderBracketPairs(pairs, scores, editable, segmentId, courtNames = [], activeCourtAssignment = null, phaseIdx = 0, forfeitedTeamIds = null) {
+function renderBracketPairs(pairs, scores, editable, segmentId, courtNames = [], activeCourtAssignment = null, phaseIdx = 0, forfeitedTeamIds = null, hiddenMatchKeys = null) {
   return pairs.map(([a, b], idx) => {
     if (a.bye && b.bye) return "";
 
@@ -222,7 +266,7 @@ function renderBracketPairs(pairs, scores, editable, segmentId, courtNames = [],
     const dataAttrs = editable ? `data-segment="${segmentId}" data-match="${idx}"` : "";
     const courtIdx = activeCourtAssignment?.get(`${phaseIdx}-${segmentId}-${idx}`) ?? idx;
     const courtLabel = escapeHtml(courtNames[courtIdx] || `Terrain ${courtIdx + 1}`);
-    return `
+    const matchCardHtml = `
       <div class="match-card">
         <span class="court-badge">${courtLabel}</span>
         <div class="team-score">
@@ -236,6 +280,9 @@ function renderBracketPairs(pairs, scores, editable, segmentId, courtNames = [],
         </div>
       </div>
     `;
+    const hideKey = `bracket:${phaseIdx}:${segmentId}:${idx}`;
+    const label = `${escapeHtml(a.team.name)} vs ${escapeHtml(b.team.name)}`;
+    return wrapHideableMatch(hideKey, label, matchCardHtml, hiddenMatchKeys);
   }).join("");
 }
 
@@ -254,8 +301,9 @@ function renderBracketPairs(pairs, scores, editable, segmentId, courtNames = [],
  *   pour consolationPhase — doit correspondre à l'ordre passé à
  *   assignCourtsToActiveMatches pour que les clés se retrouvent).
  * @param {Set<number>|null} forfeitedTeamIds - voir renderBracketPairs
+ * @param {Set<string>|null} hiddenMatchKeys - voir wrapHideableMatch
  */
-function renderBracketPhase(phase, container, courtNames = [], activeCourtAssignment = null, phaseIdx = 0, forfeitedTeamIds = null) {
+function renderBracketPhase(phase, container, courtNames = [], activeCourtAssignment = null, phaseIdx = 0, forfeitedTeamIds = null, hiddenMatchKeys = null) {
   if (!phase) {
     container.innerHTML = "";
     return;
@@ -265,7 +313,7 @@ function renderBracketPhase(phase, container, courtNames = [], activeCourtAssign
     <div class="pool-card">
       <h3 class="pool-card-title">${escapeHtml(round.label)}</h3>
       <div class="round">
-        <div class="matches-list">${renderBracketPairs(round.pairs, round.scores, false, null, courtNames, null, phaseIdx, forfeitedTeamIds)}</div>
+        <div class="matches-list">${renderBracketPairs(round.pairs, round.scores, false, round.segmentId, courtNames, null, phaseIdx, forfeitedTeamIds, hiddenMatchKeys)}</div>
       </div>
     </div>
   `);
@@ -276,7 +324,7 @@ function renderBracketPhase(phase, container, courtNames = [], activeCourtAssign
       <div class="pool-card">
         <h3 class="pool-card-title">${escapeHtml(segmentLabel(segment))}</h3>
         <div class="round">
-          <div class="matches-list">${renderBracketPairs(segmentPairs(segment), segment.scores, true, segment.id, courtNames, activeCourtAssignment, phaseIdx, forfeitedTeamIds)}</div>
+          <div class="matches-list">${renderBracketPairs(segmentPairs(segment), segment.scores, true, segment.id, courtNames, activeCourtAssignment, phaseIdx, forfeitedTeamIds, hiddenMatchKeys)}</div>
         </div>
       </div>
     `);
@@ -299,8 +347,9 @@ function renderBothBracketPhases(tournament) {
     tournament.numCourts
   );
   const forfeitedTeamIds = new Set(tournament.forfeitedTeamIds || []);
-  renderBracketPhase(tournament.finalPhase, elFinalPhaseContainer, tournament.courtNames, assignment, 0, forfeitedTeamIds);
-  renderBracketPhase(tournament.consolationPhase, elConsolationPhaseContainer, tournament.courtNames, assignment, 1, forfeitedTeamIds);
+  const hiddenMatchKeys = new Set(tournament.hiddenMatchKeys || []);
+  renderBracketPhase(tournament.finalPhase, elFinalPhaseContainer, tournament.courtNames, assignment, 0, forfeitedTeamIds, hiddenMatchKeys);
+  renderBracketPhase(tournament.consolationPhase, elConsolationPhaseContainer, tournament.courtNames, assignment, 1, forfeitedTeamIds, hiddenMatchKeys);
 }
 
 /**

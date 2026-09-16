@@ -4,6 +4,14 @@
 // FONCTIONS D'ANALYSE DU FORMULAIRE ET PRESENCE
 // =============================================================================
 
+// Icônes "œil" (masquer/afficher un tour, voir render() plus bas) en SVG
+// inline plutôt qu'en emoji : rendu identique et net sur toutes les
+// plateformes (contrairement aux emoji, dont le style varie beaucoup d'un
+// système à l'autre), et stroke="currentColor" suit automatiquement la
+// couleur du bouton (thème clair/sombre, survol...) sans rien coder en dur.
+const ICON_EYE_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+const ICON_EYE_OFF_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+
 /**
  * Efface les messages d'erreur et d'avertissement à l'écran.
  */
@@ -223,17 +231,20 @@ function render(result, players, numCourts, numRounds) {
 
   const activeRoundIndex = updateSessionStepper(rounds);
 
+  const hiddenRounds = Array.isArray(window.__PB_HIDDEN_ROUNDS__) ? window.__PB_HIDDEN_ROUNDS__ : [];
+
   rounds.forEach((matches, idx) => {
     const wrap = document.createElement("div");
     const isActiveRound = (idx === activeRoundIndex);
-    wrap.className = `round ${isActiveRound ? 'active-round' : ''}`;
+    const isHidden = hiddenRounds.includes(idx);
+    wrap.className = `round ${isActiveRound ? 'active-round' : ''} ${isHidden ? 'round-collapsed' : ''}`;
 
     const titleRow = document.createElement("div");
     titleRow.className = "roundTitle";
-    
+
     const h3 = document.createElement("h3");
     h3.textContent = `Tour ${idx + 1}`;
-    
+
     const tagsDiv = document.createElement("div");
     tagsDiv.className = "round-tags";
 
@@ -258,16 +269,31 @@ function render(result, players, numCourts, numRounds) {
       tagsDiv.appendChild(absent);
     }
 
+    // Masquage manuel d'un tour (les scores restent enregistrés normalement,
+    // voir window.__PB_HIDDEN_ROUNDS__ et la délégation de clic dans
+    // history-and-events.js) : pratique pour replier au fur et à mesure les
+    // tours déjà joués et ne garder à l'écran que ceux qui restent.
+    const hideBtn = document.createElement("button");
+    hideBtn.type = "button";
+    hideBtn.className = "round-hide-btn";
+    hideBtn.dataset.round = idx;
+    hideBtn.innerHTML = `${isHidden ? ICON_EYE_SVG : ICON_EYE_OFF_SVG}<span>${isHidden ? "Afficher" : "Masquer"}</span>`;
+    hideBtn.title = isHidden ? "Réafficher ce tour" : "Masquer ce tour (les scores restent enregistrés)";
+    tagsDiv.appendChild(hideBtn);
+
     titleRow.appendChild(h3);
     titleRow.appendChild(tagsDiv);
     wrap.appendChild(titleRow);
+
+    const content = document.createElement("div");
+    content.className = "round-content";
 
     if (!matches.length) {
       const p = document.createElement("div");
       p.className = "subtle";
       p.style.marginTop = "8px";
       p.textContent = "Pas assez de joueurs disponibles pour un match ce tour-ci.";
-      wrap.appendChild(p);
+      content.appendChild(p);
     } else {
       const matchesList = document.createElement("div");
       matchesList.className = "matches-list";
@@ -297,9 +323,10 @@ function render(result, players, numCourts, numRounds) {
         `;
         matchesList.appendChild(matchCard);
       });
-      wrap.appendChild(matchesList);
+      content.appendChild(matchesList);
     }
 
+    wrap.appendChild(content);
     elSchedule.appendChild(wrap);
   });
 

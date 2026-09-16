@@ -126,6 +126,7 @@ if (btnResetAll) {
     // Réinitialise l'état en mémoire
     window.__PB_SCORES__ = {};
     window.__PB_PRESENCE__ = {};
+    window.__PB_HIDDEN_ROUNDS__ = [];
     window.__PB_LAST_RESULT__ = null;
 
     // Réinitialise les champs du formulaire à leurs valeurs par défaut
@@ -220,6 +221,31 @@ btnGenerate.addEventListener("click", () => {
       autoSaveState();
     }
   });
+});
+
+// Masquage/affichage manuel d'un tour (bouton dans l'en-tête de chaque tour,
+// voir render() dans form-and-render.js) : purement visuel, ne touche à
+// aucun score. On bascule juste la classe CSS + le libellé du bouton plutôt
+// que de régénérer tout le DOM, pour ne jamais perdre le focus/la saisie en
+// cours dans un autre tour.
+elSchedule.addEventListener("click", (e) => {
+  const btn = e.target.closest(".round-hide-btn");
+  if (!btn) return;
+
+  const idx = parseInt(btn.dataset.round, 10);
+  if (!Array.isArray(window.__PB_HIDDEN_ROUNDS__)) window.__PB_HIDDEN_ROUNDS__ = [];
+
+  const pos = window.__PB_HIDDEN_ROUNDS__.indexOf(idx);
+  const nowHidden = pos === -1;
+  if (nowHidden) window.__PB_HIDDEN_ROUNDS__.push(idx);
+  else window.__PB_HIDDEN_ROUNDS__.splice(pos, 1);
+
+  const roundEl = btn.closest(".round");
+  if (roundEl) roundEl.classList.toggle("round-collapsed", nowHidden);
+  btn.innerHTML = `${nowHidden ? ICON_EYE_SVG : ICON_EYE_OFF_SVG}<span>${nowHidden ? "Afficher" : "Masquer"}</span>`;
+  btn.title = nowHidden ? "Réafficher ce tour" : "Masquer ce tour (les scores restent enregistrés)";
+
+  autoSaveState();
 });
 
 // Écoute instantanée de tous les paramètres du formulaire (input + change)

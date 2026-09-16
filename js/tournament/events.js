@@ -187,10 +187,10 @@ btnGeneratePools.addEventListener("click", async () => {
   const numCourts = Math.max(1, parseInt(elNumCourts.value || "1", 10));
   const courtNames = parseCourtNames(elCourtNames.value);
   const courtAllocation = allocateCourtsToPools(pools, numCourts);
-  window.__PT_TOURNAMENT__ = { teams, numPools, qualifiersPerPool, poolAssignMode: mode, numCourts, courtNames, courtAllocation, pools, forfeitedTeamIds: [] };
+  window.__PT_TOURNAMENT__ = { teams, numPools, qualifiersPerPool, poolAssignMode: mode, numCourts, courtNames, courtAllocation, pools, forfeitedTeamIds: [], hiddenPoolIndices: [], hiddenMatchKeys: [] };
 
   elManualAssignSection.hidden = true;
-  renderPools(pools, courtNames, courtAllocation);
+  renderPools(pools, courtNames, courtAllocation, [], new Set());
   renderPoolStandings(pools, qualifiersPerPool, new Set());
   elPoolsSection.hidden = false;
   elPoolStandingsSection.hidden = false;
@@ -216,10 +216,10 @@ btnConfirmManualAssign.addEventListener("click", () => {
   const numCourts = Math.max(1, parseInt(elNumCourts.value || "1", 10));
   const courtNames = parseCourtNames(elCourtNames.value);
   const courtAllocation = allocateCourtsToPools(pools, numCourts);
-  window.__PT_TOURNAMENT__ = { teams, numPools, qualifiersPerPool, poolAssignMode: "manual", numCourts, courtNames, courtAllocation, pools, forfeitedTeamIds: [] };
+  window.__PT_TOURNAMENT__ = { teams, numPools, qualifiersPerPool, poolAssignMode: "manual", numCourts, courtNames, courtAllocation, pools, forfeitedTeamIds: [], hiddenPoolIndices: [], hiddenMatchKeys: [] };
 
   elManualAssignSection.hidden = true;
-  renderPools(pools, courtNames, courtAllocation);
+  renderPools(pools, courtNames, courtAllocation, [], new Set());
   renderPoolStandings(pools, qualifiersPerPool, new Set());
   elPoolsSection.hidden = false;
   elPoolStandingsSection.hidden = false;
@@ -239,7 +239,7 @@ function refreshCourtsOnExistingTournament() {
   tournament.numCourts = Math.max(1, parseInt(elNumCourts.value || "1", 10));
   tournament.courtNames = parseCourtNames(elCourtNames.value);
   tournament.courtAllocation = allocateCourtsToPools(tournament.pools, tournament.numCourts);
-  renderPools(tournament.pools, tournament.courtNames, tournament.courtAllocation);
+  renderPools(tournament.pools, tournament.courtNames, tournament.courtAllocation, tournament.hiddenPoolIndices || [], new Set(tournament.hiddenMatchKeys || []));
   renderBothBracketPhases(tournament);
 }
 
@@ -290,7 +290,7 @@ elPoolsContainer.addEventListener("input", (e) => {
  */
 function refreshAfterTeamEdit(tournament) {
   const forfeitedTeamIds = new Set(tournament.forfeitedTeamIds || []);
-  renderPools(tournament.pools, tournament.courtNames, tournament.courtAllocation);
+  renderPools(tournament.pools, tournament.courtNames, tournament.courtAllocation, tournament.hiddenPoolIndices || [], new Set(tournament.hiddenMatchKeys || []));
   renderPoolStandings(tournament.pools, tournament.qualifiersPerPool, forfeitedTeamIds);
   renderBothBracketPhases(tournament);
   renderFinalRanking(tournament);
@@ -361,6 +361,71 @@ elPoolStandingsContainer.addEventListener("click", async (e) => {
 
   refreshAfterTeamEdit(tournament);
 });
+
+// --------------------------------------------------
+// MASQUAGE MANUEL (poules et matchs) — purement visuel, ne touche à aucun
+// score ni à aucune donnée : voir renderPools/wrapHideableMatch (render.js).
+// On bascule juste la classe CSS + le libellé du bouton concerné plutôt que
+// de tout réafficher, pour ne jamais perdre le focus/la saisie en cours dans
+// un autre match.
+// --------------------------------------------------
+
+elPoolsContainer.addEventListener("click", (e) => {
+  const btn = e.target.closest(".pool-hide-btn");
+  if (!btn) return;
+
+  const tournament = window.__PT_TOURNAMENT__;
+  if (!tournament) return;
+
+  const poolIdx = parseInt(btn.dataset.poolIndex, 10);
+  if (!Array.isArray(tournament.hiddenPoolIndices)) tournament.hiddenPoolIndices = [];
+
+  const pos = tournament.hiddenPoolIndices.indexOf(poolIdx);
+  const nowHidden = pos === -1;
+  if (nowHidden) tournament.hiddenPoolIndices.push(poolIdx);
+  else tournament.hiddenPoolIndices.splice(pos, 1);
+
+  const poolCard = btn.closest(".pool-card");
+  if (poolCard) poolCard.classList.toggle("pool-collapsed", nowHidden);
+  btn.innerHTML = `${nowHidden ? ICON_EYE_SVG : ICON_EYE_OFF_SVG}<span>${nowHidden ? "Afficher" : "Masquer"}</span>`;
+  btn.title = nowHidden ? "Afficher cette poule" : "Masquer cette poule";
+
+  autoSaveTournamentState();
+});
+
+/**
+ * Câble le masquage/affichage manuel d'un match (bouton `.match-hide-btn`,
+ * voir wrapHideableMatch dans render.js) sur un conteneur de matchs (poules
+ * ou l'un des deux brackets — même logique partout).
+ */
+function wireMatchHideButtons(container) {
+  container.addEventListener("click", (e) => {
+    const btn = e.target.closest(".match-hide-btn");
+    if (!btn) return;
+
+    const tournament = window.__PT_TOURNAMENT__;
+    if (!tournament) return;
+
+    const key = btn.dataset.hideKey;
+    if (!Array.isArray(tournament.hiddenMatchKeys)) tournament.hiddenMatchKeys = [];
+
+    const pos = tournament.hiddenMatchKeys.indexOf(key);
+    const nowHidden = pos === -1;
+    if (nowHidden) tournament.hiddenMatchKeys.push(key);
+    else tournament.hiddenMatchKeys.splice(pos, 1);
+
+    const wrapper = btn.closest(".match-wrapper");
+    if (wrapper) wrapper.classList.toggle("match-hidden", nowHidden);
+    btn.innerHTML = nowHidden ? ICON_EYE_SVG : ICON_EYE_OFF_SVG;
+    btn.title = nowHidden ? "Afficher ce match" : "Masquer ce match";
+
+    autoSaveTournamentState();
+  });
+}
+
+wireMatchHideButtons(elPoolsContainer);
+wireMatchHideButtons(elFinalPhaseContainer);
+wireMatchHideButtons(elConsolationPhaseContainer);
 
 // --------------------------------------------------
 // PHASE FINALE
