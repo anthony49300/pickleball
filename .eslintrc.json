@@ -15,7 +15,7 @@
     "no-redeclare": ["error", { "builtinGlobals": false }]
   },
   "globals": {
-    "activeScrollTarget": "readonly",
+    "activeScrollTarget": "writable",
     "advanceSegment": "readonly",
     "alertModal": "readonly",
     "allocateCourtsToPools": "readonly",
