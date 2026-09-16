@@ -192,6 +192,7 @@ btnGeneratePools.addEventListener("click", async () => {
   elManualAssignSection.hidden = true;
   renderPools(pools, courtNames, courtAllocation, [], new Set());
   renderPoolStandings(pools, qualifiersPerPool, new Set());
+  renderTournamentProgress(window.__PT_TOURNAMENT__);
   elPoolsSection.hidden = false;
   elPoolStandingsSection.hidden = false;
   autoSaveTournamentState();
@@ -221,6 +222,7 @@ btnConfirmManualAssign.addEventListener("click", () => {
   elManualAssignSection.hidden = true;
   renderPools(pools, courtNames, courtAllocation, [], new Set());
   renderPoolStandings(pools, qualifiersPerPool, new Set());
+  renderTournamentProgress(window.__PT_TOURNAMENT__);
   elPoolsSection.hidden = false;
   elPoolStandingsSection.hidden = false;
   autoSaveTournamentState();
@@ -274,6 +276,7 @@ elPoolsContainer.addEventListener("input", (e) => {
   delete pool.scores[key].forfeit;
 
   renderPoolStandings(tournament.pools, tournament.qualifiersPerPool, new Set(tournament.forfeitedTeamIds || []));
+  renderTournamentProgress(tournament);
   autoSaveTournamentState();
 });
 
@@ -294,6 +297,7 @@ function refreshAfterTeamEdit(tournament) {
   renderPoolStandings(tournament.pools, tournament.qualifiersPerPool, forfeitedTeamIds);
   renderBothBracketPhases(tournament);
   renderFinalRanking(tournament);
+  renderTournamentProgress(tournament);
   autoSaveTournamentState();
 }
 
@@ -472,6 +476,7 @@ function wireBracketGenerateButton(button, { phaseKey, getSeededTeams, getRankOf
 
     renderBothBracketPhases(tournament);
     renderFinalRanking(tournament);
+    renderTournamentProgress(tournament);
     autoSaveTournamentState();
   });
 }
@@ -508,6 +513,7 @@ function wireBracketScoreInputs(container, phaseKey) {
       renderBothBracketPhases(tournament);
     }
     renderFinalRanking(tournament);
+    renderTournamentProgress(tournament);
     autoSaveTournamentState();
   });
 }
@@ -571,5 +577,17 @@ if (btnExportFinalRankingPng) {
     } finally {
       btnExportFinalRankingPng.innerHTML = originalBtnHtml;
     }
+  });
+}
+
+// --------------------------------------------------
+// BOUTON FLOTTANT "REVENIR A L'ETAPE EN COURS" (voir renderTournamentProgress
+// dans render.js, qui calcule la cible et gère l'affichage/masquage du
+// bouton selon sa visibilité — ici, seulement le clic pour y défiler).
+// --------------------------------------------------
+
+if (btnScrollToActive) {
+  btnScrollToActive.addEventListener("click", () => {
+    activeScrollTarget?.scrollIntoView({ behavior: "smooth", block: "center" });
   });
 }

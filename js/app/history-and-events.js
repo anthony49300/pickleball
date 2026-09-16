@@ -173,6 +173,12 @@ btnNewSeed.addEventListener("click", () => {
   autoSaveState();
 });
 
+if (btnScrollToActive) {
+  btnScrollToActive.addEventListener("click", () => {
+    elSchedule.querySelector(".round.active-round")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+}
+
 btnGenerate.addEventListener("click", () => {
   const hasScores = Object.keys(window.__PB_SCORES__).length > 0;
   generateSession(hasScores);
@@ -215,6 +221,8 @@ btnGenerate.addEventListener("click", () => {
             if (badge) badge.remove();
           }
         });
+
+        updateScrollToActiveButton();
       }
 
       updateRankings();
