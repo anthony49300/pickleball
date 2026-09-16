@@ -109,5 +109,6 @@ function loadTournamentState() {
 
     renderBothBracketPhases(state.tournament);
     renderFinalRanking(state.tournament);
+    renderTournamentProgress(state.tournament);
   }
 }

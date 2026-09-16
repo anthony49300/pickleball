@@ -352,6 +352,99 @@ function renderBothBracketPhases(tournament) {
   renderBracketPhase(tournament.consolationPhase, elConsolationPhaseContainer, tournament.courtNames, assignment, 1, forfeitedTeamIds, hiddenMatchKeys);
 }
 
+let activeSectionScrollObserver = null;
+let activeScrollTarget = null;
+
+/**
+ * Affiche/masque le bouton flottant "Revenir à l'étape en cours"
+ * (#scrollToActiveBtn, voir events.js pour le clic) selon que `targetEl` est
+ * actuellement visible à l'écran ou non. Un IntersectionObserver (plutôt
+ * qu'un listener de scroll) évite tout calcul à chaque pixel défilé ; il est
+ * reconstruit à chaque appel car la section "en cours" peut changer d'un
+ * appel à l'autre (voir renderTournamentProgress).
+ * @param {HTMLElement|null} targetEl
+ */
+function updateScrollToActiveSection(targetEl) {
+  activeScrollTarget = targetEl;
+  if (!btnScrollToActive) return;
+
+  if (activeSectionScrollObserver) {
+    activeSectionScrollObserver.disconnect();
+    activeSectionScrollObserver = null;
+  }
+
+  if (!targetEl) {
+    btnScrollToActive.hidden = true;
+    return;
+  }
+
+  activeSectionScrollObserver = new IntersectionObserver(
+    ([entry]) => { btnScrollToActive.hidden = !!entry?.isIntersecting; },
+    { threshold: 0.15 }
+  );
+  activeSectionScrollObserver.observe(targetEl);
+}
+
+/**
+ * Affiche une vue d'ensemble de l'avancement du tournoi (Poules → Phase
+ * finale → Matchs de classement → Classement final), sur le même principe
+ * visuel que le stepper de tour du mode Rotation (classes .session-stepper/
+ * .step-item/.step-number/.step-divider, réutilisées telles quelles). Phase
+ * finale et matchs de classement sont indépendants l'un de l'autre (on peut
+ * lancer l'un sans l'autre, ou les deux en parallèle) : chaque étape calcule
+ * son propre statut plutôt que de dépendre strictement de la précédente.
+ * Met aussi à jour le bouton flottant "Revenir à l'étape en cours" (voir
+ * updateScrollToActiveSection), sur la 1ère étape non terminée.
+ * @param {Object|null} tournament
+ */
+function renderTournamentProgress(tournament) {
+  if (!elTournamentProgress) return;
+
+  if (!tournament?.pools?.length) {
+    elTournamentProgress.hidden = true;
+    elTournamentProgress.innerHTML = "";
+    updateScrollToActiveSection(null);
+    return;
+  }
+
+  const poolsDone = tournament.pools.every(isPoolComplete);
+  const finalStarted = !!tournament.finalPhase;
+  const finalDone = !!tournament.finalPhase?.finalRanking;
+  const consolationStarted = !!tournament.consolationPhase;
+  const consolationDone = !!tournament.consolationPhase?.finalRanking;
+  const rankingReady = finalDone || consolationDone;
+
+  const steps = [
+    { label: "Poules", started: true, done: poolsDone },
+    { label: "Phase finale", started: finalStarted, done: finalDone },
+    { label: "Matchs de classement", started: consolationStarted, done: consolationDone },
+    { label: "Classement final", started: rankingReady, done: rankingReady }
+  ];
+
+  elTournamentProgress.innerHTML = steps.map((step, i) => {
+    const isActive = step.started && !step.done;
+    const stepHtml = `
+      <div class="step-item ${step.done ? "completed" : ""} ${isActive ? "active" : ""}">
+        <div class="step-number">${step.done ? "✓" : i + 1}</div>
+        <span>${escapeHtml(step.label)}</span>
+      </div>
+    `;
+    const dividerHtml = i < steps.length - 1
+      ? `<div class="step-divider ${step.done ? "active" : ""}"></div>`
+      : "";
+    return stepHtml + dividerHtml;
+  }).join("");
+
+  elTournamentProgress.hidden = false;
+
+  let scrollTarget = null;
+  if (!poolsDone) scrollTarget = elPoolsSection;
+  else if (finalStarted && !finalDone) scrollTarget = elFinalPhaseContainer;
+  else if (consolationStarted && !consolationDone) scrollTarget = elConsolationPhaseContainer;
+  else if (rankingReady) scrollTarget = elFinalRankingSection;
+  updateScrollToActiveSection(scrollTarget);
+}
+
 /**
  * Podium visuel des 3 premiers du classement final (mêmes classes que le
  * podium du mode Rotation : podium-container/podium-step/gold/silver/bronze).

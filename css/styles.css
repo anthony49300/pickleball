@@ -790,13 +790,28 @@ button:disabled {
   color: var(--text-main);
 }
 
+/* Transition douce (plutôt qu'un display:none instantané) : max-height assez
+   grand pour ne jamais rogner un tour de taille normale, l'opacité fait
+   l'essentiel du travail visuel. */
+.round-content {
+  overflow: hidden;
+  max-height: 3000px;
+  opacity: 1;
+  transition: max-height 0.3s ease, opacity 0.25s ease;
+}
+
 .round.round-collapsed .round-content {
-  display: none;
+  max-height: 0;
+  opacity: 0;
+}
+
+.roundTitle {
+  transition: margin-bottom 0.3s ease, padding-bottom 0.3s ease, border-color 0.3s ease;
 }
 
 .round.round-collapsed .roundTitle {
   margin-bottom: 0;
-  border-bottom: none;
+  border-bottom-color: transparent;
   padding-bottom: 0;
 }
 
@@ -1133,6 +1148,33 @@ button:disabled {
 }
 
 .footer { text-align: center; padding: 20px 0; font-size: 0.85rem; }
+
+/* --------------------------------------------------
+   BOUTON FLOTTANT "REVENIR AU TOUR/SEGMENT EN COURS" — affiché seulement
+   quand ce tour/segment n'est plus visible à l'écran (voir l'IntersectionObserver
+   dans history-and-events.js / events.js), pour ne pas avoir à scroller à la
+   main sur une longue session/un long tournoi.
+-------------------------------------------------- */
+.fab-scroll-active {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 40;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: var(--pickle-yellow);
+  color: #000;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35), 0 0 0 3px rgba(var(--pickle-yellow-rgb), 0.25);
+}
+
+.fab-scroll-active[hidden] {
+  display: none;
+}
 
 /* --------------------------------------------------
    MODALE GENERIQUE (remplace confirm/alert/prompt natifs)

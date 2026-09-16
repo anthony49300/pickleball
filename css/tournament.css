@@ -162,10 +162,17 @@ select option {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  /* Transition douce (plutôt qu'un display:none instantané) : max-height
+     assez grand pour ne jamais rogner une poule de taille normale. */
+  overflow: hidden;
+  max-height: 6000px;
+  opacity: 1;
+  transition: max-height 0.3s ease, opacity 0.25s ease;
 }
 
 .pool-card.pool-collapsed .pool-content {
-  display: none;
+  max-height: 0;
+  opacity: 0;
 }
 
 /* --------------------------------------------------
@@ -210,8 +217,23 @@ select option {
   padding-right: 30px;
 }
 
+/* Fondu croisé plutôt qu'un display:none/block instantané : le match complet
+   (.match-hideable-content) rétrécit et s'estompe pendant que l'intitulé
+   compact (.match-hidden-label) apparaît, et inversement. */
 .match-hidden-label {
-  display: none;
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  font-size: 0.85rem;
+  color: var(--text-subtle);
+  transition: max-height 0.3s ease, opacity 0.2s ease;
+}
+
+.match-hideable-content {
+  overflow: hidden;
+  max-height: 500px;
+  opacity: 1;
+  transition: max-height 0.3s ease, opacity 0.2s ease;
 }
 
 .match-wrapper.match-hidden {
@@ -219,16 +241,17 @@ select option {
   border-radius: 10px;
   padding: 8px 40px 8px 12px;
   background: rgba(var(--fg-overlay-rgb), 0.03);
+  transition: padding 0.3s ease, background 0.3s ease, border-color 0.3s ease;
 }
 
 .match-wrapper.match-hidden .match-hideable-content {
-  display: none;
+  max-height: 0;
+  opacity: 0;
 }
 
 .match-wrapper.match-hidden .match-hidden-label {
-  display: block;
-  font-size: 0.85rem;
-  color: var(--text-subtle);
+  max-height: 60px;
+  opacity: 1;
 }
 
 .match-wrapper.match-hidden .match-hide-btn {

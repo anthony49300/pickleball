@@ -26,6 +26,7 @@ const btnNewSeed = document.getElementById("newSeed");
 
 const elSchedule = document.getElementById("schedule");
 const elSessionStepper = document.getElementById("sessionStepper");
+const btnScrollToActive = document.getElementById("scrollToActiveBtn");
 const elDiag = document.getElementById("diagnostics");
 const elDiagSection = document.getElementById("diagnosticsSection") || (elDiag ? elDiag.closest("section") || elDiag.parentElement : null);
 const elWarning = document.getElementById("warning");

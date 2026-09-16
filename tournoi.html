@@ -48,6 +48,11 @@
   </header>
 
   <main class="container grid">
+    <!-- BARRE DE PROGRESSION DU TOURNOI : vue d'ensemble Poules → Phase finale
+         (+ Matchs de classement, en parallèle) → Classement final. Masquée
+         tant qu'aucune poule n'existe (voir renderTournamentProgress). -->
+    <div id="tournamentProgress" class="session-stepper" style="grid-column: 1 / -1;" hidden></div>
+
     <!-- SECTION EQUIPES -->
     <section class="card">
       <h2>⚔️ Équipes du tournoi</h2>
@@ -199,6 +204,12 @@
       <div id="finalRankingContainer"></div>
     </section>
   </main>
+
+  <!-- BOUTON FLOTTANT "REVENIR À L'ÉTAPE EN COURS" (masqué tant qu'elle est
+       déjà visible à l'écran, ou qu'il n'y a rien en cours) -->
+  <button id="scrollToActiveBtn" class="fab-scroll-active" type="button" title="Revenir à l'étape en cours" aria-label="Revenir à l'étape en cours" hidden>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+  </button>
 
   <footer class="container subtle footer">
     <p>JF Pickleball — Mode Tournoi (poules &amp; phase finale)</p>

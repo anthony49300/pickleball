@@ -217,6 +217,37 @@ function updateSessionStepper(rounds) {
   return activeRoundIndex;
 }
 
+let activeRoundScrollObserver = null;
+
+/**
+ * Affiche/masque le bouton flottant "Revenir au tour en cours"
+ * (#scrollToActiveBtn) selon que ce tour est actuellement visible à l'écran
+ * ou non — inutile de l'afficher si le tour en cours est déjà sous les yeux.
+ * Un IntersectionObserver (plutôt qu'un listener de scroll) évite tout calcul
+ * à chaque pixel défilé ; il est reconstruit à chaque appel car l'élément
+ * ".active-round" est recréé à chaque rendu (voir render() plus bas).
+ */
+function updateScrollToActiveButton() {
+  if (!btnScrollToActive) return;
+
+  if (activeRoundScrollObserver) {
+    activeRoundScrollObserver.disconnect();
+    activeRoundScrollObserver = null;
+  }
+
+  const activeEl = elSchedule.querySelector(".round.active-round");
+  if (!activeEl) {
+    btnScrollToActive.hidden = true;
+    return;
+  }
+
+  activeRoundScrollObserver = new IntersectionObserver(
+    ([entry]) => { btnScrollToActive.hidden = !!entry?.isIntersecting; },
+    { threshold: 0.2 }
+  );
+  activeRoundScrollObserver.observe(activeEl);
+}
+
 /**
  * Construit la structure HTML affichant les terrains, matchs, scores et diagnostics.
  */
@@ -378,6 +409,8 @@ function render(result, players, numCourts, numRounds) {
   btnCopy.disabled = false;
   btnCopyLink.disabled = false;
   btnSaveToHistory.disabled = false;
+
+  updateScrollToActiveButton();
 }
 
 

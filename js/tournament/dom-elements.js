@@ -41,6 +41,8 @@ const elFinalRankingContainer = document.getElementById("finalRankingContainer")
 const btnExportFinalRankingPng = document.getElementById("exportFinalRankingPng");
 
 const elAutosaveBadge = document.getElementById("autosaveBadge");
+const elTournamentProgress = document.getElementById("tournamentProgress");
+const btnScrollToActive = document.getElementById("scrollToActiveBtn");
 
 // Etat en mémoire de la répartition manuelle en cours (avant validation), et du
 // tournoi une fois les poules générées. Voir js/tournament/state.js pour la

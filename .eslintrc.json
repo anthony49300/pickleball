@@ -15,6 +15,7 @@
     "no-redeclare": ["error", { "builtinGlobals": false }]
   },
   "globals": {
+    "activeScrollTarget": "writable",
     "advanceSegment": "readonly",
     "alertModal": "readonly",
     "allocateCourtsToPools": "readonly",
@@ -43,6 +44,7 @@
     "btnResetAll": "readonly",
     "btnSavePlayerGroup": "readonly",
     "btnSaveToHistory": "readonly",
+    "btnScrollToActive": "readonly",
     "buildFinalPhase": "readonly",
     "buildPools": "readonly",
     "buildShareableUrl": "readonly",
@@ -104,6 +106,7 @@
     "elTeams": "readonly",
     "elTeamsError": "readonly",
     "elTeamsWarning": "readonly",
+    "elTournamentProgress": "readonly",
     "elWarning": "readonly",
     "elwO": "readonly",
     "elwP": "readonly",
@@ -150,6 +153,7 @@
     "renderPodium": "readonly",
     "renderPools": "readonly",
     "renderPoolStandings": "readonly",
+    "renderTournamentProgress": "readonly",
     "savePlayerGroupsToStorage": "readonly",
     "saveToHistory": "readonly",
     "scheduleRotations": "readonly",
@@ -169,6 +173,7 @@
     "topPairs": "readonly",
     "updatePlayerCountBadge": "readonly",
     "updateRankings": "readonly",
+    "updateScrollToActiveButton": "readonly",
     "updateSessionStepper": "readonly",
     "updateTeamCountBadge": "readonly",
     "xmur3": "readonly"
