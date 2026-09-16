@@ -67,7 +67,9 @@ function renderManualAssignList(teams, numPools, currentAssignment) {
  * sans rien à replier) dans un conteneur muni d'un bouton masquer/afficher
  * (voir events.js, délégation `.match-hide-btn`). Masquer un match est
  * purement visuel : ça ne touche à aucun score, juste au rendu (`innerHtml`
- * replié en un intitulé compact "Équipe A vs Équipe B").
+ * replié en un intitulé compact "Équipe A vs Équipe B"). Le bouton est hors
+ * de l'ordre de tabulation (tabindex="-1") : sinon, tabuler entre les champs
+ * de score d'un match à l'autre passerait systématiquement par lui.
  * @param {string} hideKey - identifiant stable du match (voir appelants)
  * @param {string} label - intitulé affiché une fois replié
  * @param {string} innerHtml - rendu complet du match (déplié)
@@ -77,7 +79,7 @@ function wrapHideableMatch(hideKey, label, innerHtml, hiddenMatchKeys) {
   const isHidden = !!hiddenMatchKeys?.has(hideKey);
   return `
     <div class="match-wrapper ${isHidden ? "match-hidden" : ""}">
-      <button type="button" class="match-hide-btn" data-hide-key="${hideKey}" title="${isHidden ? "Afficher ce match" : "Masquer ce match"}" aria-label="${isHidden ? "Afficher" : "Masquer"} le match ${label}">${isHidden ? ICON_EYE_SVG : ICON_EYE_OFF_SVG}</button>
+      <button type="button" class="match-hide-btn" tabindex="-1" data-hide-key="${hideKey}" title="${isHidden ? "Afficher ce match" : "Masquer ce match"}" aria-label="${isHidden ? "Afficher" : "Masquer"} le match ${label}">${isHidden ? ICON_EYE_SVG : ICON_EYE_OFF_SVG}</button>
       <div class="match-hidden-label">${label}</div>
       <div class="match-hideable-content">${innerHtml}</div>
     </div>
@@ -145,7 +147,7 @@ function renderPools(pools, courtNames = [], courtAllocation = [], hiddenPoolInd
       <div class="pool-card ${isPoolHidden ? "pool-collapsed" : ""}">
         <div class="pool-card-header">
           <h3 class="pool-card-title">${escapeHtml(pool.name)}</h3>
-          <button type="button" class="round-hide-btn pool-hide-btn" data-pool-index="${poolIdx}" title="${isPoolHidden ? "Afficher cette poule" : "Masquer cette poule"}">${isPoolHidden ? ICON_EYE_SVG : ICON_EYE_OFF_SVG}<span>${isPoolHidden ? "Afficher" : "Masquer"}</span></button>
+          <button type="button" class="round-hide-btn pool-hide-btn" tabindex="-1" data-pool-index="${poolIdx}" title="${isPoolHidden ? "Afficher cette poule" : "Masquer cette poule"}">${isPoolHidden ? ICON_EYE_SVG : ICON_EYE_OFF_SVG}<span>${isPoolHidden ? "Afficher" : "Masquer"}</span></button>
         </div>
         <div class="pool-content">${roundsHtml}</div>
       </div>
