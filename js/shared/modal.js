@@ -18,6 +18,7 @@ const elModalImageArea = document.getElementById("modalImageArea");
 const elModalImagePreview = document.getElementById("modalImagePreview");
 const btnModalCancel = document.getElementById("modalCancelBtn");
 const btnModalDownload = document.getElementById("modalDownloadBtn");
+const btnModalShare = document.getElementById("modalShareBtn");
 const btnModalConfirm = document.getElementById("modalConfirmBtn");
 
 let modalResolve = null;
@@ -51,7 +52,7 @@ function onModalKeydown(e) {
   }
   if (e.key !== "Tab") return;
 
-  const focusables = [btnModalCancel, elModalCopyInput, btnModalDownload, btnModalConfirm].filter(
+  const focusables = [btnModalCancel, elModalCopyInput, btnModalDownload, btnModalShare, btnModalConfirm].filter(
     el => el && !el.hidden && el.offsetParent !== null
   );
   if (!focusables.length) return;
@@ -69,11 +70,28 @@ function onModalKeydown(e) {
 }
 
 /**
+ * Le partage natif d'un FICHIER (pas juste du texte/d'une URL) est-il possible
+ * sur cet appareil/navigateur ? Test avec un fichier factice minuscule (aucun
+ * coût réel, rien n'est affiché ni envoyé) : navigator.share existe sur pas
+ * mal de navigateurs, mais le partage de fichiers (files: [...]) est une
+ * capacité distincte, pas systématiquement supportée (essentiellement mobile
+ * à ce jour — peu ou pas sur desktop).
+ */
+function canShareFiles() {
+  try {
+    return !!(navigator.canShare && navigator.share &&
+      navigator.canShare({ files: [new File([""], "test.png", { type: "image/png" })] }));
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Ouvre la modale générique et renvoie une promesse résolue à la fermeture :
  * `true` si l'utilisateur a cliqué sur le bouton de confirmation, `false` sinon
  * (annulation, clic en dehors, Échap).
  */
-function openModal({ icon = "⚠️", title, message, confirmText = "Confirmer", cancelText = "Annuler", danger = false, showCancel = true, copyText = null, imageSrc = null, downloadFilename = null }) {
+function openModal({ icon = "⚠️", title, message, confirmText = "Confirmer", cancelText = "Annuler", danger = false, showCancel = true, copyText = null, imageSrc = null, downloadFilename = null, shareText = null }) {
   modalLastFocusedEl = document.activeElement;
 
   elModalIcon.textContent = icon;
@@ -102,6 +120,19 @@ function openModal({ icon = "⚠️", title, message, confirmText = "Confirmer",
   } else {
     btnModalDownload.hidden = true;
     btnModalDownload.dataset.filename = "";
+  }
+
+  // Le partage direct (vers WhatsApp et consorts) n'a de sens que pour une
+  // image, et seulement là où le partage de fichiers est réellement possible
+  // (voir canShareFiles) : pas de bouton mort qui échouerait à tous les clics.
+  if (imageSrc != null && downloadFilename && canShareFiles()) {
+    btnModalShare.hidden = false;
+    btnModalShare.dataset.filename = downloadFilename;
+    btnModalShare.dataset.shareText = shareText || "";
+  } else {
+    btnModalShare.hidden = true;
+    btnModalShare.dataset.filename = "";
+    btnModalShare.dataset.shareText = "";
   }
 
   btnModalConfirm.textContent = confirmText;
@@ -144,6 +175,40 @@ btnModalDownload.addEventListener("click", () => {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+});
+
+/**
+ * Bouton "Partager" : ouvre le sélecteur de partage natif du téléphone
+ * (WhatsApp, Messages, Mail...) avec l'image en pièce jointe directement —
+ * plus rapide que "Télécharger" puis rouvrir l'app cible depuis la galerie.
+ * N'est affiché que là où le partage de fichiers est supporté (voir
+ * canShareFiles dans openModal) : pas de tentative sur un navigateur qui ne
+ * le permet pas.
+ */
+btnModalShare.addEventListener("click", async () => {
+  const src = elModalImagePreview.src;
+  if (!src) return;
+
+  try {
+    // data: URI -> Blob -> File (navigator.share veut un vrai File, pas une chaîne).
+    const blob = await (await fetch(src)).blob();
+    const file = new File([blob], btnModalShare.dataset.filename || "image.png", { type: blob.type || "image/png" });
+
+    if (!navigator.canShare({ files: [file] })) {
+      await alertModal(
+        "Le partage direct n'est pas possible sur cet appareil/navigateur : utilisez \"Télécharger\" puis partagez le fichier depuis votre galerie.",
+        { title: "Partage impossible", icon: "⚠️" }
+      );
+      return;
+    }
+
+    await navigator.share({ files: [file], text: btnModalShare.dataset.shareText || "" });
+  } catch (err) {
+    // AbortError : l'utilisateur a simplement annulé le partage (fermé le
+    // sélecteur natif) — pas une vraie erreur, rien à signaler.
+    if (err?.name === "AbortError") return;
+    console.error(err);
+  }
 });
 
 /** Remplace confirm() : question à 2 issues (confirmer / annuler), destructif par défaut. */
@@ -198,7 +263,8 @@ function imagePreviewModal(dataUri, opts = {}) {
     confirmText: "Fermer",
     showCancel: false,
     imageSrc: dataUri,
-    downloadFilename: opts.downloadFilename ?? null
+    downloadFilename: opts.downloadFilename ?? null,
+    shareText: opts.shareText ?? null
   });
 }
 

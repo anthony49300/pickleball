@@ -367,7 +367,8 @@ if (btnExportPng) {
       const imageUri = canvas.toDataURL("image/png");
       await imagePreviewModal(imageUri, {
         title: "Classement — image générée",
-        downloadFilename: `Classement-Pickleball-${elSeed.value || "session"}.png`
+        downloadFilename: `Classement-Pickleball-${elSeed.value || "session"}.png`,
+        shareText: "🏓 Classement de la session"
       });
     } catch (err) {
       console.error(err);

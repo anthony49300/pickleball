@@ -1260,12 +1260,14 @@ button:disabled {
 
 .modal-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   justify-content: center;
 }
 
 .modal-actions button {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 100px;
 }
 
 /* --------------------------------------------------

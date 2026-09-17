@@ -581,7 +581,8 @@ if (btnExportFinalRankingPng) {
       const dateLabel = new Date().toISOString().slice(0, 10);
       await imagePreviewModal(imageUri, {
         title: "Classement final — image générée",
-        downloadFilename: `Classement-Tournoi-${dateLabel}.png`
+        downloadFilename: `Classement-Tournoi-${dateLabel}.png`,
+        shareText: "🏆 Classement final du tournoi"
       });
     } catch (err) {
       console.error(err);
