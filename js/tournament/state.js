@@ -184,14 +184,19 @@ function saveTournamentToHistory() {
   if (existingIndex !== -1) history.splice(existingIndex, 1);
 
   history.unshift(newItem);
-  localStorage.setItem(TOURNAMENT_HISTORY_KEY, JSON.stringify(history.slice(0, 20)));
-  renderTournamentHistory();
+  const trimmedHistory = history.slice(0, 20);
+  localStorage.setItem(TOURNAMENT_HISTORY_KEY, JSON.stringify(trimmedHistory));
+  renderTournamentHistory(trimmedHistory);
   return true;
 }
 
-function renderTournamentHistory() {
+/**
+ * @param {Array} [history] - déjà en mémoire chez l'appelant (sauvegarde,
+ *   suppression) ? On lui évite un aller-retour localStorage.getItem +
+ *   JSON.parse inutile en le passant directement, plutôt que de le relire.
+ */
+function renderTournamentHistory(history = getTournamentHistory()) {
   if (!elTournamentHistoryList) return;
-  const history = getTournamentHistory();
   if (!history.length) {
     elTournamentHistoryList.innerHTML = `<p class="subtle">Aucun tournoi enregistré pour le&nbsp;moment.</p>`;
     return;

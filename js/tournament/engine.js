@@ -166,6 +166,34 @@ function allocateCourtsToPools(pools, numCourts) {
 }
 
 /**
+ * Terrain (index global 0-based) attribué à un match de poule donné, selon
+ * le cycle défini par allocateCourtsToPools ci-dessus : les terrains dédiés
+ * à la poule (ou partagés avec les autres, si `allocateCourtsToPools` en a
+ * décidé ainsi) sont parcourus dans l'ordre pour chaque match de la journée.
+ * Utilisée à la fois par renderPools et collectNextMatches (render.js), pour
+ * qu'elles ne puissent jamais diverger sur "quel terrain pour quel match".
+ * @param {number[][]} courtAllocation - voir allocateCourtsToPools
+ * @param {number} poolIdx
+ * @param {number} matchIdx - position du match dans SA journée (pas un index global)
+ * @returns {number}
+ */
+function poolCourtIndex(courtAllocation, poolIdx, matchIdx) {
+  const poolCourts = courtAllocation[poolIdx]?.length ? courtAllocation[poolIdx] : [poolIdx];
+  return poolCourts[matchIdx % poolCourts.length];
+}
+
+/**
+ * Libellé d'un terrain à partir de son index global (0-based) : le nom
+ * personnalisé donné par l'utilisateur s'il existe, sinon "Terrain N".
+ * @param {string[]} courtNames
+ * @param {number} courtIdx
+ * @returns {string}
+ */
+function formatCourtLabel(courtNames, courtIdx) {
+  return courtNames[courtIdx] || `Terrain ${courtIdx + 1}`;
+}
+
+/**
  * Génère un calendrier round-robin pour une poule : chaque équipe affronte
  * toutes les autres exactement une fois (algorithme du cercle / circle method).
  * Si le nombre d'équipes est impair, une équipe est exemptée ("bye") à tour de

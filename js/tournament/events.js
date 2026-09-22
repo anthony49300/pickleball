@@ -280,20 +280,10 @@ elPoolsContainer.addEventListener("input", (e) => {
   autoSaveTournamentState();
 });
 
-// Navigation clavier rapide : Entrée passe au champ de score suivant, tous
-// conteneurs confondus (poules PUIS phase finale PUIS matchs de classement,
-// dans l'ordre de la page — .bracket-score-input porte aussi la classe
-// .score-input) — ces champs ne sont dans aucun <form>, Entrée n'a par
-// défaut aucun effet dessus. Un champ en lecture seule (historique de
-// bracket déjà joué) est ignoré : rien à y saisir.
-document.addEventListener("keydown", (e) => {
-  if (e.key !== "Enter" || !e.target.classList.contains("score-input") || e.target.readOnly) return;
-  e.preventDefault();
-
-  const inputs = Array.from(document.querySelectorAll(".score-input:not([readonly])"));
-  const next = inputs[inputs.indexOf(e.target) + 1];
-  if (next) { next.focus(); next.select(); }
-});
+// Navigation clavier rapide (Entrée -> champ de score suivant, poules PUIS
+// phase finale PUIS matchs de classement puisque .bracket-score-input porte
+// aussi la classe .score-input) : voir js/shared/ui-controls.js, module
+// chargé sur les deux pages.
 
 // --------------------------------------------------
 // RENOMMAGE ET FORFAIT D'UNE EQUIPE (depuis le tableau de classement de poule,
@@ -668,7 +658,7 @@ if (elTournamentHistoryList) {
     } else if (e.target.classList.contains("del-tournament-hist-btn")) {
       history = history.filter(x => x.id !== id);
       localStorage.setItem(TOURNAMENT_HISTORY_KEY, JSON.stringify(history));
-      renderTournamentHistory();
+      renderTournamentHistory(history);
     }
   });
 }

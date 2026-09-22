@@ -102,7 +102,6 @@ function wrapHideableMatch(hideKey, label, innerHtml, hiddenMatchKeys) {
  */
 function renderPools(pools, courtNames = [], courtAllocation = [], hiddenPoolIndices = [], hiddenMatchKeys = new Set()) {
   elPoolsContainer.innerHTML = pools.map((pool, poolIdx) => {
-    const poolCourts = courtAllocation[poolIdx]?.length ? courtAllocation[poolIdx] : [poolIdx];
     const isPoolHidden = hiddenPoolIndices.includes(poolIdx);
 
     const roundsHtml = pool.rounds.map((matches, rIdx) => {
@@ -112,8 +111,8 @@ function renderPools(pools, courtNames = [], courtAllocation = [], hiddenPoolInd
         }
 
         const score = pool.scores[`${rIdx}-${mIdx}`] || {};
-        const globalCourtIdx = poolCourts[mIdx % poolCourts.length];
-        const courtLabel = escapeHtml(courtNames[globalCourtIdx] || `Terrain ${globalCourtIdx + 1}`);
+        const globalCourtIdx = poolCourtIndex(courtAllocation, poolIdx, mIdx);
+        const courtLabel = escapeHtml(formatCourtLabel(courtNames, globalCourtIdx));
         const forfeitBadge = score.forfeit ? `<span class="forfeit-badge" title="Résultat automatique (forfait)">🚫 Forfait</span>` : "";
         const matchCardHtml = `
           <div class="match-card">
@@ -401,19 +400,18 @@ function collectNextMatches(tournament) {
   const courtNames = tournament.courtNames || [];
 
   (tournament.pools || []).forEach((pool, poolIdx) => {
-    const poolCourts = tournament.courtAllocation?.[poolIdx]?.length ? tournament.courtAllocation[poolIdx] : [poolIdx];
     pool.rounds.forEach((matches, rIdx) => {
       matches.forEach((match, mIdx) => {
         if (match.bye) return;
         const score = pool.scores[`${rIdx}-${mIdx}`];
         if (score && score.a != null && score.b != null) return;
 
-        const globalCourtIdx = poolCourts[mIdx % poolCourts.length];
+        const globalCourtIdx = poolCourtIndex(tournament.courtAllocation || [], poolIdx, mIdx);
         items.push({
           source: `${pool.name} · Journée ${rIdx + 1}`,
           teamA: match.a.name,
           teamB: match.b.name,
-          court: courtNames[globalCourtIdx] || `Terrain ${globalCourtIdx + 1}`
+          court: formatCourtLabel(courtNames, globalCourtIdx)
         });
       });
     });

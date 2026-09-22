@@ -38,13 +38,18 @@ function saveToHistory() {
   }
 
   history.unshift(newItem);
-  localStorage.setItem("pb_history", JSON.stringify(history.slice(0, 20)));
-  renderHistory();
+  history = history.slice(0, 20);
+  localStorage.setItem("pb_history", JSON.stringify(history));
+  renderHistory(history);
 }
 
-function renderHistory() {
+/**
+ * @param {Array} [history] - déjà en mémoire chez l'appelant (sauvegarde,
+ *   suppression) ? On lui évite un aller-retour localStorage.getItem +
+ *   JSON.parse inutile en le passant directement, plutôt que de le relire.
+ */
+function renderHistory(history = getHistory()) {
   if (!elHistoryList) return;
-  const history = getHistory();
   if (!history.length) {
     elHistoryList.innerHTML = `<p class="subtle">Aucune session enregistrée dans l'historique.</p>`;
     return;
@@ -79,7 +84,7 @@ if (elHistoryList) {
     } else if (e.target.classList.contains("del-hist-btn")) {
       history = history.filter(x => x.id !== id);
       localStorage.setItem("pb_history", JSON.stringify(history));
-      renderHistory();
+      renderHistory(history);
     }
   });
 }
@@ -231,18 +236,8 @@ btnGenerate.addEventListener("click", () => {
   });
 });
 
-// Navigation clavier rapide : Entrée passe au champ de score suivant (dans
-// l'ordre du DOM, donc match par match puis tour par tour) plutôt que de ne
-// rien faire (ces champs ne sont dans aucun <form>, Entrée n'a par défaut
-// aucun effet dessus) — pratique pour saisir beaucoup de scores d'affilée.
-elSchedule.addEventListener("keydown", (e) => {
-  if (e.key !== "Enter" || !e.target.classList.contains("score-input")) return;
-  e.preventDefault();
-
-  const inputs = Array.from(elSchedule.querySelectorAll(".score-input"));
-  const next = inputs[inputs.indexOf(e.target) + 1];
-  if (next) { next.focus(); next.select(); }
-});
+// Navigation clavier rapide (Entrée -> champ de score suivant) : voir
+// js/shared/ui-controls.js, module chargé sur les deux pages.
 
 // Masquage/affichage manuel d'un tour (bouton dans l'en-tête de chaque tour,
 // voir render() dans form-and-render.js) : purement visuel, ne touche à
