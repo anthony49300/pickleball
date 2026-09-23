@@ -20,6 +20,7 @@ const btnModalCancel = document.getElementById("modalCancelBtn");
 const btnModalDownload = document.getElementById("modalDownloadBtn");
 const btnModalShare = document.getElementById("modalShareBtn");
 const btnModalConfirm = document.getElementById("modalConfirmBtn");
+const btnAbout = document.getElementById("aboutBtn");
 
 let modalResolve = null;
 let modalLastFocusedEl = null;
@@ -158,6 +159,21 @@ btnModalCancel.addEventListener("click", () => closeModal(false));
 elModalOverlay.addEventListener("click", (e) => {
   if (e.target === elModalOverlay) closeModal(false);
 });
+
+/**
+ * Bouton "À propos" du pied de page (#aboutBtn, discret exprès — voir
+ * .footer-link dans styles.css) : affiche juste le numéro de version
+ * (APP_VERSION, voir js/shared/version.js), sans rien d'autre à construire —
+ * réutilise alertModal() telle quelle.
+ */
+if (btnAbout) {
+  btnAbout.addEventListener("click", () => {
+    alertModal(
+      `JF Pickleball — version ${APP_VERSION}\nModes Rotation & Tournoi.`,
+      { title: "À propos", icon: "🥒" }
+    );
+  });
+}
 
 /**
  * Bouton "Télécharger" de la modale image : le long-press/clic-droit sur l'image ne
