@@ -196,6 +196,16 @@ header h1 {
    supprimer, pour corriger/retirer une entrée précise dans une longue liste
    sans avoir à la repérer dans un gros bloc de texte brut.
 -------------------------------------------------- */
+/* [hidden] doit être déclaré AVANT la règle display:flex ci-dessous, sinon
+   les deux ont la même spécificité (une classe = un attribut) et c'est la
+   dernière déclarée qui l'emporte : sans ça, .editable-list-view resterait
+   visible (display:flex) même avec l'attribut hidden posé en JS — la vue
+   liste ET le textarea s'affichaient alors tous les deux en même temps
+   (même bug déjà évité une fois pour .session-stepper, voir plus bas). */
+.editable-list-view[hidden] {
+  display: none;
+}
+
 .editable-list-view {
   display: flex;
   flex-direction: column;
