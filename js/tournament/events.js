@@ -43,6 +43,19 @@ elTeams.addEventListener("input", () => {
   autoSaveTournamentState();
 });
 
+// Vue liste éditable pour la liste d'équipes (voir js/shared/ui-controls.js) :
+// chaque ligne est déjà une équipe complète ("Alice & Bob"), pas besoin d'un
+// découpage supplémentaire par virgule (elle sert à séparer les deux joueurs
+// AU SEIN d'une équipe, pas les équipes entre elles).
+wireEditableListView({
+  textareaId: "teams",
+  listContainerId: "teamsListView",
+  toggleBtnId: "teamsListToggle",
+  addBtnId: "teamsListAdd",
+  rowPlaceholder: "Alice & Bob",
+  split: text => text.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+});
+
 btnImportGroup.addEventListener("click", async () => {
   const groupId = elImportGroupSelect.value;
   if (!groupId) return;
@@ -401,6 +414,30 @@ elPoolsContainer.addEventListener("click", (e) => {
 
   autoSaveTournamentState();
 });
+
+/**
+ * Replie ou déplie TOUTES les poules d'un coup (voir #collapseAllPoolsBtn /
+ * #expandAllPoolsBtn) : utile avec beaucoup de poules, pour ne pas avoir à
+ * cliquer poule par poule. Ne touche jamais au masquage des matchs
+ * individuels (indépendant, voir wireMatchHideButtons ci-dessous).
+ */
+function setAllPoolsHidden(hidden) {
+  const tournament = window.__PT_TOURNAMENT__;
+  if (!tournament) return;
+
+  tournament.hiddenPoolIndices = hidden ? tournament.pools.map((_, idx) => idx) : [];
+  renderPools(
+    tournament.pools,
+    tournament.courtNames,
+    tournament.courtAllocation,
+    tournament.hiddenPoolIndices,
+    new Set(tournament.hiddenMatchKeys || [])
+  );
+  autoSaveTournamentState();
+}
+
+if (btnCollapseAllPools) btnCollapseAllPools.addEventListener("click", () => setAllPoolsHidden(true));
+if (btnExpandAllPools) btnExpandAllPools.addEventListener("click", () => setAllPoolsHidden(false));
 
 /**
  * Câble le masquage/affichage manuel d'un match (bouton `.match-hide-btn`,

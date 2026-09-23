@@ -26,6 +26,8 @@ const btnConfirmManualAssign = document.getElementById("confirmManualAssign");
 
 const elPoolsSection = document.getElementById("poolsSection");
 const elPoolsContainer = document.getElementById("poolsContainer");
+const btnCollapseAllPools = document.getElementById("collapseAllPoolsBtn");
+const btnExpandAllPools = document.getElementById("expandAllPoolsBtn");
 
 const elPoolStandingsSection = document.getElementById("poolStandingsSection");
 const elPoolStandingsContainer = document.getElementById("poolStandingsContainer");
@@ -41,6 +43,7 @@ const elFinalRankingContainer = document.getElementById("finalRankingContainer")
 const btnExportFinalRankingPng = document.getElementById("exportFinalRankingPng");
 
 const elAutosaveBadge = document.getElementById("autosaveBadge");
+const elTournamentSummary = document.getElementById("tournamentSummary");
 const elTournamentProgress = document.getElementById("tournamentProgress");
 const elNextMatchesSection = document.getElementById("nextMatchesSection");
 const elNextMatchesContainer = document.getElementById("nextMatchesContainer");

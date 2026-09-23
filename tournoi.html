@@ -49,6 +49,12 @@
   </header>
 
   <main class="container grid">
+    <!-- RESUME CHIFFRE : vue d'ensemble immédiate ("24 équipes · 6 poules ·
+         8 terrains"), utile pour ne pas avoir à tout parcourir pour savoir
+         où on en est à grande échelle. Masqué tant qu'aucune poule n'existe
+         (voir renderTournamentProgress). -->
+    <div id="tournamentSummary" class="subtle" style="grid-column: 1 / -1; font-size: 0.85rem; margin-top: -8px;" hidden></div>
+
     <!-- BARRE DE PROGRESSION DU TOURNOI : vue d'ensemble Poules → Phase finale
          (+ Matchs de classement, en parallèle) → Classement final. Masquée
          tant qu'aucune poule n'existe (voir renderTournamentProgress). -->
@@ -75,6 +81,11 @@
         <span id="teamCountBadge" class="count-badge">0 équipe</span>
       </label>
       <textarea id="teams" rows="6" placeholder="Alice &amp; Bob&#10;Chloé &amp; David&#10;Émilie &amp; Farid"></textarea>
+      <div id="teamsListView" class="editable-list-view" hidden></div>
+      <div class="actions-secondary" style="margin-top: 8px;">
+        <button type="button" id="teamsListToggle" class="secondary" style="font-size: 0.8rem; padding: 6px 12px;">📝 Vue liste</button>
+        <button type="button" id="teamsListAdd" class="secondary" style="font-size: 0.8rem; padding: 6px 12px;" hidden>➕ Ajouter une ligne</button>
+      </div>
 
       <!-- FORMATION AUTOMATIQUE DES EQUIPES -->
       <details class="details" id="autoFormTeamsDetails" style="margin-top: 10px;">
@@ -166,6 +177,10 @@
     <section class="card" id="poolsSection" style="grid-column: 1 / -1;" hidden>
       <div class="headerRow">
         <h2>👥 Phase de poules</h2>
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <button type="button" id="collapseAllPoolsBtn" class="secondary" style="font-size: 0.8rem; padding: 6px 12px;">🔽 Tout replier</button>
+          <button type="button" id="expandAllPoolsBtn" class="secondary" style="font-size: 0.8rem; padding: 6px 12px;">🔼 Tout déplier</button>
+        </div>
       </div>
       <div id="poolsContainer" class="pools-container"></div>
     </section>

@@ -173,6 +173,19 @@ if (btnSaveToHistory) {
 // Le thème clair/sombre est géré par js/shared/theme.js (module partagé avec
 // les autres pages du site, chargé avant celui-ci — voir index.html).
 
+// Vue liste éditable pour la liste de joueurs (voir js/shared/ui-controls.js) :
+// à l'ouverture, "Antoine, Julien" comme "Antoine\nJulien" deviennent chacun
+// leur propre ligne (mêmes séparateurs que parsePlayers), pour que chaque
+// joueur soit individuellement supprimable.
+wireEditableListView({
+  textareaId: "players",
+  listContainerId: "playersListView",
+  toggleBtnId: "playersListToggle",
+  addBtnId: "playersListAdd",
+  rowPlaceholder: "Nom du joueur",
+  split: text => text.split(/\r?\n/).flatMap(l => l.split(",")).map(l => l.trim()).filter(Boolean)
+});
+
 btnNewSeed.addEventListener("click", () => {
   elSeed.value = generateSeed();
   autoSaveState();
@@ -263,6 +276,29 @@ elSchedule.addEventListener("click", (e) => {
 
   autoSaveState();
 });
+
+/**
+ * Replie ou déplie TOUS les tours d'un coup (voir #collapseAllRoundsBtn /
+ * #expandAllRoundsBtn) : ré-affiche le résultat déjà généré (aucun nouveau
+ * calcul de planning, contrairement à generateSession) avec la liste
+ * complète des tours masqués (ou vidée), utile sur une longue session pour
+ * ne pas avoir à cliquer tour par tour.
+ */
+function setAllRoundsHidden(hidden) {
+  const result = window.__PB_LAST_RESULT__;
+  if (!result) return;
+
+  window.__PB_HIDDEN_ROUNDS__ = hidden ? result.rounds.map((_, idx) => idx) : [];
+
+  const players = parsePlayers(elPlayers.value);
+  const numCourts = Math.max(1, parseInt(elCourts.value || "1", 10));
+  const numRounds = Math.max(1, parseInt(elRounds.value || "1", 10));
+  render(result, players, numCourts, numRounds);
+  autoSaveState();
+}
+
+if (btnCollapseAllRounds) btnCollapseAllRounds.addEventListener("click", () => setAllRoundsHidden(true));
+if (btnExpandAllRounds) btnExpandAllRounds.addEventListener("click", () => setAllRoundsHidden(false));
 
 // Écoute instantanée de tous les paramètres du formulaire (input + change)
 [elPlayers, elCourts, elRounds, elSeed, elCourtNames, elwT, elwO, elwP, elBeamWidth, elPartnerK, elSquare, elAvoidB2B].forEach(el => {

@@ -300,22 +300,8 @@ select option {
   margin-left: 6px;
 }
 
-.icon-btn {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-size: 0.85rem;
-  line-height: 1;
-  padding: 2px 4px;
-  border-radius: 6px;
-  opacity: 0.55;
-  transition: opacity 0.15s ease, background 0.15s ease;
-}
-
-.icon-btn:hover {
-  opacity: 1;
-  background: rgba(var(--fg-overlay-rgb), 0.08);
-}
+/* .icon-btn : déplacé dans styles.css (partagé entre les deux pages, voir
+   la vue liste éditable qui en a maintenant besoin sur la page Rotation aussi). */
 
 .team-forfeit-btn.active {
   opacity: 1;

@@ -32,6 +32,8 @@ const elDiagSection = document.getElementById("diagnosticsSection") || (elDiag ?
 const elWarning = document.getElementById("warning");
 const elError = document.getElementById("error");
 const elMeta = document.getElementById("meta");
+const btnCollapseAllRounds = document.getElementById("collapseAllRoundsBtn");
+const btnExpandAllRounds = document.getElementById("expandAllRoundsBtn");
 
 const elRankingSection = document.getElementById("rankingSection");
 const elRankingTableBody = document.querySelector("#rankingTable tbody");

@@ -167,6 +167,70 @@ header h1 {
   gap: 6px;
 }
 
+/* --------------------------------------------------
+   PETIT BOUTON ICONE SEUL (renommer/forfait en tournoi, supprimer une ligne
+   de la vue liste éditable...) — partagé entre les deux pages, d'où sa place
+   ici plutôt que dans tournament.css (où il vivait avant que la vue liste
+   éditable, elle aussi partagée, en ait besoin sur la page Rotation aussi).
+-------------------------------------------------- */
+.icon-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 6px;
+  opacity: 0.55;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.icon-btn:hover {
+  opacity: 1;
+  background: rgba(var(--fg-overlay-rgb), 0.08);
+}
+
+/* --------------------------------------------------
+   VUE LISTE EDITABLE (joueurs, équipes) — voir wireEditableListView dans
+   js/shared/ui-controls.js. Une ligne = un champ texte + un bouton
+   supprimer, pour corriger/retirer une entrée précise dans une longue liste
+   sans avoir à la repérer dans un gros bloc de texte brut.
+-------------------------------------------------- */
+/* [hidden] doit être déclaré AVANT la règle display:flex ci-dessous, sinon
+   les deux ont la même spécificité (une classe = un attribut) et c'est la
+   dernière déclarée qui l'emporte : sans ça, .editable-list-view resterait
+   visible (display:flex) même avec l'attribut hidden posé en JS — la vue
+   liste ET le textarea s'affichaient alors tous les deux en même temps
+   (même bug déjà évité une fois pour .session-stepper, voir plus bas). */
+.editable-list-view[hidden] {
+  display: none;
+}
+
+.editable-list-view {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px 2px;
+}
+
+.editable-list-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.editable-list-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.editable-list-remove {
+  flex-shrink: 0;
+  font-size: 1rem;
+}
+
 .grid {
   display: flex;
   flex-direction: column; /* Empile la configuration puis le planning */
