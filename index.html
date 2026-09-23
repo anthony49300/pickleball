@@ -59,6 +59,11 @@
         <span id="playerCountBadge" class="count-badge">0 joueur</span>
       </label>
       <textarea id="players" rows="5" placeholder="Antoine, Julien, Marc"></textarea>
+      <div id="playersListView" class="editable-list-view" hidden></div>
+      <div class="actions-secondary" style="margin-top: 8px;">
+        <button type="button" id="playersListToggle" class="secondary" style="font-size: 0.8rem; padding: 6px 12px;">📝 Vue liste</button>
+        <button type="button" id="playersListAdd" class="secondary" style="font-size: 0.8rem; padding: 6px 12px;" hidden>➕ Ajouter une ligne</button>
+      </div>
 
       <!-- GROUPES DE JOUEURS RÉGULIERS (CLUBS RÉCURRENTS) -->
       <details class="details" id="playerGroupsDetails">
@@ -216,7 +221,11 @@
     <section class="card">
       <div class="headerRow">
         <h2>🎾 Planning des matchs</h2>
-        <span id="meta" class="subtle"></span>
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <span id="meta" class="subtle"></span>
+          <button type="button" id="collapseAllRoundsBtn" class="secondary" style="font-size: 0.8rem; padding: 6px 12px;">🔽 Tout replier</button>
+          <button type="button" id="expandAllRoundsBtn" class="secondary" style="font-size: 0.8rem; padding: 6px 12px;">🔼 Tout déplier</button>
+        </div>
       </div>
 
       <!-- STEPPER DE SESSION -->

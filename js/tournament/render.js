@@ -475,6 +475,29 @@ function renderNextMatches(tournament) {
 }
 
 /**
+ * Bandeau chiffré ("24 équipes · 6 poules · 8 terrains") pour avoir une vue
+ * d'ensemble immédiate à grande échelle, sans avoir à tout parcourir. Masqué
+ * tant qu'aucune poule n'existe.
+ * @param {Object|null} tournament
+ */
+function renderTournamentSummary(tournament) {
+  if (!elTournamentSummary) return;
+
+  if (!tournament?.pools?.length) {
+    elTournamentSummary.hidden = true;
+    return;
+  }
+
+  const teamsCount = tournament.teams?.length || 0;
+  const poolsCount = tournament.pools.length;
+  const courtsCount = Math.max(1, tournament.numCourts || 1);
+
+  elTournamentSummary.textContent =
+    `⚔️ ${teamsCount} équipe${teamsCount > 1 ? "s" : ""} · 👥 ${poolsCount} poule${poolsCount > 1 ? "s" : ""} · 🏟️ ${courtsCount} terrain${courtsCount > 1 ? "s" : ""}`;
+  elTournamentSummary.hidden = false;
+}
+
+/**
  * Affiche une vue d'ensemble de l'avancement du tournoi (Poules → Phase
  * finale → Matchs de classement → Classement final), sur le même principe
  * visuel que le stepper de tour du mode Rotation (classes .session-stepper/
@@ -483,11 +506,12 @@ function renderNextMatches(tournament) {
  * lancer l'un sans l'autre, ou les deux en parallèle) : chaque étape calcule
  * son propre statut plutôt que de dépendre strictement de la précédente.
  * Met aussi à jour le bouton flottant "Revenir à l'étape en cours" (voir
- * updateScrollToActiveSection), sur la 1ère étape non terminée.
+ * updateScrollToActiveSection) et le bandeau chiffré (renderTournamentSummary).
  * @param {Object|null} tournament
  */
 function renderTournamentProgress(tournament) {
   renderNextMatches(tournament);
+  renderTournamentSummary(tournament);
 
   if (!elTournamentProgress) return;
 

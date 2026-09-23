@@ -28,11 +28,15 @@
     "bestSplitForFour": "readonly",
     "btnClearHistory": "readonly",
     "btnClearTournamentHistory": "readonly",
+    "btnCollapseAllPools": "readonly",
+    "btnCollapseAllRounds": "readonly",
     "btnConfirmManualAssign": "readonly",
     "btnCopy": "readonly",
     "btnCopyLink": "readonly",
     "btnCopyRankingLink": "readonly",
     "btnCopyTournamentLink": "readonly",
+    "btnExpandAllPools": "readonly",
+    "btnExpandAllRounds": "readonly",
     "btnExportFinalRankingPng": "readonly",
     "btnExportPng": "readonly",
     "btnFormPairs": "readonly",
@@ -191,6 +195,7 @@
     "updateScrollToActiveButton": "readonly",
     "updateSessionStepper": "readonly",
     "updateTeamCountBadge": "readonly",
+    "wireEditableListView": "readonly",
     "xmur3": "readonly"
   }
 }
