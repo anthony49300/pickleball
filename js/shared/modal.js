@@ -8,6 +8,14 @@
 // toute page qui inclut le balisage de la modale (voir index.html, section
 // "MODALE GENERIQUE") et souhaite utiliser confirmModal/alertModal/etc.
 
+// Reprend le logo "balle" de l'en-tête (voir index.html/tournoi.html, <h1>),
+// pour la modale "À propos" (voir plus bas) : fill="currentColor" plutôt
+// qu'une couleur fixe, pour suivre --pickle-yellow (via .modal-icon svg dans
+// styles.css) qui diffère déjà entre les deux pages (vert-jaune en Rotation,
+// doré en Tournoi) — sans ça, cette icône aurait une couleur figée, fausse
+// sur l'une des deux pages.
+const ABOUT_ICON_SVG = '<svg width="40" height="40" viewBox="0 0 100 100" aria-hidden="true" focusable="false"><circle cx="50" cy="50" r="45" fill="currentColor"/><circle cx="35" cy="35" r="5" fill="#0a0f18"/><circle cx="65" cy="35" r="5" fill="#0a0f18"/><circle cx="50" cy="50" r="5" fill="#0a0f18"/><circle cx="35" cy="65" r="5" fill="#0a0f18"/><circle cx="65" cy="65" r="5" fill="#0a0f18"/></svg>';
+
 const elModalOverlay = document.getElementById("modalOverlay");
 const elModalIcon = document.getElementById("modalIcon");
 const elModalTitle = document.getElementById("modalTitle");
@@ -92,10 +100,15 @@ function canShareFiles() {
  * `true` si l'utilisateur a cliqué sur le bouton de confirmation, `false` sinon
  * (annulation, clic en dehors, Échap).
  */
-function openModal({ icon = "⚠️", title, message, confirmText = "Confirmer", cancelText = "Annuler", danger = false, showCancel = true, copyText = null, imageSrc = null, downloadFilename = null, shareText = null }) {
+function openModal({ icon = "⚠️", iconHtml = null, title, message, confirmText = "Confirmer", cancelText = "Annuler", danger = false, showCancel = true, copyText = null, imageSrc = null, downloadFilename = null, shareText = null }) {
   modalLastFocusedEl = document.activeElement;
 
-  elModalIcon.textContent = icon;
+  // iconHtml (SVG...) prend le pas sur icon (emoji texte, utilisé partout
+  // ailleurs) : seule la modale "À propos" s'en sert pour l'instant, voir
+  // ABOUT_ICON_SVG plus bas.
+  if (iconHtml != null) elModalIcon.innerHTML = iconHtml;
+  else elModalIcon.textContent = icon;
+
   elModalTitle.textContent = title;
   elModalMessage.textContent = message;
 
@@ -170,7 +183,7 @@ if (btnAbout) {
   btnAbout.addEventListener("click", () => {
     alertModal(
       `JF Pickleball — version ${APP_VERSION}\nModes Rotation & Tournoi.`,
-      { title: "À propos", icon: "🥒" }
+      { title: "À propos", iconHtml: ABOUT_ICON_SVG }
     );
   });
 }
@@ -247,6 +260,7 @@ function confirmModal(message, opts = {}) {
 function alertModal(message, opts = {}) {
   return openModal({
     icon: opts.icon ?? "ℹ️",
+    iconHtml: opts.iconHtml ?? null,
     title: opts.title ?? "Information",
     message,
     confirmText: opts.confirmText ?? "OK",
