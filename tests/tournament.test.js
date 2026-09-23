@@ -33,6 +33,8 @@ const {
   autoPairPlayers,
   parseCourtNames,
   allocateCourtsToPools,
+  poolCourtIndex,
+  formatCourtLabel,
   generateRoundRobin,
   dealRoundRobinIntoPools,
   dealSnakeIntoPools,
@@ -173,6 +175,30 @@ test("allocateCourtsToPools : moins de terrains que de poules -> tout le monde p
   assert.deepStrictEqual(allocation[0], [0, 1]);
   assert.deepStrictEqual(allocation[1], [0, 1]);
   assert.deepStrictEqual(allocation[2], [0, 1]);
+});
+
+// ---------------------------------------------------------------------------
+// poolCourtIndex / formatCourtLabel
+// ---------------------------------------------------------------------------
+
+test("poolCourtIndex : cycle sur les terrains dédiés à la poule", () => {
+  const courtAllocation = [[2, 3], [0]];
+  assert.strictEqual(poolCourtIndex(courtAllocation, 0, 0), 2);
+  assert.strictEqual(poolCourtIndex(courtAllocation, 0, 1), 3);
+  assert.strictEqual(poolCourtIndex(courtAllocation, 0, 2), 2); // ça reboucle
+  assert.strictEqual(poolCourtIndex(courtAllocation, 1, 0), 0);
+  assert.strictEqual(poolCourtIndex(courtAllocation, 1, 5), 0); // 1 seul terrain : toujours le même
+});
+
+test("poolCourtIndex : repli sur l'index de poule si aucune attribution n'existe pour elle", () => {
+  assert.strictEqual(poolCourtIndex([], 2, 0), 2);
+  assert.strictEqual(poolCourtIndex([[], []], 1, 3), 1);
+});
+
+test("formatCourtLabel : nom personnalisé si présent, sinon 'Terrain N' (1-indexé)", () => {
+  assert.strictEqual(formatCourtLabel(["Court Central"], 0), "Court Central");
+  assert.strictEqual(formatCourtLabel(["Court Central"], 1), "Terrain 2");
+  assert.strictEqual(formatCourtLabel([], 3), "Terrain 4");
 });
 
 // ---------------------------------------------------------------------------

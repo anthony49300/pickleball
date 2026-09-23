@@ -195,10 +195,13 @@ btnModalShare.addEventListener("click", async () => {
     const file = new File([blob], btnModalShare.dataset.filename || "image.png", { type: blob.type || "image/png" });
 
     if (!navigator.canShare({ files: [file] })) {
-      await alertModal(
-        "Le partage direct n'est pas possible sur cet appareil/navigateur : utilisez \"Télécharger\" puis partagez le fichier depuis votre galerie.",
-        { title: "Partage impossible", icon: "⚠️" }
-      );
+      // PAS alertModal() ici : la fenêtre d'export est encore ouverte, et la
+      // modale générique n'a qu'une seule instance partagée (un seul
+      // elModalOverlay/modalResolve) — en ouvrir une 2e par-dessus détournerait
+      // la promesse de imagePreviewModal(), qui ne se résoudrait alors plus
+      // jamais (le bouton d'export resterait bloqué sur "Génération..."). On
+      // remplace juste le message de la modale déjà ouverte à la place.
+      elModalMessage.textContent = "Le partage direct n'est pas possible pour ce fichier sur cet appareil/navigateur : utilisez \"Télécharger\" puis partagez-le depuis votre galerie.";
       return;
     }
 

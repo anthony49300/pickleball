@@ -18,6 +18,13 @@ window.addEventListener("DOMContentLoaded", () => {
   const sharedData = params.get("d");
 
   if (sharedData) {
+    // Retire "?d=..." de l'URL une fois appliqué (sans recharger la page) :
+    // sinon, un rechargement ultérieur (accidentel, ou l'onglet restauré par
+    // le navigateur) réappliquerait ce même instantané figé au moment du
+    // partage, effaçant silencieusement toute la progression faite depuis
+    // (déjà pourtant sauvegardée dans pb_autosave entre-temps).
+    window.history.replaceState({}, "", window.location.origin + window.location.pathname);
+
     try {
       const jsonString = LZString.decompressFromEncodedURIComponent(sharedData);
       const state = JSON.parse(jsonString);
