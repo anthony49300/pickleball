@@ -119,6 +119,7 @@
     "elTeamsWarning": "readonly",
     "elTournamentHistoryList": "readonly",
     "elTournamentProgress": "readonly",
+    "elTournamentSummary": "readonly",
     "elWarning": "readonly",
     "elwO": "readonly",
     "elwP": "readonly",
