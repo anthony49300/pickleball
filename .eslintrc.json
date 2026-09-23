@@ -19,6 +19,7 @@
     "advanceSegment": "readonly",
     "alertModal": "readonly",
     "allocateCourtsToPools": "readonly",
+    "APP_VERSION": "readonly",
     "applyTournamentState": "readonly",
     "assignCourtsToActiveMatches": "readonly",
     "autoPairPlayers": "readonly",

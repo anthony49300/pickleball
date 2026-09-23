@@ -1213,6 +1213,32 @@ button:disabled {
 
 .footer { text-align: center; padding: 20px 0; font-size: 0.85rem; }
 
+/* Lien "À propos" (voir #aboutBtn, ouvre la modale de version dans
+   modal.js) : un <button> plutôt qu'un <a href="#"> (ne navigue nulle
+   part, ne fait que déclencher la modale — plus correct sémantiquement),
+   mais qui se fond dans le texte du pied de page plutôt que de ressembler
+   à un vrai bouton (voir "button" plus bas, dont il annule tout le style). */
+.footer-link {
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-size: inherit;
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  cursor: pointer;
+  transition: text-decoration-color 0.15s ease;
+}
+
+.footer-link:hover {
+  background: none;
+  transform: none;
+  text-decoration-color: currentColor;
+}
+
 /* --------------------------------------------------
    BOUTON FLOTTANT "REVENIR AU TOUR/SEGMENT EN COURS" — affiché seulement
    quand ce tour/segment n'est plus visible à l'écran (voir l'IntersectionObserver
@@ -1282,6 +1308,14 @@ button:disabled {
 }
 
 .modal-icon { font-size: 2.2rem; margin-bottom: 8px; }
+
+/* Modale "À propos" (voir ABOUT_ICON_SVG dans modal.js) : le logo réutilise
+   fill="currentColor", qui suit donc --pickle-yellow ici — déjà différent
+   entre les deux pages (vert-jaune en Rotation, doré en Tournoi, voir
+   tournament.css), sans rien à coder en dur. */
+.modal-icon svg {
+  color: var(--pickle-yellow);
+}
 
 .modal-title {
   font-size: 1.15rem;
