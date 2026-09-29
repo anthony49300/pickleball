@@ -582,6 +582,26 @@ wireBracketScoreInputs(elFinalPhaseContainer, "finalPhase");
 wireBracketScoreInputs(elConsolationPhaseContainer, "consolationPhase");
 
 // --------------------------------------------------
+// VUE ARBRE DU BRACKET (bascule avec la vue liste par défaut, voir
+// renderBothBracketPhases dans render.js) — une seule préférence pour la
+// phase finale ET les matchs de classement.
+// --------------------------------------------------
+
+if (btnToggleBracketView) {
+  btnToggleBracketView.addEventListener("click", () => {
+    const tournament = window.__PT_TOURNAMENT__;
+    if (!tournament) return;
+
+    const nowTree = tournament.bracketViewMode !== "tree";
+    tournament.bracketViewMode = nowTree ? "tree" : "list";
+    btnToggleBracketView.textContent = nowTree ? "📋 Vue liste" : "🌳 Vue arbre";
+
+    renderBothBracketPhases(tournament);
+    autoSaveTournamentState();
+  });
+}
+
+// --------------------------------------------------
 // EXPORT DU CLASSEMENT FINAL EN IMAGE (PNG)
 // --------------------------------------------------
 

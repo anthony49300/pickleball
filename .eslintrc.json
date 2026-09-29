@@ -54,6 +54,8 @@
     "btnSaveToHistory": "readonly",
     "btnSaveTournamentToHistory": "readonly",
     "btnScrollToActive": "readonly",
+    "btnToggleBracketView": "readonly",
+    "buildBracketTree": "readonly",
     "buildFinalPhase": "readonly",
     "buildPools": "readonly",
     "buildShareableUrl": "readonly",

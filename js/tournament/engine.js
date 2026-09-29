@@ -629,6 +629,72 @@ function segmentLabel(segment) {
 }
 
 /**
+ * Reconstruit l'arbre COMPLET d'un bracket à classement complet (phase
+ * finale ou matchs de classement), y compris les groupes de places pas
+ * encore atteints (un ancêtre pas encore résolu) — contrairement à
+ * `phase.segments` (seulement les groupes encore actifs) et `phase.rounds`
+ * (seulement l'historique déjà résolu), qui ne donnent chacun qu'une vue
+ * partielle. Sert à la "vue arbre" du bracket (voir renderBracketTree,
+ * render.js), où chaque groupe doit exister même "à venir" pour construire
+ * les colonnes par profondeur.
+ *
+ * IMPORTANT : un nœud de cet arbre ne représente PAS un match individuel,
+ * mais un GROUPE de places (ex: "places 1 à 4"), qui peut contenir
+ * PLUSIEURS matchs simultanés tant qu'il n'a pas encore été scindé (voir le
+ * commentaire au-dessus de la section PHASE FINALE plus haut dans ce
+ * fichier) — un vrai arbre match par match demanderait de recalculer quel
+ * match individuel en alimente un autre, ce que cette fonction ne fait pas.
+ *
+ * @param {Object} phase - finalPhase ou consolationPhase (voir buildFinalPhase)
+ * @returns {Object|null} nœud racine ({id, depth, rankStart, rankSize,
+ *   status: "resolved"|"active"|"pending", pairs, scores, children:[w,l]|null,
+ *   team (uniquement pour une feuille, rankSize===1)}), ou null si le
+ *   bracket n'a pas encore été généré ou est dégénéré (< 2 équipes)
+ */
+function buildBracketTree(phase) {
+  if (!phase || !phase.bracketSize || phase.bracketSize < 2) return null;
+
+  const roundBySegmentId = new Map(phase.rounds.map(r => [r.segmentId, r]));
+  const activeSegmentById = new Map(phase.segments.map(s => [s.id, s]));
+
+  function buildNode(id, rankStart, rankSize, depth) {
+    if (rankSize === 1) {
+      const segment = activeSegmentById.get(id);
+      const slot = segment ? segment.slots[0] : null;
+      const team = slot && !slot.bye ? slot.team : null;
+      return { id, depth, rankStart, rankSize, status: segment ? "resolved" : "pending", team, children: null };
+    }
+
+    const resolvedRound = roundBySegmentId.get(id);
+    const activeSegment = activeSegmentById.get(id);
+
+    let status = "pending";
+    let pairs = null;
+    let scores = null;
+    if (resolvedRound) {
+      status = "resolved";
+      pairs = resolvedRound.pairs;
+      scores = resolvedRound.scores;
+    } else if (activeSegment) {
+      status = "active";
+      pairs = segmentPairs(activeSegment);
+      scores = activeSegment.scores;
+    }
+
+    const half = rankSize / 2;
+    return {
+      id, depth, rankStart, rankSize, status, pairs, scores,
+      children: [
+        buildNode(`${id}-w`, rankStart, half, depth + 1),
+        buildNode(`${id}-l`, rankStart + half, half, depth + 1)
+      ]
+    };
+  }
+
+  return buildNode("seg-1", 1 + (phase.rankOffset || 0), phase.bracketSize, 0);
+}
+
+/**
  * Calcule le classement final une fois tous les segments résolus à une seule
  * équipe (ou repos). Les repos sont filtrés puis les places renumérotées en
  * continu à partir de `rankOffset + 1` (les repos ne "mangent" jamais que

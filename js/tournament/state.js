@@ -118,6 +118,13 @@ function applyTournamentState(state) {
   renderBothBracketPhases(state.tournament || {});
   renderFinalRanking(state.tournament || {});
   renderTournamentProgress(state.tournament);
+
+  // Synchronise le libellé du bouton de bascule vue liste/vue arbre avec la
+  // préférence chargée (sinon il resterait sur son libellé par défaut après
+  // un rechargement, en décalage avec la vue réellement affichée ci-dessus).
+  if (btnToggleBracketView) {
+    btnToggleBracketView.textContent = state.tournament?.bracketViewMode === "tree" ? "📋 Vue liste" : "🌳 Vue arbre";
+  }
 }
 
 /**

@@ -46,6 +46,7 @@ const {
   seedQualifiedTeams,
   seedNonQualifiedTeams,
   buildFinalPhase,
+  buildBracketTree,
   segmentPairs,
   isSegmentRoundComplete,
   advanceSegment,
@@ -595,6 +596,73 @@ test("computeFinalRanking : filtre les repos et renumérote les places en contin
   const ranking = computeFinalRanking(segments);
   assert.deepStrictEqual(ranking.map(r => r.team.id), [1, 2]);
   assert.deepStrictEqual(ranking.map(r => r.rank), [1, 2]);
+});
+
+// ---------------------------------------------------------------------------
+// buildBracketTree
+// ---------------------------------------------------------------------------
+
+test("buildBracketTree : structure initiale (rien résolu) — un groupe actif à la racine, tout le reste 'à venir'", () => {
+  const teams = makeTeams(4);
+  const finalPhase = buildFinalPhase(teams, 0);
+  const tree = buildBracketTree(finalPhase);
+
+  assert.strictEqual(tree.status, "active");
+  assert.strictEqual(tree.rankStart, 1);
+  assert.strictEqual(tree.rankSize, 4);
+  assert.strictEqual(tree.pairs.length, 2);
+
+  assert.strictEqual(tree.children[0].status, "pending"); // seg-1-w (places 1-2)
+  assert.strictEqual(tree.children[1].status, "pending"); // seg-1-l (places 3-4)
+  assert.strictEqual(tree.children[0].rankStart, 1);
+  assert.strictEqual(tree.children[1].rankStart, 3);
+
+  // Feuilles (rankSize 1) : toutes "à venir", pas encore d'équipe déterminée.
+  const leaves = [
+    tree.children[0].children[0], tree.children[0].children[1],
+    tree.children[1].children[0], tree.children[1].children[1]
+  ];
+  leaves.forEach(leaf => {
+    assert.strictEqual(leaf.rankSize, 1);
+    assert.strictEqual(leaf.status, "pending");
+    assert.strictEqual(leaf.team, null);
+    assert.strictEqual(leaf.children, null);
+  });
+  assert.deepStrictEqual(leaves.map(l => l.rankStart), [1, 2, 3, 4]);
+});
+
+test("buildBracketTree : une fois entièrement résolu, les feuilles reflètent le classement final dans l'ordre", () => {
+  const teams = makeTeams(4);
+  const finalPhase = buildFinalPhase(teams, 0);
+
+  // segmentPairs(seg-1) = [[seed1,seed4],[seed2,seed3]] d'après seedOrder(4).
+  finalPhase.segments[0].scores = { 0: { a: 11, b: 5 }, 1: { a: 11, b: 5 } }; // pas de surprise
+  progressFinalPhase(finalPhase);
+
+  const winnerSeg = finalPhase.segments.find(s => s.rankStart === 1);
+  const loserSeg = finalPhase.segments.find(s => s.rankStart === 3);
+  winnerSeg.scores[0] = { a: 11, b: 5 };
+  loserSeg.scores[0] = { a: 11, b: 5 };
+  progressFinalPhase(finalPhase);
+
+  assert.ok(finalPhase.finalRanking, "le tournoi devrait être entièrement résolu pour ce test");
+
+  const tree = buildBracketTree(finalPhase);
+  assert.strictEqual(tree.status, "resolved");
+  assert.strictEqual(tree.children[0].status, "resolved");
+  assert.strictEqual(tree.children[1].status, "resolved");
+
+  const leaves = [
+    tree.children[0].children[0], tree.children[0].children[1],
+    tree.children[1].children[0], tree.children[1].children[1]
+  ];
+  leaves.forEach(leaf => assert.strictEqual(leaf.status, "resolved"));
+  assert.deepStrictEqual(leaves.map(l => l.team.id), finalPhase.finalRanking.map(r => r.team.id));
+});
+
+test("buildBracketTree : renvoie null tant que le bracket n'a pas encore été généré", () => {
+  assert.strictEqual(buildBracketTree(null), null);
+  assert.strictEqual(buildBracketTree(undefined), null);
 });
 
 test("computeOverallTeamStats : agrège les matchs de poule et de bracket pour chaque équipe", () => {
