@@ -135,6 +135,7 @@
     "generateSession": "readonly",
     "getCount": "readonly",
     "getCurrentState": "readonly",
+    "getFrozenRounds": "readonly",
     "getHistory": "readonly",
     "getPlayerGroups": "readonly",
     "getTournamentHistory": "readonly",
@@ -150,6 +151,7 @@
     "loadTournamentState": "readonly",
     "LZString": "readonly",
     "makeRng": "readonly",
+    "matchScoreKey": "readonly",
     "nextPowerOfTwo": "readonly",
     "pairKey": "readonly",
     "parseCourtNames": "readonly",
@@ -159,6 +161,7 @@
     "pickBenchesByQueue": "readonly",
     "poolCourtIndex": "readonly",
     "progressFinalPhase": "readonly",
+    "readMatchScore": "readonly",
     "renameTeamEverywhere": "readonly",
     "render": "readonly",
     "renderBadges": "readonly",
@@ -200,6 +203,7 @@
     "updateSessionStepper": "readonly",
     "updateTeamCountBadge": "readonly",
     "wireEditableListView": "readonly",
+    "writeMatchScore": "readonly",
     "xmur3": "readonly"
   }
 }

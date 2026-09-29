@@ -179,9 +179,8 @@ function updateSessionStepper(rounds) {
   const roundStatuses = rounds.map((matches, rIdx) => {
     if (!matches.length) return true;
     let isComplete = true;
-    matches.forEach((_, mIdx) => {
-      const key = `${rIdx}-${mIdx}`;
-      const sc = window.__PB_SCORES__[key];
+    matches.forEach((match, mIdx) => {
+      const sc = readMatchScore(window.__PB_SCORES__, rIdx, mIdx, match);
       if (!sc || sc['1'] == null || sc['2'] == null) {
         isComplete = false;
       }
@@ -341,9 +340,9 @@ function render(result, players, numCourts, numRounds) {
         matchCard.className = "match-card";
 
         // Récupération des scores sauvegardés en mémoire pour réinjection direct
-        const key = `${idx}-${mIdx}`;
-        const savedScore1 = window.__PB_SCORES__[key]?.['1'] ?? "";
-        const savedScore2 = window.__PB_SCORES__[key]?.['2'] ?? "";
+        const savedScore = readMatchScore(window.__PB_SCORES__, idx, mIdx, m);
+        const savedScore1 = savedScore?.['1'] ?? "";
+        const savedScore2 = savedScore?.['2'] ?? "";
 
         matchCard.innerHTML = `
           <span class="court-badge">${courtLabel}</span>
