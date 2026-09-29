@@ -33,6 +33,7 @@ const elPoolStandingsSection = document.getElementById("poolStandingsSection");
 const elPoolStandingsContainer = document.getElementById("poolStandingsContainer");
 
 const btnGenerateFinalPhase = document.getElementById("generateFinalPhase");
+const btnToggleBracketView = document.getElementById("toggleBracketViewBtn");
 const elFinalPhaseContainer = document.getElementById("finalPhaseContainer");
 
 const btnGenerateConsolationPhase = document.getElementById("generateConsolationPhase");

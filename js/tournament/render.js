@@ -334,13 +334,105 @@ function renderBracketPhase(phase, container, courtNames = [], activeCourtAssign
 }
 
 /**
+ * Rend une "feuille" (rankSize===1) de l'arbre du bracket (voir
+ * buildBracketTree, engine.js) : juste l'équipe (ou un espace réservé tant
+ * qu'elle n'est pas encore déterminée) et la place finale visée.
+ */
+function renderBracketTreeLeaf(node) {
+  const content = node.team
+    ? escapeHtml(node.team.name)
+    : `<span class="subtle">à déterminer</span>`;
+  return `
+    <div class="bracket-tree-node bracket-tree-leaf">
+      <span class="bracket-tree-rank">Place ${node.rankStart}</span>
+      <strong class="bracket-tree-leaf-team">${content}</strong>
+    </div>
+  `;
+}
+
+/**
+ * Rend un "groupe" de l'arbre du bracket (rankSize>1, peut contenir
+ * plusieurs matchs simultanés tant qu'il n'a pas encore été scindé, voir le
+ * commentaire de buildBracketTree) : réutilise EXACTEMENT renderBracketPairs
+ * (même rendu que la vue liste), pour ne jamais dupliquer/désynchroniser la
+ * logique de saisie des scores — seule la disposition change (colonnes).
+ */
+function renderBracketTreeGroup(node, courtNames, activeCourtAssignment, phaseIdx, forfeitedTeamIds, hiddenMatchKeys) {
+  const label = segmentLabel({ rankStart: node.rankStart, rankSize: node.rankSize });
+
+  if (node.status === "pending") {
+    return `
+      <div class="bracket-tree-node pool-card">
+        <h3 class="pool-card-title">${escapeHtml(label)}</h3>
+        <p class="subtle" style="font-size: 0.85rem; margin: 0;">À déterminer</p>
+      </div>
+    `;
+  }
+
+  const editable = node.status === "active";
+  return `
+    <div class="bracket-tree-node pool-card">
+      <h3 class="pool-card-title">${escapeHtml(label)}</h3>
+      <div class="round">
+        <div class="matches-list">${renderBracketPairs(node.pairs, node.scores, editable, node.id, courtNames, activeCourtAssignment, phaseIdx, forfeitedTeamIds, hiddenMatchKeys)}</div>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Affiche un bracket à classement complet en "vue arbre" : les groupes de
+ * places (voir buildBracketTree, engine.js) en colonnes par profondeur,
+ * plutôt qu'empilés chronologiquement (vue par défaut, voir
+ * renderBracketPhase juste au-dessus) — pratique pour voir d'un coup d'œil
+ * la forme générale du tableau. Réutilise renderBracketPairs pour le
+ * contenu de chaque groupe : la saisie des scores fonctionne à l'identique
+ * (même délégation d'événement sur le conteneur, voir wireBracketScoreInputs
+ * dans events.js), seule la disposition change.
+ * @param {Object} phase
+ * @param {HTMLElement} container
+ * @param {string[]} courtNames
+ * @param {Map<string,number>|null} activeCourtAssignment
+ * @param {number} phaseIdx
+ * @param {Set<number>|null} forfeitedTeamIds
+ * @param {Set<string>|null} hiddenMatchKeys
+ */
+function renderBracketTree(phase, container, courtNames = [], activeCourtAssignment = null, phaseIdx = 0, forfeitedTeamIds = null, hiddenMatchKeys = null) {
+  const tree = buildBracketTree(phase);
+  if (!tree) {
+    container.innerHTML = "";
+    return;
+  }
+
+  const columns = [];
+  (function collect(node) {
+    if (!node) return;
+    if (!columns[node.depth]) columns[node.depth] = [];
+    columns[node.depth].push(node);
+    if (node.children) { collect(node.children[0]); collect(node.children[1]); }
+  })(tree);
+
+  container.innerHTML = `<div class="bracket-tree">${columns.map(nodes => {
+    const nodesHtml = [...nodes]
+      .sort((a, b) => a.rankStart - b.rankStart)
+      .map(node => node.rankSize === 1
+        ? renderBracketTreeLeaf(node)
+        : renderBracketTreeGroup(node, courtNames, activeCourtAssignment, phaseIdx, forfeitedTeamIds, hiddenMatchKeys)
+      ).join("");
+    return `<div class="bracket-tree-column">${nodesHtml}</div>`;
+  }).join("")}</div>`;
+}
+
+/**
  * Réaffiche la phase finale ET les matchs de classement ensemble, avec une
  * attribution de terrain partagée entre les deux (voir
  * assignCourtsToActiveMatches) — sinon chacun recommence sa numérotation à
  * "Terrain 1" indépendamment, alors qu'ils peuvent tourner en même temps et
  * ne peuvent pas physiquement partager les mêmes terrains. L'ordre passé ici
  * (finalPhase = index 0, consolationPhase = index 1) doit correspondre à
- * celui utilisé pour construire `assignment`.
+ * celui utilisé pour construire `assignment`. Bascule entre vue liste (par
+ * défaut) et vue arbre selon tournament.bracketViewMode (voir events.js,
+ * bouton #toggleBracketViewBtn) — une seule préférence pour les deux phases.
  */
 function renderBothBracketPhases(tournament) {
   const assignment = assignCourtsToActiveMatches(
@@ -349,8 +441,9 @@ function renderBothBracketPhases(tournament) {
   );
   const forfeitedTeamIds = new Set(tournament.forfeitedTeamIds || []);
   const hiddenMatchKeys = new Set(tournament.hiddenMatchKeys || []);
-  renderBracketPhase(tournament.finalPhase, elFinalPhaseContainer, tournament.courtNames, assignment, 0, forfeitedTeamIds, hiddenMatchKeys);
-  renderBracketPhase(tournament.consolationPhase, elConsolationPhaseContainer, tournament.courtNames, assignment, 1, forfeitedTeamIds, hiddenMatchKeys);
+  const renderPhaseFn = tournament.bracketViewMode === "tree" ? renderBracketTree : renderBracketPhase;
+  renderPhaseFn(tournament.finalPhase, elFinalPhaseContainer, tournament.courtNames, assignment, 0, forfeitedTeamIds, hiddenMatchKeys);
+  renderPhaseFn(tournament.consolationPhase, elConsolationPhaseContainer, tournament.courtNames, assignment, 1, forfeitedTeamIds, hiddenMatchKeys);
 }
 
 let activeSectionScrollObserver = null;

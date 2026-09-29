@@ -200,7 +200,10 @@
     <section class="card" style="grid-column: 1 / -1;">
       <div class="headerRow">
         <h2>🥇 Phase finale</h2>
-        <button id="generateFinalPhase" class="secondary" type="button">⚡ Générer la phase finale</button>
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <button id="toggleBracketViewBtn" class="secondary" type="button" style="font-size: 0.8rem; padding: 6px 12px;" title="Change aussi l'affichage des matchs de classement">🌳 Vue arbre</button>
+          <button id="generateFinalPhase" class="secondary" type="button">⚡ Générer la phase finale</button>
+        </div>
       </div>
       <p class="subtle" style="font-size: 0.85rem;">
         À partir des équipes qualifiées de chaque poule (tous les matchs de poule doivent être terminés). Élimination directe, mais les équipes battues continuent à jouer entre elles pour se classer, jusqu'à ce que tout le monde ait une place précise — personne ne s'arrête après une seule défaite.
