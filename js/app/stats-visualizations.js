@@ -85,8 +85,7 @@ function updateRankings() {
 
   result.rounds.forEach((matches, rIdx) => {
     matches.forEach((match, mIdx) => {
-      const key = `${rIdx}-${mIdx}`;
-      const scores = window.__PB_SCORES__[key];
+      const scores = readMatchScore(window.__PB_SCORES__, rIdx, mIdx, match);
       
       if (scores && scores['1'] != null && scores['2'] != null) {
         hasAnyScore = true;

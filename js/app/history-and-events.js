@@ -206,14 +206,15 @@ btnGenerate.addEventListener("click", () => {
 ["input", "change"].forEach(evt => {
   elSchedule.addEventListener(evt, (e) => {
     if (e.target.classList.contains("score-input")) {
-      const r = e.target.dataset.round;
-      const m = e.target.dataset.match;
+      const r = parseInt(e.target.dataset.round, 10);
+      const m = parseInt(e.target.dataset.match, 10);
       const t = e.target.dataset.team;
       const val = parseInt(e.target.value, 10);
-      
-      const key = `${r}-${m}`;
-      if (!window.__PB_SCORES__[key]) window.__PB_SCORES__[key] = {};
-      window.__PB_SCORES__[key][t] = isNaN(val) ? null : val;
+
+      const match = window.__PB_LAST_RESULT__?.rounds?.[r]?.[m];
+      if (match) {
+        writeMatchScore(window.__PB_SCORES__, r, match, t, isNaN(val) ? null : val);
+      }
       
       if (window.__PB_LAST_RESULT__) {
         updateSessionStepper(window.__PB_LAST_RESULT__.rounds);

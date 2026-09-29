@@ -113,7 +113,16 @@ function generateSession(preserveScores = true) {
       avoidB2B: !!elAvoidB2B.checked,
     };
 
-    const result = scheduleRotations(players, numCourts, numRounds, seedText, options, window.__PB_PRESENCE__);
+    // Gèle les tours déjà notés (voir getFrozenRounds) plutôt que de les
+    // laisser être rejoués sous un autre tirage : sans ça, la moindre
+    // modification de la liste de joueurs (arrivée/départ) ou de la graine
+    // change la séquence aléatoire dès le tour 1, y compris pour des tours
+    // déjà joués et notés à l'écran.
+    const frozenRounds = preserveScores
+      ? getFrozenRounds(window.__PB_LAST_RESULT__, window.__PB_SCORES__)
+      : [];
+
+    const result = scheduleRotations(players, numCourts, numRounds, seedText, options, window.__PB_PRESENCE__, frozenRounds);
     window.__PB_LAST_RESULT__ = result;
 
     render(result, players, numCourts, numRounds);

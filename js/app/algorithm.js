@@ -133,6 +133,103 @@ function fmtMatch(match) {
 }
 
 /**
+ * Clé de stockage d'un score, basée sur QUI joue à ce tour (composition du
+ * match) plutôt que sur sa simple position round-match dans le planning.
+ * Indispensable : le planning peut être régénéré (nouvelle graine, arrivée/
+ * départ d'un joueur...) avec une composition différente à cette même
+ * position — sans cette clé, un score resterait "collé" à la position et se
+ * retrouverait attribué à un tout autre match (voir readMatchScore).
+ * @param {number} roundIdx
+ * @param {Array} match - [team1, team2], chaque équipe étant 1 ou 2 noms
+ * @returns {string}
+ */
+function matchScoreKey(roundIdx, match) {
+  const [t1, t2] = match;
+  const allPlayers = [...t1, ...t2].sort();
+  return `${roundIdx}::${allPlayers.join("|")}`;
+}
+
+/**
+ * Lit le score enregistré pour un match, en identifiant le bon enregistrement
+ * par composition (voir matchScoreKey) plutôt que par position. Gère le cas
+ * où la même composition est retrouvée mais avec équipe 1/équipe 2 inversées
+ * par rapport à la saisie d'origine (le score est alors renvoyé en miroir,
+ * plutôt que silencieusement attribué à la mauvaise équipe). Repli sur
+ * l'ancienne clé positionnelle "round-match" pour une session enregistrée
+ * avant l'introduction de cette clé (compatibilité).
+ * @param {Object} scoresStore - window.__PB_SCORES__
+ * @param {number} roundIdx
+ * @param {number} matchIdx
+ * @param {Array} match
+ * @returns {{'1': number|null, '2': number|null}|null}
+ */
+function readMatchScore(scoresStore, roundIdx, matchIdx, match) {
+  const key = matchScoreKey(roundIdx, match);
+  const entry = scoresStore[key];
+  if (entry) {
+    const sortedTeam1 = match[0].slice().sort().join("|");
+    if (entry.teamA === sortedTeam1) return { '1': entry['1'] ?? null, '2': entry['2'] ?? null };
+    // Composition identique, mais équipes inversées par rapport à la saisie
+    // d'origine (ex: le tirage a reconstruit team1/team2 dans l'autre sens).
+    return { '1': entry['2'] ?? null, '2': entry['1'] ?? null };
+  }
+  const legacyKey = `${roundIdx}-${matchIdx}`;
+  return scoresStore[legacyKey] || null;
+}
+
+/**
+ * Enregistre le score d'un côté ("1" ou "2") d'un match, sous la clé par
+ * composition (voir matchScoreKey). `teamA` (la composition de l'équipe côté
+ * "1" au moment de la toute première saisie sur ce match) n'est posé qu'à la
+ * création de l'entrée, pour que readMatchScore puisse ensuite détecter un
+ * éventuel retournement équipe1/équipe2 lors d'une régénération.
+ * @param {Object} scoresStore - window.__PB_SCORES__ (mutable)
+ * @param {number} roundIdx
+ * @param {Array} match
+ * @param {"1"|"2"} side
+ * @param {number|null} value
+ */
+function writeMatchScore(scoresStore, roundIdx, match, side, value) {
+  const key = matchScoreKey(roundIdx, match);
+  if (!scoresStore[key]) {
+    scoresStore[key] = { teamA: match[0].slice().sort().join("|") };
+  }
+  scoresStore[key][side] = value;
+}
+
+/**
+ * Construit le paramètre `frozenRounds` à passer à scheduleRotations, à
+ * partir du dernier planning affiché et des scores déjà saisis : tous les
+ * tours jusqu'au dernier ayant au moins un score enregistré sont gelés (voir
+ * scheduleRotations), pour qu'une régénération (nouvelle graine, arrivée/
+ * départ d'un joueur...) ne rejoue jamais un tour déjà noté sous un autre
+ * planning. Les tours au-delà de ce point (jamais notés) sont laissés vides
+ * ici, pour que scheduleRotations les recalcule normalement.
+ * @param {{rounds: Array, benches: Array}|null} previousResult - window.__PB_LAST_RESULT__
+ * @param {Object} scoresStore - window.__PB_SCORES__
+ * @returns {Array<{matches: Array, benched: string[]}>}
+ */
+function getFrozenRounds(previousResult, scoresStore) {
+  if (!previousResult || !previousResult.rounds) return [];
+  const { rounds, benches } = previousResult;
+
+  let lastScoredIdx = -1;
+  rounds.forEach((matches, rIdx) => {
+    matches.forEach((match, mIdx) => {
+      const sc = readMatchScore(scoresStore, rIdx, mIdx, match);
+      if (sc && sc['1'] != null && sc['2'] != null) lastScoredIdx = rIdx;
+    });
+  });
+  if (lastScoredIdx === -1) return [];
+
+  const frozenRounds = [];
+  for (let r = 0; r <= lastScoredIdx; r++) {
+    frozenRounds.push({ matches: rounds[r], benched: benches[r] || [] });
+  }
+  return frozenRounds;
+}
+
+/**
  * Extrait les N paires les plus fréquentes à partir d'une Map de statistiques.
  */
 function topPairs(map, limit = 15) {
@@ -376,8 +473,20 @@ function beamSearchRound(
 
 /**
  * Moteur principal : génère l'ensemble du planning sur tous les tours demandés.
+ * @param {Array<{matches:Array, benched:string[]}|undefined>} [frozenRounds] -
+ *   tours déjà générés ET notés (au moins un score saisi) lors d'un appel
+ *   précédent, à conserver TELS QUELS plutôt qu'à recalculer (indexé comme
+ *   `rounds` : frozenRounds[r] pour le tour r, `undefined` si ce tour doit
+ *   être (re)calculé normalement) — voir generateSession
+ *   (state-and-groups.js), qui construit ce tableau à partir des tours dont
+ *   au moins un match a un score enregistré. Sans ça, régénérer le planning
+ *   (nouvelle graine, arrivée/départ d'un joueur...) rejoue toute la session
+ *   depuis le tour 1 : la seed alimente le tirage aléatoire dès la 1re ligne
+ *   de cette fonction, donc la moindre différence dans la liste de joueurs
+ *   change la séquence de tirages pour TOUS les tours, y compris ceux déjà
+ *   joués et notés.
  */
-function scheduleRotations(players, numCourts, numRounds, seedText, options, presenceMap) {
+function scheduleRotations(players, numCourts, numRounds, seedText, options, presenceMap, frozenRounds = []) {
   const rng = makeRng(seedText);
   players = players.map(p => p.trim()).filter(Boolean);
   if (players.length < 4) throw new Error("Il faut au moins 4 joueurs.");
@@ -410,6 +519,58 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
 
     const inactivePlayers = players.filter(p => !activePlayers.includes(p));
     absents.push(inactivePlayers);
+
+    const frozen = frozenRounds[r];
+    if (frozen) {
+      // Rejoue TEL QUEL un tour déjà généré et noté (voir doc ci-dessus) :
+      // aucun recalcul des affiches/repos, seule la comptabilité (qui a
+      // joué avec/contre qui, qui a été au banc) est mise à jour, pour que
+      // les tours SUIVANTS (recalculés eux) en tiennent compte normalement.
+      for (const match of frozen.matches) {
+        const [t1, t2] = match;
+        if (t1.length === 2 && t2.length === 2) {
+          const [a, b] = t1;
+          const [c, d] = t2;
+          incCount(teammateCount, pairKey(a, b));
+          incCount(teammateCount, pairKey(c, d));
+          for (const x of [a, b]) {
+            for (const y of [c, d]) incCount(opponentCount, pairKey(x, y));
+          }
+        } else if (t1.length === 1 && t2.length === 1) {
+          incCount(opponentCount, pairKey(t1[0], t2[0]));
+          incCount(singlesCount, t1[0]);
+          incCount(singlesCount, t2[0]);
+          incCount(singlesPairCounts, pairKey(t1[0], t2[0]));
+          lastSingles = new Set([t1[0], t2[0]]);
+        }
+        for (const p of [...t1, ...t2]) {
+          playsCount.set(p, (playsCount.get(p) ?? 0) + 1);
+        }
+      }
+
+      // File d'attente du banc : reproduit la mutation shift+push de
+      // pickBenchesByQueue pour les joueurs réellement mis au repos à ce
+      // tour, sans rien redécider (déjà figé).
+      for (const p of activePlayers) {
+        if (!benchQueue.includes(p)) benchQueue.push(p);
+      }
+      for (const p of frozen.benched) {
+        const idx = benchQueue.indexOf(p);
+        if (idx !== -1) benchQueue.splice(idx, 1);
+        benchQueue.push(p);
+        benchCount.set(p, (benchCount.get(p) ?? 0) + 1);
+      }
+      for (let i = 0; i < frozen.benched.length; i++) {
+        for (let j = i + 1; j < frozen.benched.length; j++) {
+          incCount(benchPairCounts, pairKey(frozen.benched[i], frozen.benched[j]));
+        }
+      }
+      lastBenched = new Set(frozen.benched);
+
+      rounds.push(frozen.matches);
+      benches.push(frozen.benched);
+      continue;
+    }
 
     let targetMatches = Math.min(numCourts, Math.floor(activePlayers.length / 4));
     let need = 4 * targetMatches;
