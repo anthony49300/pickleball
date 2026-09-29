@@ -455,7 +455,73 @@ select option {
   justify-content: space-around;
   gap: 16px;
   flex-shrink: 0;
-  width: 260px;
+  width: 280px;
+}
+
+/* .match-card (styles.css, mode Rotation) est conçu pour une carte PLEINE
+   LARGEUR (grid 2 colonnes, badges terrain/VS positionnés en absolu avec
+   juste assez de marge réservée) : à peine 280px de colonne, ce
+   dimensionnement casse complètement — équipes en collision avec les
+   badges, noms de plusieurs lettres qui n'ont plus la place de tenir sur
+   une ligne et repassent lettre par lettre. styles.css a DÉJÀ la bonne
+   disposition pour un espace étroit (empilement vertical), mais seulement
+   dans un @media (max-width: 500px) — une media query réagit à la largeur
+   de l'ÉCRAN, jamais à celle d'un simple conteneur, donc elle ne s'applique
+   pas ici même sur un grand écran. On reprend exactement les mêmes règles,
+   scopées à .bracket-tree-node au lieu du media query. */
+.bracket-tree-node .match-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  padding: 36px 12px 14px;
+}
+
+.bracket-tree-node .match-card::before {
+  top: 50%;
+  left: 0;
+  right: 0;
+  bottom: auto;
+  width: auto;
+  height: 2px;
+  border-left: none;
+  border-top: 1px dashed rgba(255, 255, 255, 0.8);
+  transform: translateY(-50%);
+}
+
+.bracket-tree-node .match-card::after {
+  top: 32%;
+  bottom: 32%;
+  left: 0;
+  right: 0;
+  border-left: none;
+  border-right: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.5);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.bracket-tree-node .court-badge {
+  top: 10px;
+  left: 10px;
+  transform: none;
+}
+
+.bracket-tree-node .vs {
+  position: static;
+  align-self: center;
+  transform: none;
+  margin: 0;
+}
+
+.bracket-tree-node .team-score {
+  width: 100%;
+  justify-content: center;
+  text-align: center;
+  padding-left: 0;
+}
+
+.bracket-tree-node .team {
+  font-size: 0.85rem;
 }
 
 /* Repère de progression : la même bordure gauche dorée sur tous les nœuds
