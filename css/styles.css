@@ -269,6 +269,53 @@ h2 {
   padding-bottom: 8px;
 }
 
+/* En-tête repliable d'une carte entière (ex: #configDetails) : même apparence
+   que h2 ci-dessus, mais cliquable avec un chevron — contrairement à
+   .details plus bas (pensé pour un sous-bloc À L'INTÉRIEUR d'une carte), pas
+   de fond/bordure encadrés pour ne pas donner un effet "boîte dans la boîte". */
+.card-summary-h2 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-main);
+  border-bottom: 2px solid rgba(var(--pickle-yellow-rgb), 0.2);
+  padding-bottom: 8px;
+  cursor: pointer;
+  outline: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-summary-h2::-webkit-details-marker { display: none; }
+
+.card-summary-h2::after {
+  content: "⌄";
+  font-size: 1.1rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  margin-left: 10px;
+  transition: transform 0.2s ease;
+  color: var(--text-subtle);
+}
+
+details[open] > .card-summary-h2::after {
+  transform: rotate(180deg);
+}
+
+details:not([open]) > .card-summary-h2 {
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
+.card-summary-h2:focus-visible {
+  outline: 2px solid var(--pickle-yellow);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
 .subtle { color: var(--text-subtle); }
 
 .label {

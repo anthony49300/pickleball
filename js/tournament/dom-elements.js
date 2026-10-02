@@ -4,6 +4,8 @@
 // MODE TOURNOI — ELEMENTS DU DOM
 // =============================================================================
 
+const elTeamsDetails = document.getElementById("teamsDetails");
+const elPoolsConfigDetails = document.getElementById("poolsConfigDetails");
 const elTeams = document.getElementById("teams");
 const elTeamCountBadge = document.getElementById("teamCountBadge");
 const elImportGroupSelect = document.getElementById("importGroupSelect");

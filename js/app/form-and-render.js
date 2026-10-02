@@ -165,6 +165,7 @@ function renderEmptyState() {
   btnSaveToHistory.disabled = true;
   if (btnCollapseAllRounds) btnCollapseAllRounds.disabled = true;
   if (btnExpandAllRounds) btnExpandAllRounds.disabled = true;
+  if (elConfigDetails) elConfigDetails.open = true;
 }
 
 /**
@@ -422,6 +423,13 @@ function render(result, players, numCourts, numRounds) {
   btnSaveToHistory.disabled = false;
   if (btnCollapseAllRounds) btnCollapseAllRounds.disabled = false;
   if (btnExpandAllRounds) btnExpandAllRounds.disabled = false;
+
+  // Replie automatiquement la configuration une fois un planning affiché,
+  // pour ne pas avoir à défiler devant une longue carte de réglages déjà
+  // utilisée pour atteindre les matchs. Reste rouvrable à tout moment (la
+  // flèche du résumé), et se redéplie d'elle-même dès qu'il n'y a plus de
+  // planning (voir renderEmptyState).
+  if (elConfigDetails) elConfigDetails.open = false;
 
   updateScrollToActiveButton();
 }

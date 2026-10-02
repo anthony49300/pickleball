@@ -71,7 +71,8 @@
 
     <!-- SECTION EQUIPES -->
     <section class="card">
-      <h2>⚔️ Équipes du tournoi</h2>
+      <details id="teamsDetails" open>
+      <summary class="card-summary-h2">⚔️ Équipes du tournoi</summary>
       <p class="subtle" style="font-size: 0.85rem; margin-top:-8px; margin-bottom: 12px;">
         Le mode Tournoi joue en paires fixes : chaque équipe garde le même partenaire du début à la fin, contrairement au mode Rotation qui varie les partenaires à chaque tour.
       </p>
@@ -112,11 +113,13 @@
 
       <p id="teamsWarning" class="warning" hidden></p>
       <p id="teamsError" class="error" hidden></p>
+      </details>
     </section>
 
     <!-- SECTION CONFIG POULES -->
     <section class="card">
-      <h2>🔧 Configuration des poules</h2>
+      <details id="poolsConfigDetails" open>
+      <summary class="card-summary-h2">🔧 Configuration des poules</summary>
 
       <div class="row">
         <div>
@@ -161,6 +164,7 @@
       <div class="actions" style="margin-top: 16px;">
         <button id="generatePools" class="btn-primary-lg">⚡ Générer les poules</button>
       </div>
+      </details>
     </section>
 
     <!-- REPARTITION MANUELLE (n'apparaît qu'en mode "Manuelle") -->
