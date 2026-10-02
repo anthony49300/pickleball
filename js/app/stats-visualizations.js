@@ -1,5 +1,13 @@
 "use strict";
 
+/**
+ * Formate un nombre décimal à la française (virgule plutôt que point), pour
+ * les moyennes affichées dans le classement et les badges.
+ */
+function fmtDecimal(n, digits = 1) {
+  return n.toLocaleString("fr-FR", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+}
+
 // =============================================================================
 // RENDU DE LA MATRICE (HEATMAP)
 // =============================================================================
@@ -157,8 +165,8 @@ function updateRankings() {
     const diffClass = p.diff > 0 ? "diff-positive" : (p.diff < 0 ? "diff-negative" : "");
     const diffSign = p.diff > 0 ? "+" : "";
     const winPct = p.m > 0 ? Math.round((p.w / p.m) * 100) : 0;
-    const avgPf = p.m > 0 ? (p.pf / p.m).toFixed(1) : "0.0";
-    const avgPa = p.m > 0 ? (p.pa / p.m).toFixed(1) : "0.0";
+    const avgPf = fmtDecimal(p.m > 0 ? p.pf / p.m : 0);
+    const avgPa = fmtDecimal(p.m > 0 ? p.pa / p.m : 0);
     const bestWin = p.maxWin > 0 ? `+${p.maxWin}` : "—";
     const worstLoss = p.maxLoss > 0 ? `-${p.maxLoss}` : "—";
     let streakLabel = "—";
@@ -259,7 +267,7 @@ function renderBadges(sorted, pairWins) {
       icon: "💥",
       title: "Canonnière",
       player: bestAttacker.name,
-      desc: `${(bestAttacker.pf / bestAttacker.m).toFixed(1)} points marqués en moyenne par match (${bestAttacker.pf} au total)`
+      desc: `${fmtDecimal(bestAttacker.pf / bestAttacker.m)} points marqués en moyenne par match (${bestAttacker.pf} au total)`
     });
   }
 
@@ -269,7 +277,7 @@ function renderBadges(sorted, pairWins) {
       icon: "🛡️",
       title: "Roc Défensif",
       player: bestDefender.name,
-      desc: `${(bestDefender.pa / bestDefender.m).toFixed(1)} points encaissés en moyenne par match (${bestDefender.pa} au total)`
+      desc: `${fmtDecimal(bestDefender.pa / bestDefender.m)} points encaissés en moyenne par match (${bestDefender.pa} au total)`
     });
   }
 
@@ -292,7 +300,7 @@ function renderBadges(sorted, pairWins) {
       icon: "🚀",
       title: "Maître du Différentiel",
       player: bestDiff.name,
-      desc: `Différentiel moyen de +${bestDiff.avgDiff.toFixed(1)} par match (total ${bestDiff.diff > 0 ? "+" : ""}${bestDiff.diff})`
+      desc: `Différentiel moyen de +${fmtDecimal(bestDiff.avgDiff)} par match (total ${bestDiff.diff > 0 ? "+" : ""}${bestDiff.diff})`
     });
   }
 
