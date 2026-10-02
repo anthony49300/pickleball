@@ -133,14 +133,20 @@ function updateRankings() {
   }
   
   elRankingSection.hidden = false;
-  
-  // Tri selon les règles de départage (Victoires -> Différentiel -> Points marqués)
+
+  // Tri selon les règles de départage (Taux de victoire -> Différentiel moyen -> Victoires brutes).
+  // Le taux de victoire passe avant le nombre de victoires brutes pour ne pas
+  // défavoriser un joueur qui a simplement moins joué (rotation du banc) mais
+  // gagné dans les mêmes proportions (ex: 2V/2 ne doit pas être classé après
+  // 3V/3 uniquement parce qu'il totalise moins de victoires).
   const sortedPlayers = Object.entries(playersStats).map(([name, stats]) => {
-    return { name, ...stats, diff: stats.pf - stats.pa };
+    const winRate = stats.m > 0 ? stats.w / stats.m : 0;
+    const avgDiff = stats.m > 0 ? (stats.pf - stats.pa) / stats.m : 0;
+    return { name, ...stats, diff: stats.pf - stats.pa, winRate, avgDiff };
   }).sort((a, b) => {
-    if (b.w !== a.w) return b.w - a.w;        // 1. Victoires
-    if (b.diff !== a.diff) return b.diff - a.diff; // 2. Différentiel (+/-)
-    return b.pf - a.pf;                         // 3. Points marqués (PF)
+    if (b.winRate !== a.winRate) return b.winRate - a.winRate; // 1. Taux de victoire
+    if (b.avgDiff !== a.avgDiff) return b.avgDiff - a.avgDiff; // 2. Différentiel moyen par match
+    return b.w - a.w;                                           // 3. Victoires brutes
   });
 
   renderPodium(sortedPlayers);
@@ -197,7 +203,7 @@ function updateRankings() {
     }
   }
 
-  noteEl.innerHTML = `💡 <strong>Règle de départage en cas d'égalité :</strong> 1. Nombre de victoires (V) &nbsp;➔&nbsp; 2. Différentiel de points (+/-) &nbsp;➔&nbsp; 3. Points pour (PP).`;
+  noteEl.innerHTML = `💡 <strong>Règle de départage en cas d'égalité :</strong> 1. Taux de victoire (%) &nbsp;➔&nbsp; 2. Différentiel moyen par match &nbsp;➔&nbsp; 3. Nombre de victoires (V).`;
 }
 
 function renderPodium(sorted) {
@@ -244,44 +250,49 @@ function countAlternations(results) {
 function renderBadges(sorted, pairWins) {
   const badges = [];
 
-  const bestAttacker = [...sorted].sort((a, b) => b.pf - a.pf)[0];
-  if (bestAttacker && bestAttacker.pf > 0) {
+  // Moyennes par match plutôt que des totaux bruts : sinon, un joueur ayant
+  // simplement joué plus de matchs (rotation du banc) rafle ces badges même
+  // avec une production par match inférieure à celle d'un joueur moins présent.
+  const bestAttacker = [...sorted].filter(p => p.m > 0).sort((a, b) => (b.pf / b.m) - (a.pf / a.m))[0];
+  if (bestAttacker) {
     badges.push({
       icon: "💥",
       title: "Canonnière",
       player: bestAttacker.name,
-      desc: `${bestAttacker.pf} points inscrits au total`
+      desc: `${(bestAttacker.pf / bestAttacker.m).toFixed(1)} points marqués en moyenne par match (${bestAttacker.pf} au total)`
     });
   }
 
-  const bestDefender = [...sorted].filter(p => p.m > 0).sort((a, b) => a.pa - b.pa)[0];
+  const bestDefender = [...sorted].filter(p => p.m > 0).sort((a, b) => (a.pa / a.m) - (b.pa / b.m))[0];
   if (bestDefender) {
     badges.push({
       icon: "🛡️",
       title: "Roc Défensif",
       player: bestDefender.name,
-      desc: `Seulement ${bestDefender.pa} points encaissés`
+      desc: `${(bestDefender.pa / bestDefender.m).toFixed(1)} points encaissés en moyenne par match (${bestDefender.pa} au total)`
     });
   }
 
+  // Seuil minimum (3 victoires ensemble) pour éviter qu'un duo n'ayant joué
+  // qu'une seule fois décroche le badge sur un simple coup de chance.
   const topDuoEntry = [...pairWins.entries()].sort((a, b) => b[1] - a[1])[0];
-  if (topDuoEntry && topDuoEntry[1] > 0) {
+  if (topDuoEntry && topDuoEntry[1] >= 3) {
     const pairName = topDuoEntry[0].replace("||", " & ");
     badges.push({
       icon: "🔥",
       title: "Incollable en Duo",
       player: pairName,
-      desc: `${topDuoEntry[1]} victoires ensemble`
+      desc: `${topDuoEntry[1]} victoire${topDuoEntry[1] > 1 ? "s" : ""} ensemble`
     });
   }
 
-  const bestDiff = [...sorted].sort((a, b) => b.diff - a.diff)[0];
-  if (bestDiff && bestDiff.diff > 0) {
+  const bestDiff = [...sorted].filter(p => p.m > 0).sort((a, b) => b.avgDiff - a.avgDiff)[0];
+  if (bestDiff && bestDiff.avgDiff > 0) {
     badges.push({
       icon: "🚀",
       title: "Maître du Différentiel",
       player: bestDiff.name,
-      desc: `Différentiel de +${bestDiff.diff}`
+      desc: `Différentiel moyen de +${bestDiff.avgDiff.toFixed(1)} par match (total ${bestDiff.diff > 0 ? "+" : ""}${bestDiff.diff})`
     });
   }
 
@@ -297,8 +308,9 @@ function renderBadges(sorted, pairWins) {
 
   // "Malgré un bon différentiel global" : on exige un différentiel positif, pour ne
   // récompenser que les joueurs dont la malchance sur les matchs serrés ne reflète
-  // pas leur niveau réel sur l'ensemble de la session.
-  const unlucky = [...sorted].filter(p => p.closeLosses > 0 && p.diff > 0).sort((a, b) => b.closeLosses - a.closeLosses)[0];
+  // pas leur niveau réel sur l'ensemble de la session. Le 1er du classement est
+  // exclu : son classement en tête contredirait déjà l'idée de "malchance".
+  const unlucky = [...sorted].filter((p, idx) => idx > 0 && p.closeLosses > 0 && p.diff > 0).sort((a, b) => b.closeLosses - a.closeLosses)[0];
   if (unlucky) {
     badges.push({
       icon: "😬",
@@ -308,8 +320,10 @@ function renderBadges(sorted, pairWins) {
     });
   }
 
+  // Seuil minimum de 4 matchs : sur 2-3 matchs, un simple "W puis L" compte
+  // déjà comme 100% d'alternance et déclenchait le badge pour presque rien.
   const rollercoaster = [...sorted]
-    .filter(p => p.m >= 2)
+    .filter(p => p.m >= 4)
     .map(p => ({ ...p, alternations: countAlternations(p.results) }))
     .sort((a, b) => b.alternations - a.alternations)[0];
   if (rollercoaster && rollercoaster.alternations > 0) {
