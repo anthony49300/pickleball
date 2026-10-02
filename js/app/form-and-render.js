@@ -344,15 +344,20 @@ function render(result, players, numCourts, numRounds) {
         const savedScore1 = savedScore?.['1'] ?? "";
         const savedScore2 = savedScore?.['2'] ?? "";
 
+        const team1Label = t1.join(" & ");
+        const team2Label = t2.join(" & ");
+        const tieWarningHidden = !(savedScore1 !== "" && savedScore2 !== "" && savedScore1 === savedScore2);
+
         matchCard.innerHTML = `
           <span class="court-badge">${courtLabel}</span>
           <div class="team-score">
             <span class="team">${t1.map(escapeHtml).join(" & ")}</span>
-            <input type="number" class="score-input" data-round="${idx}" data-match="${mIdx}" data-team="1" min="0" placeholder="-" value="${savedScore1}" />
+            <input type="number" class="score-input" data-round="${idx}" data-match="${mIdx}" data-team="1" min="0" max="99" inputmode="numeric" placeholder="-" value="${savedScore1}" aria-label="Score ${escapeHtml(team1Label)}, tour ${idx + 1}" />
           </div>
           <span class="vs">VS</span>
+          <span class="tie-warning" ${tieWarningHidden ? "hidden" : ""} title="Égalité : aucun vainqueur enregistré pour ce match">⚠️</span>
           <div class="team-score">
-            <input type="number" class="score-input" data-round="${idx}" data-match="${mIdx}" data-team="2" min="0" placeholder="-" value="${savedScore2}" />
+            <input type="number" class="score-input" data-round="${idx}" data-match="${mIdx}" data-team="2" min="0" max="99" inputmode="numeric" placeholder="-" value="${savedScore2}" aria-label="Score ${escapeHtml(team2Label)}, tour ${idx + 1}" />
             <span class="team">${t2.map(escapeHtml).join(" & ")}</span>
           </div>
         `;

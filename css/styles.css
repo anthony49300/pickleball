@@ -970,7 +970,20 @@ button:disabled {
   pointer-events: none;
 }
 
-.team { 
+/* Icône d'alerte égalité (voir history-and-events.js), ancrée juste au-dessus
+   du badge VS : une égalité n'a normalement pas de sens pour un score de
+   pickleball, c'est donc le plus souvent une erreur de saisie. */
+.tie-warning {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -26px);
+  z-index: 3;
+  font-size: 0.9rem;
+  cursor: help;
+}
+
+.team {
   font-weight: 700; 
   color: #ffffff; 
   text-shadow: 0 1px 3px rgba(0,0,0,0.8);
@@ -1522,6 +1535,13 @@ button:disabled {
     align-self: center;
     transform: none;
     margin: 0;
+  }
+
+  .tie-warning {
+    position: static;
+    align-self: center;
+    transform: none;
+    margin-top: -6px;
   }
 
   /* Nom d'équipe + son score regroupés et centrés ensemble sur la même ligne
