@@ -520,6 +520,17 @@ select option {
   padding-left: 0;
 }
 
+/* Même correctif de "zigzag" que styles.css (@media max-width: 500px, section
+   .team-score:last-of-type) : l'équipe 2 a son score AVANT son nom dans le
+   DOM, ce qui alternait visuellement la position du score d'une ligne à
+   l'autre une fois empilé en colonne. */
+.bracket-tree-node .team-score:last-of-type .team {
+  order: 1;
+}
+.bracket-tree-node .team-score:last-of-type .score-input {
+  order: 2;
+}
+
 .bracket-tree-node .team {
   font-size: 0.85rem;
 }

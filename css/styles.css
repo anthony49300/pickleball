@@ -1619,6 +1619,19 @@ button:disabled {
     padding-left: 0;
   }
 
+  /* Sur desktop, l'équipe 2 a son score AVANT son nom dans le DOM (pour rester
+     collé au filet central) : empilé tel quel en colonne, ça affichait le nom
+     tantôt avant, tantôt après son score d'une ligne à l'autre ("zigzag"),
+     rendant la lecture plus difficile. On réordonne visuellement (le DOM ne
+     change pas) pour que le score soit toujours après le nom, comme pour
+     l'équipe 1. */
+  .team-score:last-of-type .team {
+    order: 1;
+  }
+  .team-score:last-of-type .score-input {
+    order: 2;
+  }
+
   .team {
     font-size: 0.85rem;
   }
