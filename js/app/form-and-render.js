@@ -163,6 +163,7 @@ function renderEmptyState() {
   btnCopy.disabled = true;
   btnCopyLink.disabled = true;
   btnSaveToHistory.disabled = true;
+  if (elConfigDetails) elConfigDetails.open = true;
 }
 
 /**
@@ -418,6 +419,13 @@ function render(result, players, numCourts, numRounds) {
   btnCopy.disabled = false;
   btnCopyLink.disabled = false;
   btnSaveToHistory.disabled = false;
+
+  // Replie automatiquement la configuration une fois un planning affiché,
+  // pour ne pas avoir à défiler devant une longue carte de réglages déjà
+  // utilisée pour atteindre les matchs. Reste rouvrable à tout moment (la
+  // flèche du résumé), et se redéplie d'elle-même dès qu'il n'y a plus de
+  // planning (voir renderEmptyState).
+  if (elConfigDetails) elConfigDetails.open = false;
 
   updateScrollToActiveButton();
 }

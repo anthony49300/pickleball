@@ -52,7 +52,8 @@
   <main class="container grid">
     <!-- SECTION PARAMÈTRES -->
     <section class="card">
-      <h2>🔧 Configuration de Session</h2>
+      <details id="configDetails" open>
+      <summary class="card-summary-h2">🔧 Configuration de Session</summary>
 
       <label class="label label-with-badge" for="players">
         <span>⚔️ Joueurs (un par ligne ou séparés par des virgules)</span>
@@ -215,6 +216,7 @@
 
       <p id="warning" class="warning" hidden></p>
       <p id="error" class="error" hidden></p>
+      </details>
     </section>
 
     <!-- SECTION MATCHS -->

@@ -101,6 +101,14 @@ function wrapHideableMatch(hideKey, label, innerHtml, hiddenMatchKeys) {
  * @param {Set<string>} hiddenMatchKeys - voir wrapHideableMatch
  */
 function renderPools(pools, courtNames = [], courtAllocation = [], hiddenPoolIndices = [], hiddenMatchKeys = new Set()) {
+  // Replie automatiquement les cartes "Équipes"/"Configuration des poules" dès
+  // que des poules existent (plus besoin d'y revenir pour voir les matchs),
+  // et les redéplie d'elle-même s'il n'y a plus de poules (reset, tournoi
+  // vide) — reste rouvrable à tout moment via la flèche du résumé.
+  const hasPools = pools.length > 0;
+  if (elTeamsDetails) elTeamsDetails.open = !hasPools;
+  if (elPoolsConfigDetails) elPoolsConfigDetails.open = !hasPools;
+
   elPoolsContainer.innerHTML = pools.map((pool, poolIdx) => {
     const isPoolHidden = hiddenPoolIndices.includes(poolIdx);
 

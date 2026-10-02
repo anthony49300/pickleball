@@ -4,6 +4,7 @@
 // IHM & ELEMENTS DU DOM
 // =============================================================================
 
+const elConfigDetails = document.getElementById("configDetails");
 const elPlayers = document.getElementById("players");
 const elCourts = document.getElementById("courts");
 const elRounds = document.getElementById("rounds");
