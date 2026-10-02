@@ -209,13 +209,31 @@ btnGenerate.addEventListener("click", () => {
       const r = parseInt(e.target.dataset.round, 10);
       const m = parseInt(e.target.dataset.match, 10);
       const t = e.target.dataset.team;
-      const val = parseInt(e.target.value, 10);
+      let val = parseInt(e.target.value, 10);
+
+      // Un score négatif ou aberrant (saisi au clavier, le spinner natif ne
+      // l'empêche pas) n'a pas de sens pour un score de match : on corrige
+      // la saisie plutôt que d'enregistrer une valeur invalide.
+      if (!isNaN(val)) {
+        val = Math.min(99, Math.max(0, val));
+        if (String(val) !== e.target.value) e.target.value = val;
+      }
 
       const match = window.__PB_LAST_RESULT__?.rounds?.[r]?.[m];
       if (match) {
         writeMatchScore(window.__PB_SCORES__, r, match, t, isNaN(val) ? null : val);
+
+        // Signale une égalité (aucun vainqueur) une fois les deux scores saisis :
+        // au pickleball une partie ne devrait normalement jamais se terminer à
+        // égalité, c'est donc plus probablement une erreur de saisie.
+        const matchCard = e.target.closest(".match-card");
+        const tieWarning = matchCard?.querySelector(".tie-warning");
+        if (tieWarning) {
+          const sc = readMatchScore(window.__PB_SCORES__, r, m, match);
+          tieWarning.hidden = !(sc && sc['1'] != null && sc['2'] != null && sc['1'] === sc['2']);
+        }
       }
-      
+
       if (window.__PB_LAST_RESULT__) {
         updateSessionStepper(window.__PB_LAST_RESULT__.rounds);
         
