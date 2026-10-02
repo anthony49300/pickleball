@@ -163,6 +163,8 @@ function renderEmptyState() {
   btnCopy.disabled = true;
   btnCopyLink.disabled = true;
   btnSaveToHistory.disabled = true;
+  if (btnCollapseAllRounds) btnCollapseAllRounds.disabled = true;
+  if (btnExpandAllRounds) btnExpandAllRounds.disabled = true;
 }
 
 /**
@@ -418,6 +420,8 @@ function render(result, players, numCourts, numRounds) {
   btnCopy.disabled = false;
   btnCopyLink.disabled = false;
   btnSaveToHistory.disabled = false;
+  if (btnCollapseAllRounds) btnCollapseAllRounds.disabled = false;
+  if (btnExpandAllRounds) btnExpandAllRounds.disabled = false;
 
   updateScrollToActiveButton();
 }

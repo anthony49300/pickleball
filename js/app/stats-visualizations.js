@@ -29,9 +29,15 @@ function renderHeatmap() {
   let maxVal = 1;
   map.forEach(val => { if (val > maxVal) maxVal = val; });
 
+  // Le "." ne s'ajoute que si le nom est réellement tronqué : sinon "Anto."
+  // pouvait désigner aussi bien "Antoine" (tronqué) que "Anto" (pas tronqué,
+  // mais suffixé quand même), les rendant impossibles à distinguer dans
+  // l'en-tête. Le nom complet reste disponible via le title (survol).
   let html = `<table class="heatmap-table"><thead><tr><th></th>`;
   players.forEach(p => {
-    html += `<th>${escapeHtml(p.substring(0, 4))}.</th>`;
+    const short = p.substring(0, 4);
+    const label = short.length < p.length ? `${short}.` : short;
+    html += `<th title="${escapeHtml(p)}">${escapeHtml(label)}</th>`;
   });
   html += `</tr></thead><tbody>`;
 

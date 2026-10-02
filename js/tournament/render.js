@@ -214,6 +214,49 @@ function renderPoolStandings(pools, qualifiersPerPool, forfeitedTeamIds = new Se
       </div>
     `;
   }).join("");
+
+  refreshBracketGenerateButtons(pools, qualifiersPerPool, forfeitedTeamIds);
+}
+
+/**
+ * Active/désactive les boutons "Générer la phase finale" / "Générer les
+ * matchs de classement" selon que les poules sont réellement prêtes, plutôt
+ * que de les laisser cliquables en permanence (l'utilisateur ne découvrait
+ * l'impossibilité qu'après le clic, via une modale). Appelé à chaque
+ * renderPoolStandings, donc à chaque fois que l'état des poules peut avoir
+ * changé (génération, score, forfait...).
+ */
+function refreshBracketGenerateButtons(pools, qualifiersPerPool, forfeitedTeamIds = new Set()) {
+  if (!btnGenerateFinalPhase && !btnGenerateConsolationPhase) return;
+
+  if (!pools || !pools.length) {
+    if (btnGenerateFinalPhase) {
+      btnGenerateFinalPhase.disabled = true;
+      btnGenerateFinalPhase.title = "Générez d'abord les poules.";
+    }
+    if (btnGenerateConsolationPhase) {
+      btnGenerateConsolationPhase.disabled = true;
+      btnGenerateConsolationPhase.title = "Générez d'abord les poules.";
+    }
+    return;
+  }
+
+  const poolsComplete = pools.every(isPoolComplete);
+  const notCompleteTitle = "Tous les matchs de poule doivent être terminés (scores saisis) avant de continuer.";
+
+  if (btnGenerateFinalPhase) {
+    const qualified = seedQualifiedTeams(pools, qualifiersPerPool, forfeitedTeamIds);
+    const ready = poolsComplete && qualified.length >= 2;
+    btnGenerateFinalPhase.disabled = !ready;
+    btnGenerateFinalPhase.title = ready ? "" : (!poolsComplete ? notCompleteTitle : "Il faut au moins 2 équipes qualifiées pour lancer une phase finale.");
+  }
+
+  if (btnGenerateConsolationPhase) {
+    const nonQualified = seedNonQualifiedTeams(pools, qualifiersPerPool, forfeitedTeamIds);
+    const ready = poolsComplete && nonQualified.length >= 2;
+    btnGenerateConsolationPhase.disabled = !ready;
+    btnGenerateConsolationPhase.title = ready ? "" : (!poolsComplete ? notCompleteTitle : "Il faut au moins 2 équipes non qualifiées pour générer des matchs de classement.");
+  }
 }
 
 /**
