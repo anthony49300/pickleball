@@ -57,6 +57,9 @@
   --round-bg: rgba(15, 23, 42, 0.04);
   --round-bg-active: rgba(var(--pickle-yellow-rgb), 0.12);
   --table-header-bg: rgba(0, 0, 0, 0.06);
+  /* Voir .bench : rouge nettement plus sombre que le #fca5a5 du thème sombre,
+     pour rester lisible sur le lavis rose pâle de son fond translucide. */
+  --bench-text: #b91c1c;
 }
 
 * { box-sizing: border-box; }
@@ -808,7 +811,11 @@ button:disabled {
 
 .bench {
   background: rgba(239, 68, 68, 0.15);
-  color: #fca5a5;
+  /* #fca5a5 (corail clair) est pensé pour un fond sombre : en thème clair, sur
+     le lavis rose pâle du même rouge translucide, le contraste devient quasi
+     nul. --bench-text (surchargée ci-dessous en thème clair) corrige ça sans
+     toucher à l'apparence en thème sombre. */
+  color: var(--bench-text, #fca5a5);
   padding: 4px 10px;
   border-radius: 20px;
   font-size: 0.8rem;
@@ -940,13 +947,18 @@ button:disabled {
   top: 50%;
   transform: translateY(-50%);
   z-index: 3;
-  color: var(--pickle-yellow);
+  /* Toujours le jaune-vert vif, jamais la variante olive du thème clair : ce
+     badge est posé sur un fond navy fixe (ci-dessous), le même quel que soit
+     le thème de la page (voir le commentaire sur --court-blue plus haut). Avec
+     var(--pickle-yellow), le thème clair y mettait un olive sombre, quasi
+     invisible sur ce fond déjà sombre. */
+  color: #ccff00;
   font-size: 0.8rem;
   font-weight: 800;
   background: rgba(10, 15, 24, 0.85);
   padding: 3px 10px;
   border-radius: 6px;
-  border: 1px solid var(--pickle-yellow);
+  border: 1px solid #ccff00;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -1025,19 +1037,19 @@ button:disabled {
 .podium-step.gold {
   background: linear-gradient(180deg, #ffd700 0%, #b8860b 100%);
   color: #000;
-  height: 140px;
+  min-height: 140px;
 }
 
 .podium-step.silver {
   background: linear-gradient(180deg, #e0e0e0 0%, #757575 100%);
   color: #000;
-  height: 110px;
+  min-height: 110px;
 }
 
 .podium-step.bronze {
   background: linear-gradient(180deg, #cd7f32 0%, #8b4513 100%);
   color: #fff;
-  height: 90px;
+  min-height: 100px;
 }
 
 .podium-avatar { font-size: 2rem; line-height: 1; }
