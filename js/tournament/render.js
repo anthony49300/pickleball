@@ -53,6 +53,32 @@ function renderTeamLevelsList(teams, levels) {
 }
 
 /**
+ * Affiche la liste éditable "joueur → niveau" pour la formation automatique
+ * des paires (voir window.__PT_PLAYER_LEVELS__ et autoPairPlayers dans
+ * engine.js). Même principe que renderTeamLevelsList, mais indexée par nom :
+ * un joueur individuel n'a pas d'id stable avant la formation des équipes.
+ */
+function renderIndividualPlayerLevels() {
+  if (!elIndividualPlayerLevelsList) return;
+  const { players } = parsePlayerList(elIndividualPlayers.value);
+  const levels = window.__PT_PLAYER_LEVELS__;
+
+  elIndividualPlayerLevelsList.innerHTML = players.map(p => {
+    const current = levels[p] ?? 3;
+    const options = [1, 2, 3, 4, 5].map(n =>
+      `<option value="${n}" ${n === current ? "selected" : ""}>${n} — ${TEAM_LEVEL_LABELS[n]}</option>`
+    ).join("");
+
+    return `
+      <div class="manual-assign-row">
+        <span class="team-name">${escapeHtml(p)}</span>
+        <select class="player-level-select" data-player="${escapeHtml(p)}">${options}</select>
+      </div>
+    `;
+  }).join("");
+}
+
+/**
  * Remplit la liste déroulante d'import à partir des groupes de joueurs
  * enregistrés par le mode Rotation (localStorage partagé entre les deux pages).
  */

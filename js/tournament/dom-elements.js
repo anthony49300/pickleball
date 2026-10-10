@@ -12,6 +12,7 @@ const elTeamCountBadge = document.getElementById("teamCountBadge");
 const elImportGroupSelect = document.getElementById("importGroupSelect");
 const btnImportGroup = document.getElementById("importGroupBtn");
 const elIndividualPlayers = document.getElementById("individualPlayers");
+const elIndividualPlayerLevelsList = document.getElementById("individualPlayerLevelsList");
 const btnFormPairs = document.getElementById("formPairsBtn");
 const elTeamsWarning = document.getElementById("teamsWarning");
 const elTeamsError = document.getElementById("teamsError");
@@ -68,3 +69,7 @@ window.__PT_TOURNAMENT__ = null;
 // optionnel (voir buildPools, mode "balanced") : une équipe absente de cette
 // table compte comme niveau 3 (neutre).
 window.__PT_TEAM_LEVELS__ = {};
+// Niveau (1-5) par joueur INDIVIDUEL (clé = nom, voir la liste "Niveaux des
+// Joueurs" sous #individualPlayers) — entièrement optionnel, sert uniquement
+// à équilibrer la formation automatique des paires (voir autoPairPlayers).
+window.__PT_PLAYER_LEVELS__ = {};

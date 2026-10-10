@@ -102,6 +102,15 @@
 
         <p class="subtle" style="font-size: 0.82rem; margin: 14px 0 8px;">Ou depuis une liste libre de joueurs individuels (un par ligne, ou séparés par des virgules) :</p>
         <textarea id="individualPlayers" rows="4" placeholder="Alice&#10;Bob&#10;Chloé&#10;David"></textarea>
+
+        <!-- NIVEAUX DES JOUEURS INDIVIDUELS (OPTIONNEL) -->
+        <p class="subtle" style="font-size: 0.78rem; margin: 10px 0 6px;">
+          Niveau par joueur (optionnel) : s'il est renseigné, "Former des paires" associe le plus fort avec le plus faible pour équilibrer les équipes formées, plutôt que d'associer au hasard.
+        </p>
+        <div id="individualPlayerLevelsList" class="presence-grid">
+          <!-- Rempli dynamiquement en JS -->
+        </div>
+
         <div class="actions-secondary" style="margin-top: 8px;">
           <button id="formPairsBtn" class="secondary" type="button">🎲 Former des paires aléatoirement</button>
         </div>

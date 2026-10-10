@@ -141,6 +141,40 @@ test("autoPairPlayers : signale le joueur seul si l'effectif est impair", () => 
   assert.ok(players.includes(leftover));
 });
 
+test("autoPairPlayers : sans niveaux renseignés (table absente ou neutre), pairLevels vaut 3 partout", () => {
+  const players = ["Alice", "Bob", "Chloé", "David"];
+  const { pairLevels } = autoPairPlayers(players);
+  assert.deepStrictEqual(pairLevels, [3, 3]);
+
+  const neutral = Object.fromEntries(players.map(p => [p, 3]));
+  const { pairLevels: pairLevelsExplicitNeutral } = autoPairPlayers(players, neutral);
+  assert.deepStrictEqual(pairLevelsExplicitNeutral, [3, 3]);
+});
+
+test("autoPairPlayers : associe le plus fort avec le plus faible quand des niveaux sont renseignés", () => {
+  // 2 joueurs forts (5), 2 faibles (1) : sans équilibrage, un tirage aléatoire
+  // pourrait très bien associer les deux forts ensemble (paire à 10 de
+  // différentiel cumulé contre 2 pour l'autre paire). Avec des niveaux
+  // renseignés, chaque paire doit être composée d'un fort ET d'un faible.
+  const players = ["Fort1", "Fort2", "Faible1", "Faible2"];
+  const playerLevels = { Fort1: 5, Fort2: 5, Faible1: 1, Faible2: 1 };
+  const { pairs, pairLevels } = autoPairPlayers(players, playerLevels);
+
+  pairs.forEach(([a, b]) => {
+    const isForte = p => playerLevels[p] === 5;
+    assert.notStrictEqual(isForte(a), isForte(b), `Chaque paire doit mélanger un fort et un faible : ${a} & ${b}`);
+  });
+  assert.deepStrictEqual(pairLevels, [3, 3]); // moyenne (5+1)/2 arrondie = 3 pour les deux paires
+});
+
+test("autoPairPlayers : le joueur seul (niveaux renseignés, effectif impair) est bien signalé", () => {
+  const players = ["Fort1", "Fort2", "Faible1"];
+  const playerLevels = { Fort1: 5, Fort2: 4, Faible1: 1 };
+  const { pairs, leftover } = autoPairPlayers(players, playerLevels);
+  assert.strictEqual(pairs.length, 1);
+  assert.ok(players.includes(leftover));
+});
+
 test("parseCourtNames : sépare sur les virgules et ignore les entrées vides", () => {
   assert.deepStrictEqual(parseCourtNames("Court Central, Court 1,, Terrain A"), ["Court Central", "Court 1", "Terrain A"]);
   assert.deepStrictEqual(parseCourtNames(""), []);

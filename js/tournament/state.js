@@ -29,6 +29,7 @@ function getTournamentState() {
     poolAssignMode: elPoolAssignMode.value,
     courtNamesText: elCourtNames.value,
     teamLevels: window.__PT_TEAM_LEVELS__ || {},
+    playerLevels: window.__PT_PLAYER_LEVELS__ || {},
     tournament: window.__PT_TOURNAMENT__
   };
 }
@@ -83,6 +84,9 @@ function applyTournamentState(state) {
 
   window.__PT_TEAM_LEVELS__ = state.teamLevels && typeof state.teamLevels === "object" ? state.teamLevels : {};
   updateTeamCountBadge();
+
+  window.__PT_PLAYER_LEVELS__ = state.playerLevels && typeof state.playerLevels === "object" ? state.playerLevels : {};
+  renderIndividualPlayerLevels();
 
   window.__PT_TOURNAMENT__ = state.tournament || null;
 

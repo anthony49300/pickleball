@@ -91,20 +91,51 @@ function parsePlayerList(text) {
 }
 
 /**
- * Forme des paires aléatoires à partir d'une liste de joueurs individuels.
+ * Forme des paires à partir d'une liste de joueurs individuels.
  * @param {string[]} players
- * @returns {{ pairs: Array<[string,string]>, leftover: string|null }} leftover
- *   est le joueur resté seul si l'effectif est impair (à ajouter manuellement
- *   à une équipe).
+ * @param {Object<string,number>} [playerLevels] - niveau (1-5) par joueur
+ *   (voir window.__PT_PLAYER_LEVELS__), entièrement optionnel. Un joueur
+ *   absent de cette table compte comme niveau 3 (neutre) : tant qu'aucun
+ *   joueur n'a de niveau différent de 3, l'association reste purement
+ *   aléatoire, comme avant l'introduction de ce paramètre.
+ * @returns {{ pairs: Array<[string,string]>, leftover: string|null, pairLevels: number[] }}
+ *   leftover est le joueur resté seul si l'effectif est impair (à ajouter
+ *   manuellement à une équipe). pairLevels[i] est le niveau moyen (arrondi)
+ *   de la paire i, utilisable pour préremplir window.__PT_TEAM_LEVELS__.
  */
-function autoPairPlayers(players) {
-  const shuffled = shuffledCopy(players);
+function autoPairPlayers(players, playerLevels = {}) {
+  const lvl = p => playerLevels[p] ?? 3;
+  const hasCustomLevels = players.some(p => lvl(p) !== 3);
   const pairs = [];
-  for (let i = 0; i + 1 < shuffled.length; i += 2) {
-    pairs.push([shuffled[i], shuffled[i + 1]]);
+  let leftover;
+
+  if (hasCustomLevels) {
+    // Niveaux renseignés : associe le plus fort avec le plus faible (et
+    // ainsi de suite), pour que les équipes formées soient aussi équilibrées
+    // que possible entre elles plutôt que de concentrer les meilleurs
+    // joueurs ensemble. shuffledCopy avant le tri mélange l'ordre des
+    // joueurs de même niveau (le tri est stable), pour ne pas toujours
+    // associer les deux mêmes uniquement parce qu'ils sont voisins dans la
+    // liste saisie.
+    const sorted = shuffledCopy(players).sort((a, b) => lvl(b) - lvl(a));
+    const n = sorted.length;
+    const half = Math.floor(n / 2);
+    for (let i = 0; i < half; i++) {
+      pairs.push([sorted[i], sorted[n - 1 - i]]);
+    }
+    leftover = n % 2 === 1 ? sorted[half] : null;
+  } else {
+    // Comportement historique, strictement inchangé tant qu'aucun niveau
+    // n'est renseigné : association purement aléatoire.
+    const shuffled = shuffledCopy(players);
+    for (let i = 0; i + 1 < shuffled.length; i += 2) {
+      pairs.push([shuffled[i], shuffled[i + 1]]);
+    }
+    leftover = shuffled.length % 2 === 1 ? shuffled[shuffled.length - 1] : null;
   }
-  const leftover = shuffled.length % 2 === 1 ? shuffled[shuffled.length - 1] : null;
-  return { pairs, leftover };
+
+  const pairLevels = pairs.map(([a, b]) => Math.round((lvl(a) + lvl(b)) / 2));
+  return { pairs, leftover, pairLevels };
 }
 
 /**
