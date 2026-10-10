@@ -131,6 +131,7 @@ if (btnResetAll) {
     // Réinitialise l'état en mémoire
     window.__PB_SCORES__ = {};
     window.__PB_PRESENCE__ = {};
+    window.__PB_LEVELS__ = {};
     window.__PB_HIDDEN_ROUNDS__ = [];
     window.__PB_LAST_RESULT__ = null;
 
@@ -143,6 +144,7 @@ if (btnResetAll) {
     elwT.value = "5";
     elwO.value = "2";
     elwP.value = "1";
+    elwBalance.value = "3";
     elBeamWidth.value = "80";
     elPartnerK.value = "10";
     elSquare.checked = true;
@@ -320,7 +322,7 @@ if (btnCollapseAllRounds) btnCollapseAllRounds.addEventListener("click", () => s
 if (btnExpandAllRounds) btnExpandAllRounds.addEventListener("click", () => setAllRoundsHidden(false));
 
 // Écoute instantanée de tous les paramètres du formulaire (input + change)
-[elPlayers, elCourts, elRounds, elSeed, elCourtNames, elwT, elwO, elwP, elBeamWidth, elPartnerK, elSquare, elAvoidB2B].forEach(el => {
+[elPlayers, elCourts, elRounds, elSeed, elCourtNames, elwT, elwO, elwP, elwBalance, elBeamWidth, elPartnerK, elSquare, elAvoidB2B].forEach(el => {
   if (el) {
     ["change", "input"].forEach(evt => {
       el.addEventListener(evt, () => {

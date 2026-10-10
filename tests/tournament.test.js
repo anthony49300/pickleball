@@ -328,6 +328,41 @@ test("buildPools : mode manuel respecte l'affectation fournie", () => {
   assert.deepStrictEqual(pools[1].teams.map(t => t.id), [1, 3]);
 });
 
+test("buildPools : mode 'balanced' répartit les niveaux forts/faibles entre les poules (pas tous dans la même)", () => {
+  const teams = makeTeams(8);
+  // 4 équipes fortes (niveau 5), 4 équipes faibles (niveau 1), dans l'ordre
+  // de saisie le plus défavorable (toutes les fortes d'abord).
+  const teamLevels = { 0: 5, 1: 5, 2: 5, 3: 5, 4: 1, 5: 1, 6: 1, 7: 1 };
+  const pools = buildPools(teams, 2, "balanced", null, teamLevels);
+
+  const avgLevel = pool => pool.teams.reduce((sum, t) => sum + teamLevels[t.id], 0) / pool.teams.length;
+  assert.strictEqual(pools[0].teams.length, 4);
+  assert.strictEqual(pools[1].teams.length, 4);
+  assert.strictEqual(avgLevel(pools[0]), 3);
+  assert.strictEqual(avgLevel(pools[1]), 3);
+});
+
+test("buildPools : sans niveaux renseignés (table vide), le mode 'balanced' se comporte comme 'seeded' (non-régression)", () => {
+  const teams = makeTeams(9);
+  const balanced = buildPools(teams, 3, "balanced", null, {});
+  const seeded = buildPools(teams, 3, "seeded", null);
+
+  assert.deepStrictEqual(
+    balanced.map(p => p.teams.map(t => t.id)),
+    seeded.map(p => p.teams.map(t => t.id))
+  );
+});
+
+test("buildPools : les modes 'random'/'seeded'/'manual' ne sont pas affectés par un 5e paramètre absent (non-régression)", () => {
+  const teams = makeTeams(8);
+  const seededWithoutLevels = buildPools(teams, 2, "seeded", null);
+  const seededWithLevelsArg = buildPools(teams, 2, "seeded", null, { 0: 5, 1: 1 });
+  assert.deepStrictEqual(
+    seededWithoutLevels.map(p => p.teams.map(t => t.id)),
+    seededWithLevelsArg.map(p => p.teams.map(t => t.id))
+  );
+});
+
 // ---------------------------------------------------------------------------
 // Classement de poule
 // ---------------------------------------------------------------------------

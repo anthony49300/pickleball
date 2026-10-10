@@ -302,16 +302,27 @@ function shuffledCopy(arr) {
  * du nombre de poules et du mode de répartition.
  * @param {Array} teams
  * @param {number} numPools
- * @param {"random"|"seeded"|"manual"} mode
+ * @param {"random"|"seeded"|"balanced"|"manual"} mode
  * @param {Array<number>|null} manualPoolIndexByTeamId - requis si mode==="manual" :
  *   pour chaque équipe (par id), l'index de poule choisi.
+ * @param {Object<number,number>} [teamLevels] - requis si mode==="balanced" :
+ *   niveau (1-5) par équipe (par id, voir window.__PT_TEAM_LEVELS__). Une
+ *   équipe absente de cette table compte comme niveau 3 (neutre) — entièrement
+ *   optionnel, ce mode doit être choisi explicitement dans #poolAssignMode.
  * @returns {Array<{name:string, teams:Array, rounds:Array, scores:object}>}
  */
-function buildPools(teams, numPools, mode, manualPoolIndexByTeamId) {
+function buildPools(teams, numPools, mode, manualPoolIndexByTeamId, teamLevels = {}) {
   let teamsByPool;
 
   if (mode === "seeded") {
     teamsByPool = dealSnakeIntoPools(teams, numPools);
+  } else if (mode === "balanced") {
+    // Même répartition en serpentin que "seeded", mais l'ordre de tête de
+    // série est déterminé par le niveau renseigné (le plus fort d'abord)
+    // plutôt que par l'ordre de saisie, pour répartir les équipes fortes et
+    // faibles entre les poules plutôt que de les concentrer dans l'une d'elles.
+    const sorted = [...teams].sort((a, b) => (teamLevels[b.id] ?? 3) - (teamLevels[a.id] ?? 3));
+    teamsByPool = dealSnakeIntoPools(sorted, numPools);
   } else if (mode === "manual") {
     teamsByPool = Array.from({ length: numPools }, () => []);
     teams.forEach(team => {

@@ -43,6 +43,20 @@ elTeams.addEventListener("input", () => {
   autoSaveTournamentState();
 });
 
+// Niveaux des équipes (voir window.__PT_TEAM_LEVELS__, entièrement optionnel) :
+// même principe que la liste des équipes elle-même, régénérée à chaque frappe
+// dans #teams (voir updateTeamCountBadge) — le listener reste donc délégué
+// sur le conteneur plutôt que posé sur chaque <select> individuellement.
+if (elTeamLevelsList) {
+  elTeamLevelsList.addEventListener("change", (e) => {
+    if (!e.target.classList.contains("team-level-select")) return;
+    const teamId = parseInt(e.target.dataset.teamId, 10);
+    const val = parseInt(e.target.value, 10);
+    window.__PT_TEAM_LEVELS__[teamId] = isNaN(val) ? 3 : val;
+    autoSaveTournamentState();
+  });
+}
+
 // Vue liste éditable pour la liste d'équipes (voir js/shared/ui-controls.js) :
 // chaque ligne est déjà une équipe complète ("Alice & Bob"), pas besoin d'un
 // découpage supplémentaire par virgule (elle sert à séparer les deux joueurs
@@ -196,7 +210,7 @@ btnGeneratePools.addEventListener("click", async () => {
     return;
   }
 
-  const pools = buildPools(teams, numPools, mode, null);
+  const pools = buildPools(teams, numPools, mode, null, window.__PT_TEAM_LEVELS__);
   const numCourts = Math.max(1, parseInt(elNumCourts.value || "1", 10));
   const courtNames = parseCourtNames(elCourtNames.value);
   const courtAllocation = allocateCourtsToPools(pools, numCourts);

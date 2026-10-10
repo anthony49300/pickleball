@@ -12,6 +12,10 @@
 const ICON_EYE_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
 const ICON_EYE_OFF_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
 
+// Libellés du niveau 1-5 (voir window.__PB_LEVELS__, section "Niveaux des
+// Joueurs") : 3 = valeur neutre par défaut tant que rien n'est renseigné.
+const LEVEL_LABELS = { 1: "Débutant", 2: "Occasionnel", 3: "Intermédiaire", 4: "Avancé", 5: "Expert" };
+
 /**
  * Efface les messages d'erreur et d'avertissement à l'écran.
  */
@@ -83,6 +87,7 @@ function syncPresenceInputs() {
 
   updatePlayerCountBadge();
   elPresenceList.innerHTML = "";
+  if (elLevelsList) elLevelsList.innerHTML = "";
 
   players.forEach(p => {
     if (!window.__PB_PRESENCE__[p]) {
@@ -101,6 +106,24 @@ function syncPresenceInputs() {
       </div>
     `;
     elPresenceList.appendChild(item);
+
+    if (elLevelsList) {
+      // 3 = valeur neutre par défaut (voir LEVEL_LABELS) : tant qu'elle n'est
+      // pas changée ici, ce joueur n'a aucun impact sur l'équilibrage (voir
+      // levelGapPenalty dans algorithm.js).
+      if (window.__PB_LEVELS__[p] == null) window.__PB_LEVELS__[p] = 3;
+
+      const levelItem = document.createElement("div");
+      levelItem.className = "presence-item";
+      const options = [1, 2, 3, 4, 5].map(n =>
+        `<option value="${n}" ${window.__PB_LEVELS__[p] === n ? "selected" : ""}>${n} — ${LEVEL_LABELS[n]}</option>`
+      ).join("");
+      levelItem.innerHTML = `
+        <span><strong>${escapeHtml(p)}</strong></span>
+        <select class="level-select" data-player="${escapeHtml(p)}">${options}</select>
+      `;
+      elLevelsList.appendChild(levelItem);
+    }
   });
 }
 
@@ -110,13 +133,24 @@ function syncPresenceInputs() {
     const p = e.target.dataset.player;
     const type = e.target.dataset.type;
     const val = parseInt(e.target.value, 10);
-    
+
     if (p && type && window.__PB_PRESENCE__[p]) {
       window.__PB_PRESENCE__[p][type] = isNaN(val) ? 1 : val;
       autoSaveState();
     }
   });
 });
+
+// Écoute dynamique sur les niveaux (voir syncPresenceInputs ci-dessus)
+if (elLevelsList) {
+  elLevelsList.addEventListener("change", (e) => {
+    const p = e.target.dataset.player;
+    if (!p || !e.target.classList.contains("level-select")) return;
+    const val = parseInt(e.target.value, 10);
+    window.__PB_LEVELS__[p] = isNaN(val) ? 3 : val;
+    autoSaveState();
+  });
+}
 
 elPlayers.addEventListener("input", () => {
   clearMessages();

@@ -111,6 +111,17 @@
         </p>
       </details>
 
+      <!-- NIVEAUX DES EQUIPES (OPTIONNEL) -->
+      <details class="details" id="teamLevelsDetails" style="margin-top: 10px;">
+        <summary>🎚️ Niveaux des Équipes (Optionnel)</summary>
+        <p class="subtle" style="font-size: 0.82rem; margin: 6px 0 12px;">
+          Renseignez un niveau par équipe pour répartir les poules de façon équilibrée (mode "Équilibré par niveau" ci-dessous). Si vous ne touchez à rien ici, les autres modes de répartition ne sont pas affectés.
+        </p>
+        <div id="teamLevelsList" class="presence-grid">
+          <!-- Rempli dynamiquement en JS -->
+        </div>
+      </details>
+
       <p id="teamsWarning" class="warning" hidden></p>
       <p id="teamsError" class="error" hidden></p>
       </details>
@@ -152,6 +163,7 @@
       <select id="poolAssignMode">
         <option value="random">Aléatoire</option>
         <option value="seeded">Tête de série (l'ordre de la liste ci-dessus = le classement des têtes de série)</option>
+        <option value="balanced">Équilibré par niveau (voir "Niveaux des Équipes" ci-dessus)</option>
         <option value="manual">Manuelle (je choisis moi-même la poule de chaque équipe)</option>
       </select>
 

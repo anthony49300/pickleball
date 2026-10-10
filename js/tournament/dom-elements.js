@@ -6,6 +6,7 @@
 
 const elTeamsDetails = document.getElementById("teamsDetails");
 const elPoolsConfigDetails = document.getElementById("poolsConfigDetails");
+const elTeamLevelsList = document.getElementById("teamLevelsList");
 const elTeams = document.getElementById("teams");
 const elTeamCountBadge = document.getElementById("teamCountBadge");
 const elImportGroupSelect = document.getElementById("importGroupSelect");
@@ -63,3 +64,7 @@ const btnClearTournamentHistory = document.getElementById("clearTournamentHistor
 window.__PT_TEAMS__ = [];
 window.__PT_MANUAL_ASSIGNMENT__ = null;
 window.__PT_TOURNAMENT__ = null;
+// Niveau (1-5) par équipe, indexé par team.id (voir parseTeams) — entièrement
+// optionnel (voir buildPools, mode "balanced") : une équipe absente de cette
+// table compte comme niveau 3 (neutre).
+window.__PT_TEAM_LEVELS__ = {};

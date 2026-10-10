@@ -12,12 +12,44 @@
 const ICON_EYE_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
 const ICON_EYE_OFF_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
 
+// Libellés du niveau 1-5 (voir window.__PT_TEAM_LEVELS__) : 3 = valeur
+// neutre par défaut tant que rien n'est renseigné (même échelle que le mode
+// Rotation, voir LEVEL_LABELS dans js/app/form-and-render.js).
+const TEAM_LEVEL_LABELS = { 1: "Débutant", 2: "Occasionnel", 3: "Intermédiaire", 4: "Avancé", 5: "Expert" };
+
 /**
- * Met à jour le badge "X équipe(s)" à côté du champ de saisie.
+ * Met à jour le badge "X équipe(s)" à côté du champ de saisie, et la liste
+ * des niveaux par équipe (voir renderTeamLevelsList) : les deux dépendent du
+ * même texte source (#teams) et doivent donc rester synchronisés ensemble.
  */
 function updateTeamCountBadge() {
   const { teams } = parseTeams(elTeams.value);
   elTeamCountBadge.textContent = `${teams.length} équipe${teams.length > 1 ? "s" : ""}`;
+  renderTeamLevelsList(teams, window.__PT_TEAM_LEVELS__);
+}
+
+/**
+ * Affiche la liste éditable "équipe → niveau" (voir window.__PT_TEAM_LEVELS__,
+ * entièrement optionnel). Même structure que renderManualAssignList, avec un
+ * niveau 1-5 à la place d'une poule.
+ * @param {Array} teams
+ * @param {Object<number,number>} levels - id d'équipe → niveau (1-5)
+ */
+function renderTeamLevelsList(teams, levels) {
+  if (!elTeamLevelsList) return;
+  elTeamLevelsList.innerHTML = teams.map(team => {
+    const current = levels[team.id] ?? 3;
+    const options = [1, 2, 3, 4, 5].map(n =>
+      `<option value="${n}" ${n === current ? "selected" : ""}>${n} — ${TEAM_LEVEL_LABELS[n]}</option>`
+    ).join("");
+
+    return `
+      <div class="manual-assign-row">
+        <span class="team-name">${escapeHtml(team.name)}</span>
+        <select class="team-level-select" data-team-id="${team.id}">${options}</select>
+      </div>
+    `;
+  }).join("");
 }
 
 /**
