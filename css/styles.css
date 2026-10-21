@@ -372,6 +372,39 @@ textarea:focus, input:focus {
 
 textarea { resize: vertical; min-height: 110px; }
 
+/* MENUS DEROULANTS (select) — partagé entre les deux pages (ex: .level-select
+   en mode Rotation, #poolAssignMode/.team-level-select en mode Tournoi).
+   Repris à l'identique de ce qui vivait seulement dans tournament.css, à
+   l'époque où le mode Rotation n'avait encore aucun <select>. */
+select {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text-main);
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  outline: none;
+}
+
+select:focus {
+  border-color: var(--pickle-yellow);
+  box-shadow: 0 0 0 3px rgba(var(--pickle-yellow-rgb), 0.15);
+}
+
+/* Le menu déroulant natif (liste d'options ouverte) suit le rendu de l'OS et
+   ignore la plupart des styles du <select> lui-même. background-color/color
+   sur <option> restent honorés par Chrome/Edge/Firefox sur Windows et
+   évitent la liste blanche par défaut, en désaccord avec le thème sombre.
+   --bg-dark (opaque) plutôt que --bg-card (translucide) : cette popup ne
+   fait pas partie de la pile de rendu de la page, une couleur avec alpha
+   se mélangerait avec un fond hors de notre contrôle. */
+select option {
+  background: var(--bg-dark);
+  color: var(--text-main);
+}
+
 .row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -562,6 +595,17 @@ textarea { resize: vertical; min-height: 110px; }
   border-radius: 8px;
   border: 1px solid var(--border-color);
   font-size: 0.85rem;
+}
+
+/* Le <select> générique (voir plus haut) est en width:100% par défaut : sans
+   cette contrainte, il s'étirerait sur toute la largeur de .presence-item
+   (display:flex), écrasant le nom du joueur juste à côté (voir .level-select,
+   section "Niveaux des Joueurs"). Même correctif que .manual-assign-row select
+   côté mode Tournoi. */
+.presence-item select {
+  width: auto;
+  min-width: 140px;
+  margin-left: 8px;
 }
 
 .presence-inputs {

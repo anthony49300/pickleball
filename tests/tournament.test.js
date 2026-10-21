@@ -141,6 +141,40 @@ test("autoPairPlayers : signale le joueur seul si l'effectif est impair", () => 
   assert.ok(players.includes(leftover));
 });
 
+test("autoPairPlayers : sans niveaux renseignés (table absente ou neutre), pairLevels vaut 3 partout", () => {
+  const players = ["Alice", "Bob", "Chloé", "David"];
+  const { pairLevels } = autoPairPlayers(players);
+  assert.deepStrictEqual(pairLevels, [3, 3]);
+
+  const neutral = Object.fromEntries(players.map(p => [p, 3]));
+  const { pairLevels: pairLevelsExplicitNeutral } = autoPairPlayers(players, neutral);
+  assert.deepStrictEqual(pairLevelsExplicitNeutral, [3, 3]);
+});
+
+test("autoPairPlayers : associe le plus fort avec le plus faible quand des niveaux sont renseignés", () => {
+  // 2 joueurs forts (5), 2 faibles (1) : sans équilibrage, un tirage aléatoire
+  // pourrait très bien associer les deux forts ensemble (paire à 10 de
+  // différentiel cumulé contre 2 pour l'autre paire). Avec des niveaux
+  // renseignés, chaque paire doit être composée d'un fort ET d'un faible.
+  const players = ["Fort1", "Fort2", "Faible1", "Faible2"];
+  const playerLevels = { Fort1: 5, Fort2: 5, Faible1: 1, Faible2: 1 };
+  const { pairs, pairLevels } = autoPairPlayers(players, playerLevels);
+
+  pairs.forEach(([a, b]) => {
+    const isForte = p => playerLevels[p] === 5;
+    assert.notStrictEqual(isForte(a), isForte(b), `Chaque paire doit mélanger un fort et un faible : ${a} & ${b}`);
+  });
+  assert.deepStrictEqual(pairLevels, [3, 3]); // moyenne (5+1)/2 arrondie = 3 pour les deux paires
+});
+
+test("autoPairPlayers : le joueur seul (niveaux renseignés, effectif impair) est bien signalé", () => {
+  const players = ["Fort1", "Fort2", "Faible1"];
+  const playerLevels = { Fort1: 5, Fort2: 4, Faible1: 1 };
+  const { pairs, leftover } = autoPairPlayers(players, playerLevels);
+  assert.strictEqual(pairs.length, 1);
+  assert.ok(players.includes(leftover));
+});
+
 test("parseCourtNames : sépare sur les virgules et ignore les entrées vides", () => {
   assert.deepStrictEqual(parseCourtNames("Court Central, Court 1,, Terrain A"), ["Court Central", "Court 1", "Terrain A"]);
   assert.deepStrictEqual(parseCourtNames(""), []);
@@ -326,6 +360,41 @@ test("buildPools : mode manuel respecte l'affectation fournie", () => {
   const pools = buildPools(teams, 2, "manual", manualAssignment);
   assert.deepStrictEqual(pools[0].teams.map(t => t.id), [0, 2]);
   assert.deepStrictEqual(pools[1].teams.map(t => t.id), [1, 3]);
+});
+
+test("buildPools : mode 'balanced' répartit les niveaux forts/faibles entre les poules (pas tous dans la même)", () => {
+  const teams = makeTeams(8);
+  // 4 équipes fortes (niveau 5), 4 équipes faibles (niveau 1), dans l'ordre
+  // de saisie le plus défavorable (toutes les fortes d'abord).
+  const teamLevels = { 0: 5, 1: 5, 2: 5, 3: 5, 4: 1, 5: 1, 6: 1, 7: 1 };
+  const pools = buildPools(teams, 2, "balanced", null, teamLevels);
+
+  const avgLevel = pool => pool.teams.reduce((sum, t) => sum + teamLevels[t.id], 0) / pool.teams.length;
+  assert.strictEqual(pools[0].teams.length, 4);
+  assert.strictEqual(pools[1].teams.length, 4);
+  assert.strictEqual(avgLevel(pools[0]), 3);
+  assert.strictEqual(avgLevel(pools[1]), 3);
+});
+
+test("buildPools : sans niveaux renseignés (table vide), le mode 'balanced' se comporte comme 'seeded' (non-régression)", () => {
+  const teams = makeTeams(9);
+  const balanced = buildPools(teams, 3, "balanced", null, {});
+  const seeded = buildPools(teams, 3, "seeded", null);
+
+  assert.deepStrictEqual(
+    balanced.map(p => p.teams.map(t => t.id)),
+    seeded.map(p => p.teams.map(t => t.id))
+  );
+});
+
+test("buildPools : les modes 'random'/'seeded'/'manual' ne sont pas affectés par un 5e paramètre absent (non-régression)", () => {
+  const teams = makeTeams(8);
+  const seededWithoutLevels = buildPools(teams, 2, "seeded", null);
+  const seededWithLevelsArg = buildPools(teams, 2, "seeded", null, { 0: 5, 1: 1 });
+  assert.deepStrictEqual(
+    seededWithoutLevels.map(p => p.teams.map(t => t.id)),
+    seededWithLevelsArg.map(p => p.teams.map(t => t.id))
+  );
 });
 
 // ---------------------------------------------------------------------------

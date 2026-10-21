@@ -43,6 +43,38 @@ elTeams.addEventListener("input", () => {
   autoSaveTournamentState();
 });
 
+// Niveaux des équipes (voir window.__PT_TEAM_LEVELS__, entièrement optionnel) :
+// même principe que la liste des équipes elle-même, régénérée à chaque frappe
+// dans #teams (voir updateTeamCountBadge) — le listener reste donc délégué
+// sur le conteneur plutôt que posé sur chaque <select> individuellement.
+if (elTeamLevelsList) {
+  elTeamLevelsList.addEventListener("change", (e) => {
+    if (!e.target.classList.contains("team-level-select")) return;
+    const teamId = parseInt(e.target.dataset.teamId, 10);
+    const val = parseInt(e.target.value, 10);
+    window.__PT_TEAM_LEVELS__[teamId] = isNaN(val) ? 3 : val;
+    autoSaveTournamentState();
+  });
+}
+
+// Niveaux des joueurs individuels avant formation des paires (voir
+// window.__PT_PLAYER_LEVELS__, entièrement optionnel) : même principe,
+// régénéré à chaque frappe dans #individualPlayers.
+elIndividualPlayers.addEventListener("input", () => {
+  renderIndividualPlayerLevels();
+  autoSaveTournamentState();
+});
+
+if (elIndividualPlayerLevelsList) {
+  elIndividualPlayerLevelsList.addEventListener("change", (e) => {
+    if (!e.target.classList.contains("player-level-select")) return;
+    const player = e.target.dataset.player;
+    const val = parseInt(e.target.value, 10);
+    window.__PT_PLAYER_LEVELS__[player] = isNaN(val) ? 3 : val;
+    autoSaveTournamentState();
+  });
+}
+
 // Vue liste éditable pour la liste d'équipes (voir js/shared/ui-controls.js) :
 // chaque ligne est déjà une équipe complète ("Alice & Bob"), pas besoin d'un
 // découpage supplémentaire par virgule (elle sert à séparer les deux joueurs
@@ -115,8 +147,17 @@ btnFormPairs.addEventListener("click", async () => {
     if (!confirmed) return;
   }
 
-  const { pairs, leftover } = autoPairPlayers(players);
+  const { pairs, leftover, pairLevels } = autoPairPlayers(players, window.__PT_PLAYER_LEVELS__);
   elTeams.value = pairs.map(([a, b]) => `${a} & ${b}`).join("\n");
+
+  // La liste d'équipes est entièrement remplacée : les anciens niveaux par
+  // équipe (indexés par position, voir parseTeams) n'ont plus de sens ici et
+  // sont réinitialisés avec le niveau moyen de chaque nouvelle paire (voir
+  // autoPairPlayers) plutôt que de laisser d'anciennes valeurs désormais mal
+  // associées, ou de perdre l'équilibrage déjà calculé lors de la formation.
+  window.__PT_TEAM_LEVELS__ = {};
+  pairLevels.forEach((level, idx) => { window.__PT_TEAM_LEVELS__[idx] = level; });
+
   clearTeamsMessages();
   updateTeamCountBadge();
   autoSaveTournamentState();
@@ -196,7 +237,7 @@ btnGeneratePools.addEventListener("click", async () => {
     return;
   }
 
-  const pools = buildPools(teams, numPools, mode, null);
+  const pools = buildPools(teams, numPools, mode, null, window.__PT_TEAM_LEVELS__);
   const numCourts = Math.max(1, parseInt(elNumCourts.value || "1", 10));
   const courtNames = parseCourtNames(elCourtNames.value);
   const courtAllocation = allocateCourtsToPools(pools, numCourts);

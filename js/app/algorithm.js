@@ -268,9 +268,27 @@ function scoreOpponents(a, b, c, d, opponentCount, wO, squareRepeats) {
 }
 
 /**
+ * Pénalité d'écart de niveau entre deux équipes de 2, pour favoriser des
+ * équipes de force équivalente quand un niveau a été renseigné (voir
+ * window.__PB_LEVELS__, optionnel). Un joueur sans niveau renseigné compte
+ * pour 3 (valeur neutre du milieu de l'échelle 1-5) : tant qu'aucun niveau
+ * n'est saisi nulle part, tous les joueurs valent 3, l'écart est donc
+ * toujours nul et cette pénalité n'a STRICTEMENT AUCUN effet — le
+ * comportement par défaut (fonctionnalité non utilisée) reste identique à
+ * avant son introduction, quelle que soit la valeur de wBalance.
+ */
+function levelGapPenalty(team1, team2, wBalance, levels) {
+  if (!wBalance || !levels) return 0;
+  const lvl = p => levels[p] ?? 3;
+  const sum1 = lvl(team1[0]) + lvl(team1[1]);
+  const sum2 = lvl(team2[0]) + lvl(team2[1]);
+  return wBalance * Math.abs(sum1 - sum2);
+}
+
+/**
  * Trouve la meilleure combinaison d'équipes possible pour un groupe de 4 joueurs.
  */
-function bestSplitForFour(p4, teammateCount, opponentCount, playsCount, wT, wO, wP, squareRepeats) {
+function bestSplitForFour(p4, teammateCount, opponentCount, playsCount, wT, wO, wP, squareRepeats, wBalance = 0, levels = null) {
   const [a, b, c, d] = p4;
   const splits = [
     [a, b, c, d],
@@ -285,7 +303,8 @@ function bestSplitForFour(p4, teammateCount, opponentCount, playsCount, wT, wO, 
     const s =
       scoreTeam(x1, x2, teammateCount, playsCount, wT, wP, squareRepeats) +
       scoreTeam(y1, y2, teammateCount, playsCount, wT, wP, squareRepeats) +
-      scoreOpponents(x1, x2, y1, y2, opponentCount, wO, squareRepeats);
+      scoreOpponents(x1, x2, y1, y2, opponentCount, wO, squareRepeats) +
+      levelGapPenalty([x1, x2], [y1, y2], wBalance, levels);
 
     if (s < bestScore) {
       bestScore = s;
@@ -368,10 +387,11 @@ function pickBenchesByQueue(availablePlayers, benchesNeeded, benchQueue, lastBen
 
 /**
  * Recherche par faisceau (Beam Search) pour composer les rencontres optimales d'un tour.
+ * @param {Object<string,number>} [levelsMap] - voir levelGapPenalty (optionnel)
  */
 function beamSearchRound(
   playing, targetMatches, teammateCount, opponentCount, playsCount,
-  { wT, wO, wP, beamWidth, partnerK, squareRepeats }, rng
+  { wT, wO, wP, beamWidth, partnerK, squareRepeats, wBalance }, rng, levelsMap
 ) {
   const need = 4 * targetMatches;
   if (targetMatches <= 0 || playing.length < 4) return [];
@@ -441,7 +461,7 @@ function beamSearchRound(
           const r = shortlist[i], s = shortlist[j];
           const { match, score: matchScore } = bestSplitForFour(
             [pivot, partner, r, s],
-            teammateCount, opponentCount, playsCount, wT, wO, wP, squareRepeats
+            teammateCount, opponentCount, playsCount, wT, wO, wP, squareRepeats, wBalance, levelsMap
           );
 
           const futurePen = 0.05 * ((playsCount.get(pivot) ?? 0) + (playsCount.get(partner) ?? 0) + (playsCount.get(r) ?? 0) + (playsCount.get(s) ?? 0));
@@ -485,11 +505,18 @@ function beamSearchRound(
  *   de cette fonction, donc la moindre différence dans la liste de joueurs
  *   change la séquence de tirages pour TOUS les tours, y compris ceux déjà
  *   joués et notés.
+ * @param {Object<string,number>} [levelsMap] - niveau (1-5) par joueur, voir
+ *   levelGapPenalty. Entièrement optionnel : un joueur absent de cette table
+ *   vaut 3 (neutre), donc tant que rien n'est renseigné ici le planning
+ *   généré est rigoureusement identique à avant l'introduction de ce
+ *   paramètre, quels que soient numCourts/numRounds/options.wBalance.
  */
-function scheduleRotations(players, numCourts, numRounds, seedText, options, presenceMap, frozenRounds = []) {
+function scheduleRotations(players, numCourts, numRounds, seedText, options, presenceMap, frozenRounds = [], levelsMap = {}) {
   const rng = makeRng(seedText);
   players = players.map(p => p.trim()).filter(Boolean);
   if (players.length < 4) throw new Error("Il faut au moins 4 joueurs.");
+
+  const lvl = p => levelsMap?.[p] ?? 3;
 
   shuffleInPlace(players, rng);
   const benchQueue = [...players];
@@ -620,9 +647,14 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
         const { score: doubleScore } = bestSplitForFour(
           doublesPlayers,
           teammateCount, opponentCount, playsCount,
-          options.wT, options.wO, options.wP, options.squareRepeats
+          options.wT, options.wO, options.wP, options.squareRepeats, options.wBalance, levelsMap
         );
         cost += doubleScore;
+
+        // 5. Équilibrer le niveau de l'affiche de simple elle-même (optionnel,
+        // voir levelGapPenalty : sans niveau renseigné, lvl(p) vaut 3 pour
+        // tout le monde et ce terme est toujours nul).
+        if (options.wBalance) cost += options.wBalance * Math.abs(lvl(p1) - lvl(p2));
 
         if (cost < minPairCost) {
           minPairCost = cost;
@@ -643,10 +675,10 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
       const doublesMatches = beamSearchRound(
         doublesPlayers, 1, teammateCount, opponentCount, playsCount,
         {
-          wT: options.wT, wO: options.wO, wP: options.wP,
+          wT: options.wT, wO: options.wO, wP: options.wP, wBalance: options.wBalance,
           beamWidth: options.beamWidth, partnerK: options.partnerK, squareRepeats: options.squareRepeats
         },
-        rng
+        rng, levelsMap
       );
 
       matches = [...doublesMatches, [[singlesPlayers[0]], [singlesPlayers[1]]]];
@@ -657,10 +689,10 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
       matches = beamSearchRound(
         playing, targetMatches, teammateCount, opponentCount, playsCount,
         {
-          wT: options.wT, wO: options.wO, wP: options.wP,
+          wT: options.wT, wO: options.wO, wP: options.wP, wBalance: options.wBalance,
           beamWidth: options.beamWidth, partnerK: options.partnerK, squareRepeats: options.squareRepeats
         },
-        rng
+        rng, levelsMap
       );
     }
 

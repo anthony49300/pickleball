@@ -32,7 +32,7 @@ const assert = require("assert");
 const algoPath = path.join(__dirname, "..", "js", "app", "algorithm.js");
 const code = fs.readFileSync(algoPath, "utf8");
 vm.runInThisContext(code, { filename: algoPath });
-const { scheduleRotations, matchScoreKey, readMatchScore, writeMatchScore, getFrozenRounds } = global;
+const { scheduleRotations, matchScoreKey, readMatchScore, writeMatchScore, getFrozenRounds, bestSplitForFour, levelGapPenalty } = global;
 
 let passed = 0;
 let failed = 0;
@@ -294,6 +294,79 @@ test("scheduleRotations rejoue à l'identique les tours gelés même si la liste
   const round4Players = new Set(after.rounds[3].flatMap(([t1, t2]) => [...t1, ...t2]));
   const round4Benched = new Set(after.benches[3]);
   assert.ok(round4Players.has("Zoe") || round4Benched.has("Zoe"), "Zoé doit apparaître au tour 4 (jouée ou au banc)");
+});
+
+// ---------------------------------------------------------------------------
+// ÉQUILIBRAGE OPTIONNEL PAR NIVEAU (levelGapPenalty / bestSplitForFour / scheduleRotations)
+// ---------------------------------------------------------------------------
+
+test("levelGapPenalty est toujours nulle sans wBalance ou sans niveaux", () => {
+  assert.strictEqual(levelGapPenalty(["A", "B"], ["C", "D"], 0, { A: 1, B: 1, C: 5, D: 5 }), 0);
+  assert.strictEqual(levelGapPenalty(["A", "B"], ["C", "D"], 5, null), 0);
+});
+
+test("levelGapPenalty est nulle quand tout le monde est au niveau neutre par défaut (3)", () => {
+  assert.strictEqual(levelGapPenalty(["A", "B"], ["C", "D"], 5, {}), 0);
+});
+
+test("levelGapPenalty pénalise l'écart de niveau entre les deux équipes", () => {
+  // Équipe 1 : niveaux 1+1=2, Équipe 2 : niveaux 5+5=10, écart = 8
+  const levels = { A: 1, B: 1, C: 5, D: 5 };
+  assert.strictEqual(levelGapPenalty(["A", "B"], ["C", "D"], 1, levels), 8);
+  assert.strictEqual(levelGapPenalty(["A", "B"], ["C", "D"], 2, levels), 16);
+});
+
+test("bestSplitForFour choisit la même répartition avec ou sans wBalance/levels quand les niveaux sont absents (non-régression)", () => {
+  const teammateCount = new Map();
+  const opponentCount = new Map();
+  const playsCount = new Map();
+
+  const withoutLevels = bestSplitForFour(["A", "B", "C", "D"], teammateCount, opponentCount, playsCount, 10, 3, 1, true);
+  const withDefaultLevels = bestSplitForFour(["A", "B", "C", "D"], teammateCount, opponentCount, playsCount, 10, 3, 1, true, 5, {});
+
+  assert.deepStrictEqual(withDefaultLevels.match, withoutLevels.match);
+  assert.strictEqual(withDefaultLevels.score, withoutLevels.score);
+});
+
+test("bestSplitForFour équilibre les niveaux quand ils sont explicitement renseignés", () => {
+  const teammateCount = new Map();
+  const opponentCount = new Map();
+  const playsCount = new Map();
+  // A et D sont les deux plus forts (5), B et C les deux plus faibles (1) :
+  // sans contrainte d'historique (compteurs vides), un wBalance élevé doit
+  // produire l'équipe la plus équilibrée possible : (A,B) vs (C,D) ou
+  // (A,C) vs (B,D) — jamais (A,D) vs (B,C), qui maximise l'écart (8 vs 0).
+  const levels = { A: 5, B: 1, C: 1, D: 5 };
+  const { match } = bestSplitForFour(["A", "B", "C", "D"], teammateCount, opponentCount, playsCount, 10, 3, 1, true, 10, levels);
+
+  const [t1, t2] = match;
+  const unbalanced = (t1.includes("A") && t1.includes("D")) || (t2.includes("A") && t2.includes("D"));
+  assert.ok(!unbalanced, `A et D (les deux plus forts) ne devraient pas être dans la même équipe : ${JSON.stringify(match)}`);
+});
+
+test("scheduleRotations produit un planning strictement identique avec ou sans levelsMap, à wBalance fixé (non-régression)", () => {
+  const players = makePlayers(12);
+  const optionsWithBalance = { ...DEFAULT_OPTIONS, wBalance: 8 };
+
+  const withoutLevelsMap = scheduleRotations([...players], 3, 6, "seed-levels-1", optionsWithBalance, noPresence());
+  const withEmptyLevelsMap = scheduleRotations([...players], 3, 6, "seed-levels-1", optionsWithBalance, noPresence(), [], {});
+  const withNeutralLevelsMap = scheduleRotations(
+    [...players], 3, 6, "seed-levels-1", optionsWithBalance, noPresence(), [],
+    Object.fromEntries(players.map(p => [p, 3]))
+  );
+
+  assert.strictEqual(JSON.stringify(withEmptyLevelsMap.rounds), JSON.stringify(withoutLevelsMap.rounds));
+  assert.strictEqual(JSON.stringify(withNeutralLevelsMap.rounds), JSON.stringify(withoutLevelsMap.rounds));
+});
+
+test("scheduleRotations sans wBalance (undefined, comme avant cette fonctionnalité) est inchangé même avec des niveaux renseignés", () => {
+  const players = makePlayers(8);
+  const levelsMap = { P1: 5, P2: 5, P3: 1, P4: 1, P5: 5, P6: 1, P7: 5, P8: 1 };
+
+  const withLevelsNoBalance = scheduleRotations([...players], 2, 4, "seed-levels-2", DEFAULT_OPTIONS, noPresence(), [], levelsMap);
+  const withoutLevelsAtAll = scheduleRotations([...players], 2, 4, "seed-levels-2", DEFAULT_OPTIONS, noPresence());
+
+  assert.strictEqual(JSON.stringify(withLevelsNoBalance.rounds), JSON.stringify(withoutLevelsAtAll.rounds));
 });
 
 // ---------------------------------------------------------------------------

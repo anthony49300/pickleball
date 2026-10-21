@@ -102,6 +102,15 @@
 
         <p class="subtle" style="font-size: 0.82rem; margin: 14px 0 8px;">Ou depuis une liste libre de joueurs individuels (un par ligne, ou séparés par des virgules) :</p>
         <textarea id="individualPlayers" rows="4" placeholder="Alice&#10;Bob&#10;Chloé&#10;David"></textarea>
+
+        <!-- NIVEAUX DES JOUEURS INDIVIDUELS (OPTIONNEL) -->
+        <p class="subtle" style="font-size: 0.78rem; margin: 10px 0 6px;">
+          Niveau par joueur (optionnel) : s'il est renseigné, "Former des paires" associe le plus fort avec le plus faible pour équilibrer les équipes formées, plutôt que d'associer au hasard.
+        </p>
+        <div id="individualPlayerLevelsList" class="presence-grid">
+          <!-- Rempli dynamiquement en JS -->
+        </div>
+
         <div class="actions-secondary" style="margin-top: 8px;">
           <button id="formPairsBtn" class="secondary" type="button">🎲 Former des paires aléatoirement</button>
         </div>
@@ -109,6 +118,17 @@
         <p class="subtle" style="font-size: 0.78rem; margin-top: 10px;">
           Dans les deux cas, les paires formées remplacent le champ "Équipes" ci-dessus — à ajuster ensuite si besoin.
         </p>
+      </details>
+
+      <!-- NIVEAUX DES EQUIPES (OPTIONNEL) -->
+      <details class="details" id="teamLevelsDetails" style="margin-top: 10px;">
+        <summary>🎚️ Niveaux des Équipes (Optionnel)</summary>
+        <p class="subtle" style="font-size: 0.82rem; margin: 6px 0 12px;">
+          Renseignez un niveau par équipe pour répartir les poules de façon équilibrée (mode "Équilibré par niveau" ci-dessous). Si vous ne touchez à rien ici, les autres modes de répartition ne sont pas affectés.
+        </p>
+        <div id="teamLevelsList" class="presence-grid">
+          <!-- Rempli dynamiquement en JS -->
+        </div>
       </details>
 
       <p id="teamsWarning" class="warning" hidden></p>
@@ -152,6 +172,7 @@
       <select id="poolAssignMode">
         <option value="random">Aléatoire</option>
         <option value="seeded">Tête de série (l'ordre de la liste ci-dessus = le classement des têtes de série)</option>
+        <option value="balanced">Équilibré par niveau (voir "Niveaux des Équipes" ci-dessus)</option>
         <option value="manual">Manuelle (je choisis moi-même la poule de chaque équipe)</option>
       </select>
 

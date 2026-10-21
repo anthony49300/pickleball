@@ -5,6 +5,8 @@
 // =============================================================================
 
 const elConfigDetails = document.getElementById("configDetails");
+const elLevelsList = document.getElementById("levelsList");
+const elwBalance = document.getElementById("wBalance");
 const elPlayers = document.getElementById("players");
 const elCourts = document.getElementById("courts");
 const elRounds = document.getElementById("rounds");
@@ -65,6 +67,11 @@ const btnSavePlayerGroup = document.getElementById("savePlayerGroupBtn");
 // Variables globales de mémoire
 window.__PB_SCORES__ = {};
 window.__PB_PRESENCE__ = {};
+// Niveau (1-5) par joueur, entièrement optionnel (voir levelGapPenalty dans
+// algorithm.js) : un joueur absent de cette table compte comme niveau 3
+// (neutre) et n'affecte donc jamais le planning tant qu'il n'est pas modifié
+// explicitement via la section "Niveaux des Joueurs".
+window.__PB_LEVELS__ = {};
 // Index (0-based) des tours repliés manuellement par l'utilisateur (bouton
 // "Masquer" dans l'en-tête de chaque tour) — purement visuel, les scores
 // restent enregistrés normalement. Voir render() dans form-and-render.js.

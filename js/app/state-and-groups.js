@@ -17,12 +17,14 @@ function getCurrentState() {
     wt: elwT.value,
     wo: elwO.value,
     wp: elwP.value,
+    wbal: elwBalance.value,
     bw: elBeamWidth.value,
     pk: elPartnerK.value,
     sq: elSquare.checked,
     b2b: elAvoidB2B.checked,
     sc: window.__PB_SCORES__ || {},
     pr: window.__PB_PRESENCE__ || {},
+    lv: window.__PB_LEVELS__ || {},
     hr: window.__PB_HIDDEN_ROUNDS__ || []
   };
 }
@@ -107,6 +109,7 @@ function generateSession(preserveScores = true) {
       wT: parseFloat(elwT.value || "5"),
       wO: parseFloat(elwO.value || "2"),
       wP: parseFloat(elwP.value || "1"),
+      wBalance: parseFloat(elwBalance.value || "3"),
       beamWidth: parseInt(elBeamWidth.value || "80", 10),
       partnerK: parseInt(elPartnerK.value || "10", 10),
       squareRepeats: !!elSquare.checked,
@@ -122,7 +125,7 @@ function generateSession(preserveScores = true) {
       ? getFrozenRounds(window.__PB_LAST_RESULT__, window.__PB_SCORES__)
       : [];
 
-    const result = scheduleRotations(players, numCourts, numRounds, seedText, options, window.__PB_PRESENCE__, frozenRounds);
+    const result = scheduleRotations(players, numCourts, numRounds, seedText, options, window.__PB_PRESENCE__, frozenRounds, window.__PB_LEVELS__);
     window.__PB_LAST_RESULT__ = result;
 
     render(result, players, numCourts, numRounds);
@@ -149,11 +152,13 @@ function loadState(state) {
   if (state.wt !== undefined) elwT.value = state.wt;
   if (state.wo !== undefined) elwO.value = state.wo;
   if (state.wp !== undefined) elwP.value = state.wp;
+  if (state.wbal !== undefined) elwBalance.value = state.wbal;
   if (state.bw !== undefined) elBeamWidth.value = state.bw;
   if (state.pk !== undefined) elPartnerK.value = state.pk;
   if (state.sq !== undefined) elSquare.checked = state.sq;
   if (state.b2b !== undefined) elAvoidB2B.checked = state.b2b;
   if (state.pr) window.__PB_PRESENCE__ = state.pr;
+  window.__PB_LEVELS__ = state.lv && typeof state.lv === "object" ? state.lv : {};
   window.__PB_HIDDEN_ROUNDS__ = Array.isArray(state.hr) ? state.hr : [];
 
   syncPresenceInputs();
