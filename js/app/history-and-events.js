@@ -269,7 +269,7 @@ btnCopy.addEventListener("click", async () => {
       const label = courtCustomNames[j] || `Terrain ${j + 1}`;
       lines.push(`  [${label}] ${fmtMatch(m)}`);
     });
-    if (result.benches[i]?.length) lines.push(`  Banc : ${result.benches[i].join(", ")}`);
+    if (result.benches[i]?.length) lines.push(`  En pause : ${result.benches[i].join(", ")}`);
     if (result.absents[i]?.length) lines.push(`  Inactifs : ${result.absents[i].join(", ")}`);
     lines.push("");
   });

@@ -41,7 +41,7 @@ function writePlayers(names) {
   elPlayers.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
-/** Rappel du format sous les compteurs : combien jouent, combien au banc. */
+/** Rappel du format sous les compteurs : combien jouent, combien en pause. */
 function updateFormatHint() {
   if (!elFormatHint) return;
   const n = parsePlayers(elPlayers.value).length;
@@ -53,13 +53,13 @@ function updateFormatHint() {
   // Même règle que generateSession : à 6 joueurs sur 2 terrains ou plus,
   // 1 double + 1 simple, personne sur le banc.
   if (n === 6 && courts >= 2) {
-    elFormatHint.textContent = "6 joueurs : un double et un simple à chaque tour, personne au banc.";
+    elFormatHint.textContent = "6 joueurs : un double et un simple à chaque tour, personne en pause.";
     return;
   }
   const usable = Math.min(courts, Math.floor(n / 4));
   const bench = n - usable * 4;
   const prefix = usable < courts ? `Pas assez de joueurs pour ${courts} terrains : ${usable} utilisé${usable > 1 ? "s" : ""}. ` : "";
-  elFormatHint.textContent = `${prefix}${usable * 4} joueurs en jeu, ${bench} au banc à chaque tour.`;
+  elFormatHint.textContent = `${prefix}${usable * 4} joueurs en jeu, ${bench} en pause à chaque tour.`;
 }
 
 function renderPlayerChips() {
@@ -116,7 +116,7 @@ if (elAddPlayerInput) {
   });
 }
 
-// Courts : le rappel "X en jeu, Y au banc" suit le nombre de terrains.
+// Courts : le rappel "X en jeu, Y en pause" suit le nombre de terrains.
 elCourts.addEventListener("input", updateFormatHint);
 
 // Bascule pastilles <-> saisie en texte (pratique pour coller ou corriger une

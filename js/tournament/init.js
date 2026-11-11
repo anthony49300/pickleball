@@ -4,8 +4,10 @@
 // MODE TOURNOI — INITIALISATION
 // =============================================================================
 
-// Forcer la sauvegarde instantanée avant toute fermeture/rechargement de la page.
+// Forcer la sauvegarde instantanée avant toute fermeture/rechargement de la page
+// (sauf juste après une réinitialisation complète, voir events.js).
 window.addEventListener("beforeunload", () => {
+  if (window.__PT_RESETTING__) return;
   autoSaveTournamentState();
 });
 
