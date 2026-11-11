@@ -23,7 +23,7 @@
 // de ce fichier suffit à déclencher la mise à jour du service worker ; pensez
 // alors à incrémenter CACHE_VERSION pour repartir d'un cache propre.
 
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2;
 const CACHE_NAME = `pb-app-v${CACHE_VERSION}`;
 
 const PRECACHE_URLS = [
@@ -111,7 +111,14 @@ self.addEventListener("fetch", (event) => {
     const cache = await caches.open(CACHE_NAME);
     const cached = await cache.match(request, matchOptions);
 
-    const network = fetch(request)
+    // cache: "no-cache" : la mise à jour en arrière-plan redemande TOUJOURS au
+    // serveur (simple vérification, réponse "304 Non modifié" s'il n'y a rien
+    // de neuf), au lieu de se contenter de la copie du cache HTTP du
+    // navigateur. Sans ça, GitHub Pages (max-age=600) pouvait renvoyer
+    // l'ancienne version pendant 10 minutes et retarder les mises à jour.
+    // L'URL est reprise telle quelle : une requête de navigation ne peut pas
+    // être réutilisée avec des options.
+    const network = fetch(request.url, { cache: "no-cache", credentials: "same-origin" })
       .then(response => {
         // Les réponses partielles ou en erreur ne remplacent pas une bonne copie.
         if (response.ok && response.status === 200) {
