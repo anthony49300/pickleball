@@ -257,7 +257,7 @@ function render(result, players, numCourts, numRounds) {
     const absent = absents[idx] || [];
     const benchHtml = `
       <div class="bench-card">
-        <div class="bench-group"><span class="eyebrow">Au banc</span>${bench.length ? tagList(bench) : `<span class="subtle">Personne ce tour-ci</span>`}</div>
+        <div class="bench-group"><span class="eyebrow">En pause</span>${bench.length ? tagList(bench) : `<span class="subtle">Personne ce tour-ci</span>`}</div>
         ${absent.length ? `<div class="bench-group"><span class="eyebrow">Absents</span>${tagList(absent, " is-absent")}</div>` : ""}
       </div>`;
 
@@ -270,7 +270,7 @@ function render(result, players, numCourts, numRounds) {
       ? `<div class="next-card">
           <span class="eyebrow">Ensuite · tour ${idx + 2}</span>
           ${next.map((m, mIdx) => `<div class="next-row"><span class="next-court">${escapeHtml(courtCustomNames[mIdx] ? courtCustomNames[mIdx] : `T${mIdx + 1}`)}</span><span>${escapeHtml(m[0].join(" & "))} <em>contre</em> ${escapeHtml(m[1].join(" & "))}</span></div>`).join("")}
-          ${benches[idx + 1]?.length ? `<div class="next-row"><span class="next-court">Banc</span><span>${escapeHtml(benches[idx + 1].join(", "))}</span></div>` : ""}
+          ${benches[idx + 1]?.length ? `<div class="next-row"><span class="next-court">Pause</span><span>${escapeHtml(benches[idx + 1].join(", "))}</span></div>` : ""}
         </div>`
       : `<div class="next-card"><span class="eyebrow">Dernier tour</span><span class="subtle">Le classement final est dans l'onglet Classement.</span></div>`;
 
@@ -300,8 +300,8 @@ function render(result, players, numCourts, numRounds) {
   // Détection de la présence de matchs en simple dans la session
   const hasSingles = stats.singlesCount && Array.from(stats.singlesCount.values()).some(v => v > 0);
   const ratioLabel = hasSingles
-    ? "Par joueur (J = joué, S = simple, B = banc)"
-    : "Par joueur (J = joué, B = banc)";
+    ? "Par joueur (J = joué, S = simple, P = pause)"
+    : "Par joueur (J = joué, P = pause)";
 
   const fairnessLine = players
     .slice()
@@ -311,15 +311,15 @@ function render(result, players, numCourts, numRounds) {
       const b = stats.benchCount.get(p) ?? 0;
       const s = stats.singlesCount?.get(p) ?? 0;
       return hasSingles
-        ? `<strong>${escapeHtml(p)}</strong> ${j}J / ${s}S / ${b}B`
-        : `<strong>${escapeHtml(p)}</strong> ${j}J / ${b}B`;
+        ? `<strong>${escapeHtml(p)}</strong> ${j}J / ${s}S / ${b}P`
+        : `<strong>${escapeHtml(p)}</strong> ${j}J / ${b}P`;
     })
     .join(" · ");
 
   if (elDiag) {
     elDiag.innerHTML = `
       <p><strong>Matchs joués :</strong> de ${minPlays} à ${maxPlays} par joueur</p>
-      <p><strong>Passages au banc :</strong> de ${minBen} à ${maxBen} par joueur</p>
+      <p><strong>Pauses :</strong> de ${minBen} à ${maxBen} par joueur</p>
       <p><strong>Duos les plus fréquents :</strong> ${tmTop || "aucun"}</p>
       <p><strong>Oppositions les plus fréquentes :</strong> ${opTop || "aucune"}</p>
       <p><strong>${ratioLabel} :</strong> ${fairnessLine}</p>

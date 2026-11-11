@@ -46,7 +46,7 @@ L'application est organisée autour des moments d'une session. Sur téléphone, 
 | Écran | Rôle |
 |---|---|
 | **Préparer** | Joueurs, terrains, tours et réglages, puis génération du planning. |
-| **Jouer** | Le tour en cours : matchs, joueurs au banc et saisie des scores. Le badge (ex. « T3 ») indique le tour en cours. |
+| **Jouer** | Le tour en cours : matchs, joueurs en pause et saisie des scores. Le badge (ex. « T3 ») indique le tour en cours. |
 | **Classement** | Podium, badges, classement détaillé et équité de la session. |
 | **Historique** | La session en cours et les sessions enregistrées sur cet appareil. |
 
@@ -77,13 +77,13 @@ L'écran **Préparer** contient deux blocs.
 **Format**
 - **Terrains** : combien de terrains sont disponibles simultanément.
 - **Tours** : combien de rotations seront jouées dans la session.
-- Un rappel indique combien de joueurs jouent et combien restent au banc à chaque tour.
+- Un rappel indique combien de joueurs jouent et combien sont en pause à chaque tour.
 - **Noms des terrains** *(optionnel)* : par défaut « Terrain 1 », « Terrain 2 »… ; vous pouvez les nommer (ex. « Court central, Court 2 »).
-- **Pas de banc deux fois de suite** : un joueur n'est jamais mis au repos sur deux tours consécutifs.
+- **Pas de pause deux fois de suite** : un joueur n'est jamais en pause sur deux tours consécutifs.
 
 ### Cas particulier : 6 joueurs sur 2 terrains ou plus
 
-Avec exactement 6 joueurs actifs et au moins 2 terrains, l'application organise automatiquement **1 match en double (4 joueurs) + 1 match en simple (2 joueurs)** à chaque tour, plutôt que de laisser 2 joueurs au repos : personne ne reste sur le banc dans cette configuration.
+Avec exactement 6 joueurs actifs et au moins 2 terrains, l'application organise automatiquement **1 match en double (4 joueurs) + 1 match en simple (2 joueurs)** à chaque tour, plutôt que de laisser 2 joueurs en pause : personne n'est en pause dans cette configuration.
 
 ---
 
@@ -133,9 +133,9 @@ Les réglages par défaut conviennent à la grande majorité des sessions.
 L'écran **Jouer** affiche un tour à la fois :
 
 - En haut, le numéro du tour et une frise de tous les tours (tours complets, tour en cours, tour affiché). Touchez un segment de la frise, ou les flèches, pour changer de tour.
-- **Au banc** : les joueurs au repos sur ce tour, et les absents s'il y a des arrivées/départs.
+- **En pause** : les joueurs qui ne jouent pas ce tour, et les absents s'il y a des arrivées/départs.
 - Une carte par terrain, avec les deux équipes l'une au-dessus de l'autre.
-- **Ensuite** : un aperçu du tour suivant, pour que les joueurs du banc sachent où aller.
+- **Ensuite** : un aperçu du tour suivant, pour que les joueurs en pause sachent où aller.
 - En bas, le bouton **Tour suivant** (ou **Voir le classement** au dernier tour). Il reste utilisable même si vous ne notez pas les scores ; il indique alors combien de scores manquent.
 
 ---
@@ -172,9 +172,9 @@ Des **badges** sont décernés automatiquement selon les scores saisis (chacun n
 
 Sous le classement, le bloc **Équité de la session** résume, une fois le planning généré :
 
-- Le nombre minimum et maximum de matchs joués et de passages au banc selon les joueurs.
+- Le nombre minimum et maximum de matchs joués et de pauses selon les joueurs.
 - Les duos et les oppositions les plus fréquents.
-- Le détail par joueur (matchs joués, simples, passages au banc).
+- Le détail par joueur (matchs joués, simples, pauses).
 - La matrice **Qui a joué avec qui** : pour chaque paire de joueurs, le nombre de fois où ils ont joué ensemble (**Partenaires**) ou l'un contre l'autre (**Adversaires**). Plus la case est colorée, plus la fréquence est élevée.
 
 ---
@@ -202,6 +202,8 @@ L'écran **Historique** affiche en premier la **session en cours** (progression,
 L'indicateur **Enregistré** en haut de l'écran confirme que la session en cours (joueurs, réglages, scores) est sauvegardée automatiquement sur cet appareil : même en cas de fermeture accidentelle, tout est retrouvé à la réouverture.
 
 **Tout réinitialiser…** *(menu ⋮)* efface la session en cours, la sauvegarde automatique et tout l'historique des sessions enregistrées (une confirmation est demandée, l'action est irréversible). Les **groupes de joueurs réguliers**, eux, sont préservés.
+
+En mode Tournoi, le même **Tout réinitialiser…** *(menu ⋮)* efface le tournoi en cours, sa sauvegarde automatique et l'historique des tournois ; les groupes de joueurs réguliers sont là aussi conservés.
 
 ---
 

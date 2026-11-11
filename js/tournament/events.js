@@ -808,3 +808,26 @@ if (btnClearTournamentHistory) {
     }
   });
 }
+
+// Réinitialisation complète du mode Tournoi (menu ⋮) : efface le tournoi en
+// cours, son autosave et l'historique des tournois. Les groupes de joueurs
+// réguliers (partagés avec le mode Rotation) sont conservés. On recharge la
+// page plutôt que de remettre chaque champ à la main : c'est le moyen le plus
+// sûr de repartir des valeurs par défaut du formulaire. Le drapeau
+// __PT_RESETTING__ empêche l'autosave du beforeunload (voir init.js) de
+// réécrire l'état qu'on vient d'effacer.
+const btnResetTournament = document.getElementById("resetTournamentBtn");
+if (btnResetTournament) {
+  btnResetTournament.addEventListener("click", async () => {
+    const confirmed = await confirmModal(
+      "Cela effacera le tournoi en cours, la sauvegarde automatique ET l'historique des tournois enregistrés.\n\nLes groupes de joueurs réguliers enregistrés seront conservés. Cette action est irréversible.",
+      { title: "Réinitialiser le mode Tournoi ?", confirmText: "Tout réinitialiser", icon: "🔄" }
+    );
+    if (!confirmed) return;
+
+    window.__PT_RESETTING__ = true;
+    localStorage.removeItem(TOURNAMENT_STORAGE_KEY);
+    localStorage.removeItem(TOURNAMENT_HISTORY_KEY);
+    window.location.replace(window.location.pathname);
+  });
+}
