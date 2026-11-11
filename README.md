@@ -210,8 +210,8 @@ Chacune existe en thème clair et sombre (**Passer en thème clair / sombre**, d
 
 L'application peut être utilisée :
 
-- **Directement dans un navigateur**, sans rien installer (une connexion est nécessaire pour charger la page ; une fois chargée, la saisie des scores et toutes les fonctionnalités n'ont besoin d'aucun réseau).
-- **Installée comme application** sur mobile ou desktop (PWA) via l'option "Installer" ou "Ajouter à l'écran d'accueil" proposée par le navigateur, pour y accéder comme une app à part entière.
+- **Directement dans un navigateur**, sans rien installer. Une connexion est nécessaire pour la toute première visite ; l'application se met alors entièrement en cache (pages Rotation et Tournoi, scripts, polices, icônes) et fonctionne ensuite **sans réseau**, même après fermeture du navigateur.
+- **Installée comme application** sur mobile ou desktop (PWA) via l'option "Installer" ou "Ajouter à l'écran d'accueil" proposée par le navigateur, pour y accéder comme une app à part entière, hors ligne comprise. Un appui long sur l'icône propose des raccourcis vers **Jouer** et le mode **Tournoi**.
 - **Sous forme d'APK Android**, disponible depuis le dépôt du projet : celle-ci fonctionne intégralement hors ligne, y compris au tout premier lancement, puisque l'application est directement embarquée dans le fichier installé.
 
 ---
@@ -228,4 +228,14 @@ Oui : dans **Mode expert**, tirez un nouvel identifiant de session avec le bouto
 L'application conserve les tours déjà notés et ne recalcule que la suite. Si vous changez significativement les réglages (nombre de joueurs, de terrains ou de tours), mieux vaut vérifier que les scores affichés correspondent toujours aux bons matchs, ou enregistrer d'abord la session actuelle dans l'historique avant de régénérer.
 
 **Mes données sont-elles envoyées quelque part ?**
-Non. Tout (session en cours, historique, groupes de joueurs, apparence choisie) est stocké uniquement sur votre appareil, dans le navigateur. Seules les polices de caractères sont téléchargées depuis Google Fonts quand une connexion est disponible (sans aucune donnée de session) ; hors ligne, l'application utilise les polices du système.
+Non. Tout (session en cours, historique, groupes de joueurs, apparence choisie) est stocké uniquement sur votre appareil, dans le navigateur. L'application ne charge aucune ressource externe : polices et bibliothèques sont embarquées.
+
+**Comment l'application se met-elle à jour si elle fonctionne hors ligne ?**
+Chaque fichier est servi depuis le cache de l'appareil, et une version plus récente est téléchargée en arrière-plan quand une connexion est disponible. Une mise à jour du site apparaît donc au chargement suivant.
+
+---
+
+## Notes techniques
+
+- **Mode hors ligne** : `service-worker.js` (à la racine) met en cache tous les fichiers listés dans `PRECACHE_URLS`. **Tout nouveau fichier du site doit y être ajouté**, sinon il ne sera disponible hors ligne qu'après avoir été chargé une première fois. Le service worker n'est enregistré qu'en http(s) (pas en `file://`) et pas dans l'APK Android, qui embarque déjà ses fichiers (voir `js/shared/pwa.js`).
+- **Polices** : fichiers woff2 dans `fonts/`, déclarés dans `css/fonts.css`, sous licence SIL Open Font License 1.1 (voir `fonts/OFL.txt`).

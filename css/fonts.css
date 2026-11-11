@@ -1,0 +1,87 @@
+/* =============================================================================
+   POLICES EMBARQUÉES (fonctionnement 100 % hors ligne)
+   -----------------------------------------------------------------------------
+   Fichiers woff2 dans fonts/ (sous-ensemble "latin" de Google Fonts, qui couvre
+   le français : accents, œ, €, guillemets...). Licence SIL Open Font License
+   1.1, voir fonts/OFL.txt. Les polices "variables" (Inter, Manrope, Outfit,
+   Sora) couvrent toute une plage de graisses avec un seul fichier.
+
+   font-display: swap : le texte s'affiche tout de suite avec la police de
+   repli, puis bascule dès que le fichier local est lu (quasi instantané).
+============================================================================= */
+
+/* Nocturne */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("../fonts/inter-variable.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Sora";
+  font-style: normal;
+  font-weight: 500 700;
+  font-display: swap;
+  src: url("../fonts/sora-variable.woff2") format("woff2");
+}
+
+/* Plein air */
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("../fonts/manrope-variable.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Outfit";
+  font-style: normal;
+  font-weight: 500 700;
+  font-display: swap;
+  src: url("../fonts/outfit-variable.woff2") format("woff2");
+}
+
+/* Tableau d'affichage */
+@font-face {
+  font-family: "Barlow";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/barlow-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Barlow";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../fonts/barlow-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Barlow";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../fonts/barlow-600.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Barlow";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/barlow-700.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Barlow Condensed";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../fonts/barlow-condensed-600.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Barlow Condensed";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/barlow-condensed-700.woff2") format("woff2");
+}

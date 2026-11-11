@@ -44,6 +44,7 @@ jobs:
           mkdir -p www
           cp index.html tournoi.html manifest.json icon-192.png icon-512.png icon-pickleball.svg www/
           cp -r css www/
+          cp -r fonts www/
           cp -r js www/
 
       # Le dossier android/ n'est pas versionné (voir .gitignore) : Capacitor le régénère

@@ -8,15 +8,17 @@
   <!-- Favicon Balle de Pickleball SVG -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2245%22 fill=%22%23ccff00%22/><circle cx=%2235%22 cy=%2235%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2265%22 cy=%2235%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2250%22 cy=%2250%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2235%22 cy=%2265%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2265%22 cy=%2265%22 r=%226%22 fill=%22%230a0f18%22/></svg>">
 
-  <!-- Polices des trois identités visuelles. Hors-ligne (APK sans réseau), les
-       piles de repli de css/app.css prennent le relais (polices système). Le
-       navigateur ne télécharge que les fichiers des polices réellement utilisées. -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Outfit:wght@500;600;700&family=Sora:wght@500;600;700&display=swap" />
-
+  <!-- Polices des trois identités visuelles, embarquées dans fonts/ : aucune
+       ressource externe, l'app fonctionne entièrement hors ligne. -->
+  <link rel="stylesheet" href="css/fonts.css" />
   <link rel="stylesheet" href="css/app.css" />
+
+  <!-- Application installable (PWA) : manifeste + service worker (voir js/shared/pwa.js). -->
   <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Pickleball" />
   <meta name="theme-color" content="#0b131d" id="metaThemeColor" />
 
   <!-- Applique l'identité visuelle et le thème clair/sombre AVANT le premier
@@ -449,6 +451,7 @@
   <script src="js/shared/modal.js"></script>
   <script src="js/shared/theme.js"></script>
   <script src="js/shared/ui-controls.js"></script>
+  <script src="js/shared/pwa.js"></script>
 
   <!-- Scripts classiques (pas type="module") pour rester utilisable en file://
        sans serveur. L'ordre est important : chaque fichier peut s'appuyer sur les
