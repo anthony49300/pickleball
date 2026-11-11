@@ -50,24 +50,24 @@ function saveToHistory() {
  */
 function renderHistory(history = getHistory()) {
   if (!elHistoryList) return;
+  if (btnClearHistory) btnClearHistory.disabled = !history.length;
   if (!history.length) {
-    elHistoryList.innerHTML = `<p class="subtle">Aucune session enregistrée dans l'historique.</p>`;
+    elHistoryList.innerHTML = `<p class="subtle">Aucune session enregistrée pour l'instant. Utilisez « Enregistrer dans l'historique » sur la session en cours pour la retrouver ici.</p>`;
     return;
   }
 
   elHistoryList.innerHTML = history.map(item => `
-    <div class="history-card">
-      <div>
-        <h4>Session #${escapeHtml(item.seed)}</h4>
-        <div class="subtle" style="font-size: 0.8rem; margin-top: 4px;">
-          📅 ${escapeHtml(item.date)} · 👥 ${item.playersCount} Joueurs · 🔄 ${item.roundsCount} Tours
-        </div>
+    <article class="history-card">
+      <div class="h-top">
+        <span class="h-name">${escapeHtml(item.date)}</span>
+        <span class="h-date">n° ${escapeHtml(item.seed)}</span>
       </div>
+      <div class="h-meta"><span><b>${item.playersCount}</b> joueurs</span><span><b>${escapeHtml(item.roundsCount)}</b> tours</span></div>
       <div class="history-actions">
-        <button class="secondary load-hist-btn" data-id="${item.id}">Charger</button>
-        <button class="secondary del-hist-btn" data-id="${item.id}" style="color: var(--danger);">Supprimer</button>
+        <button type="button" class="secondary load-hist-btn" data-id="${item.id}">Charger</button>
+        <button type="button" class="secondary danger del-hist-btn" data-id="${item.id}">Supprimer</button>
       </div>
-    </div>
+    </article>
   `).join('');
 }
 
@@ -80,7 +80,13 @@ if (elHistoryList) {
 
     if (e.target.classList.contains("load-hist-btn")) {
       const item = history.find(x => x.id === id);
-      if (item) loadState(item.state);
+      if (item) {
+        loadState(item.state);
+        if (window.__PB_LAST_RESULT__) {
+          showScreen("jouer");
+          showToast("Session chargée");
+        }
+      }
     } else if (e.target.classList.contains("del-hist-btn")) {
       history = history.filter(x => x.id !== id);
       localStorage.setItem("pb_history", JSON.stringify(history));
@@ -154,17 +160,19 @@ if (btnResetAll) {
     window.history.replaceState({}, "", window.location.pathname);
 
     clearMessages();
+    syncSliderOutputs();
     syncPresenceInputs();
     renderEmptyState();
     renderHistory();
+    showScreen("preparer");
+    showToast("Page réinitialisée");
   });
 }
 
 if (btnSaveToHistory) {
   btnSaveToHistory.addEventListener("click", () => {
     saveToHistory();
-    btnSaveToHistory.textContent = "Session Sauvegardée !";
-    setTimeout(() => (btnSaveToHistory.textContent = "💾 Enregistrer Session"), 1200);
+    showToast("Session enregistrée dans l'historique");
   });
 }
 
@@ -175,33 +183,26 @@ if (btnSaveToHistory) {
 // Le thème clair/sombre est géré par js/shared/theme.js (module partagé avec
 // les autres pages du site, chargé avant celui-ci — voir index.html).
 
-// Vue liste éditable pour la liste de joueurs (voir js/shared/ui-controls.js) :
-// à l'ouverture, "Antoine, Julien" comme "Antoine\nJulien" deviennent chacun
-// leur propre ligne (mêmes séparateurs que parsePlayers), pour que chaque
-// joueur soit individuellement supprimable.
-wireEditableListView({
-  textareaId: "players",
-  listContainerId: "playersListView",
-  toggleBtnId: "playersListToggle",
-  addBtnId: "playersListAdd",
-  rowPlaceholder: "Nom du joueur",
-  split: text => text.split(/\r?\n/).flatMap(l => l.split(",")).map(l => l.trim()).filter(Boolean)
-});
+// La liste de joueurs (pastilles + fiche joueur) est gérée par players-ui.js.
 
 btnNewSeed.addEventListener("click", () => {
   elSeed.value = generateSeed();
   autoSaveState();
 });
 
-if (btnScrollToActive) {
-  btnScrollToActive.addEventListener("click", () => {
-    elSchedule.querySelector(".round.active-round")?.scrollIntoView({ behavior: "smooth", block: "center" });
-  });
-}
-
 btnGenerate.addEventListener("click", () => {
   const hasScores = Object.keys(window.__PB_SCORES__).length > 0;
   generateSession(hasScores);
+  // Planning prêt (pas d'erreur affichée) : on passe directement à l'écran Jouer.
+  if (window.__PB_LAST_RESULT__ && (!elError || elError.hidden)) {
+    showScreen("jouer");
+    // Un avertissement (doublons ignorés, terrains en trop...) s'affiche sur
+    // l'écran Préparer, qu'on vient de quitter : on le reprend dans le toast.
+    const n = window.__PB_LAST_RESULT__.rounds.length;
+    showToast(elWarning && !elWarning.hidden
+      ? elWarning.textContent
+      : `${n} tour${n > 1 ? "s" : ""} générés`, elWarning && !elWarning.hidden ? 5000 : 2400);
+  }
 });
 
 // Écoute instantanée sur la saisie des scores (input + change)
@@ -224,102 +225,37 @@ btnGenerate.addEventListener("click", () => {
       const match = window.__PB_LAST_RESULT__?.rounds?.[r]?.[m];
       if (match) {
         writeMatchScore(window.__PB_SCORES__, r, match, t, isNaN(val) ? null : val);
-
-        // Signale une égalité (aucun vainqueur) une fois les deux scores saisis :
-        // au pickleball une partie ne devrait normalement jamais se terminer à
-        // égalité, c'est donc plus probablement une erreur de saisie.
-        const matchCard = e.target.closest(".match-card");
-        const tieWarning = matchCard?.querySelector(".tie-warning");
-        if (tieWarning) {
-          const sc = readMatchScore(window.__PB_SCORES__, r, m, match);
-          tieWarning.hidden = !(sc && sc['1'] != null && sc['2'] != null && sc['1'] === sc['2']);
-        }
+        // Gagnant, état du terrain et alerte d'égalité (au pickleball une partie
+        // ne se termine jamais à égalité : c'est sans doute une erreur de saisie).
+        refreshMatchCard(e.target.closest(".match-card"));
       }
 
-      if (window.__PB_LAST_RESULT__) {
-        updateSessionStepper(window.__PB_LAST_RESULT__.rounds);
-        
-        // Re-marquer visuellement le tour actif sans régénérer tout le DOM
-        const roundEls = elSchedule.querySelectorAll('.round');
-        const activeIdx = updateSessionStepper(window.__PB_LAST_RESULT__.rounds);
-        roundEls.forEach((el, idx) => {
-          if (idx === activeIdx) {
-            el.classList.add('active-round');
-            if (!el.querySelector('.active-round-badge')) {
-              const tags = el.querySelector('.round-tags');
-              if (tags) {
-                const b = document.createElement('span');
-                b.className = 'active-round-badge';
-                b.textContent = '⚡ Tour en cours';
-                tags.prepend(b);
-              }
-            }
-          } else {
-            el.classList.remove('active-round');
-            const badge = el.querySelector('.active-round-badge');
-            if (badge) badge.remove();
-          }
-        });
-
-        updateScrollToActiveButton();
-      }
-
+      // Frise des tours, bouton "Tour suivant", badge de l'onglet Jouer...
+      refreshPlayView();
       updateRankings();
       autoSaveState();
     }
   });
 });
 
-// Navigation clavier rapide (Entrée -> champ de score suivant) : voir
-// js/shared/ui-controls.js, module chargé sur les deux pages.
-
-// Masquage/affichage manuel d'un tour (bouton dans l'en-tête de chaque tour,
-// voir render() dans form-and-render.js) : purement visuel, ne touche à
-// aucun score. On bascule juste la classe CSS + le libellé du bouton plutôt
-// que de régénérer tout le DOM, pour ne jamais perdre le focus/la saisie en
-// cours dans un autre tour.
+// Boutons −/+ autour de chaque score : modifient le champ puis redéclenchent
+// "input", exactement comme une saisie au clavier (enregistrement, gagnant,
+// classement... passent tous par le listener ci-dessus).
 elSchedule.addEventListener("click", (e) => {
-  const btn = e.target.closest(".round-hide-btn");
+  const btn = e.target.closest(".score-step");
   if (!btn) return;
+  const input = btn.closest(".score-ctl")?.querySelector(".score-input");
+  if (!input) return;
 
-  const idx = parseInt(btn.dataset.round, 10);
-  if (!Array.isArray(window.__PB_HIDDEN_ROUNDS__)) window.__PB_HIDDEN_ROUNDS__ = [];
-
-  const pos = window.__PB_HIDDEN_ROUNDS__.indexOf(idx);
-  const nowHidden = pos === -1;
-  if (nowHidden) window.__PB_HIDDEN_ROUNDS__.push(idx);
-  else window.__PB_HIDDEN_ROUNDS__.splice(pos, 1);
-
-  const roundEl = btn.closest(".round");
-  if (roundEl) roundEl.classList.toggle("round-collapsed", nowHidden);
-  btn.innerHTML = `${nowHidden ? ICON_EYE_SVG : ICON_EYE_OFF_SVG}<span>${nowHidden ? "Afficher" : "Masquer"}</span>`;
-  btn.title = nowHidden ? "Réafficher ce tour" : "Masquer ce tour (les scores restent enregistrés)";
-
-  autoSaveState();
+  const delta = parseInt(btn.dataset.delta, 10) || 0;
+  const current = parseInt(input.value, 10);
+  const next = isNaN(current) ? Math.max(0, delta) : Math.min(99, Math.max(0, current + delta));
+  input.value = next;
+  input.dispatchEvent(new Event("input", { bubbles: true }));
 });
 
-/**
- * Replie ou déplie TOUS les tours d'un coup (voir #collapseAllRoundsBtn /
- * #expandAllRoundsBtn) : ré-affiche le résultat déjà généré (aucun nouveau
- * calcul de planning, contrairement à generateSession) avec la liste
- * complète des tours masqués (ou vidée), utile sur une longue session pour
- * ne pas avoir à cliquer tour par tour.
- */
-function setAllRoundsHidden(hidden) {
-  const result = window.__PB_LAST_RESULT__;
-  if (!result) return;
-
-  window.__PB_HIDDEN_ROUNDS__ = hidden ? result.rounds.map((_, idx) => idx) : [];
-
-  const players = parsePlayers(elPlayers.value);
-  const numCourts = Math.max(1, parseInt(elCourts.value || "1", 10));
-  const numRounds = Math.max(1, parseInt(elRounds.value || "1", 10));
-  render(result, players, numCourts, numRounds);
-  autoSaveState();
-}
-
-if (btnCollapseAllRounds) btnCollapseAllRounds.addEventListener("click", () => setAllRoundsHidden(true));
-if (btnExpandAllRounds) btnExpandAllRounds.addEventListener("click", () => setAllRoundsHidden(false));
+// Navigation clavier rapide (Entrée -> champ de score suivant) : voir
+// js/shared/ui-controls.js, module chargé sur les deux pages.
 
 // Écoute instantanée de tous les paramètres du formulaire (input + change)
 [elPlayers, elCourts, elRounds, elSeed, elCourtNames, elwT, elwO, elwP, elwBalance, elBeamWidth, elPartnerK, elSquare, elAvoidB2B].forEach(el => {
@@ -352,11 +288,7 @@ btnCopy.addEventListener("click", async () => {
 
   const text = lines.join("\n").trim();
   if (await copyTextRobust(text)) {
-    // innerHTML (pas textContent) pour restaurer l'icône SVG du bouton après
-    // le message de confirmation temporaire, sinon elle disparaîtrait.
-    const originalHtml = btnCopy.innerHTML;
-    btnCopy.textContent = "Copié !";
-    setTimeout(() => { btnCopy.innerHTML = originalHtml; }, 900);
+    showToast("Matchs copiés");
   } else {
     await copyFallbackModal(text, { title: "Copier le planning" });
   }
@@ -370,7 +302,7 @@ function buildShareableUrl() {
   return `${urlBase}?d=${compressedData}`;
 }
 
-async function copyShareUrl(btnElement) {
+async function copyShareUrl() {
   let urlToShare;
   try {
     urlToShare = buildShareableUrl();
@@ -384,16 +316,14 @@ async function copyShareUrl(btnElement) {
   }
 
   if (await copyTextRobust(urlToShare)) {
-    const originalText = btnElement.textContent;
-    btnElement.textContent = "Lien copié !";
-    setTimeout(() => (btnElement.textContent = originalText), 1500);
+    showToast("Lien copié");
   } else {
     await copyFallbackModal(urlToShare, { title: "Copier le lien de partage", icon: "🔗" });
   }
 }
 
-if (btnCopyLink) btnCopyLink.addEventListener("click", () => copyShareUrl(btnCopyLink));
-if (btnCopyRankingLink) btnCopyRankingLink.addEventListener("click", () => copyShareUrl(btnCopyRankingLink));
+if (btnCopyLink) btnCopyLink.addEventListener("click", () => copyShareUrl());
+if (btnCopyRankingLink) btnCopyRankingLink.addEventListener("click", () => copyShareUrl());
 
 if (btnExportPng) {
   btnExportPng.addEventListener("click", async () => {
@@ -403,11 +333,14 @@ if (btnExportPng) {
     // innerHTML (pas textContent) pour restaurer l'icône SVG du bouton une
     // fois l'export terminé, sinon elle disparaîtrait.
     const originalBtnHtml = btnExportPng.innerHTML;
-    btnExportPng.textContent = "⏳ Génération...";
+    btnExportPng.textContent = "Génération…";
+    btnExportPng.disabled = true;
 
     try {
+      // Fond de l'image = fond de l'identité visuelle / du thème en cours.
+      const pageBg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() || "#0b131d";
       const canvas = await html2canvas(targetArea, {
-        backgroundColor: "#0a0f18",
+        backgroundColor: pageBg,
         scale: 2
       });
 
@@ -430,6 +363,7 @@ if (btnExportPng) {
       );
     } finally {
       btnExportPng.innerHTML = originalBtnHtml;
+      btnExportPng.disabled = false;
     }
   });
 }

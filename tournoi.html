@@ -18,7 +18,11 @@
        les deux pages du site). Le reste de la logique est dans js/shared/theme.js. -->
   <script>
     try {
-      if (localStorage.getItem("pb_theme") === "light") {
+      // Même règle par défaut que index.html (voir js/shared/theme.js) : sans
+      // choix explicite, sombre pour l'identité "Nocturne", clair sinon.
+      var pbSkin = localStorage.getItem("pb_skin") || "nuit";
+      var pbTheme = localStorage.getItem("pb_theme") || (pbSkin === "nuit" ? "dark" : "light");
+      if (pbTheme === "light") {
         document.documentElement.setAttribute("data-theme", "light");
       }
     } catch (e) {}

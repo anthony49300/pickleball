@@ -52,4 +52,7 @@ window.addEventListener("DOMContentLoaded", () => {
       renderEmptyState();
     }
   }
+
+  // Écran à afficher (voir navigation.js), une fois la session restaurée.
+  initNavigation();
 });
