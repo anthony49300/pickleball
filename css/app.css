@@ -324,7 +324,9 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
   grid-area: top;
   position: sticky;
   top: 0;
-  z-index: 30;
+  /* Au-dessus de la navigation (.tabbar, z-index 30) : les menus déroulants
+     de la barre du haut doivent passer par-dessus la colonne latérale. */
+  z-index: 35;
   display: flex;
   align-items: center;
   gap: 10px;
