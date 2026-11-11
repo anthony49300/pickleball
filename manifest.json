@@ -1,12 +1,16 @@
 {
-  "name": "JF Pickleball Generateur",
+  "id": "./index.html",
+  "name": "JF Pickleball",
   "short_name": "Pickleball",
-  "description": "Générateur de rotations et classements de Pickleball",
+  "description": "Générateur de rotations et classements de pickleball, utilisable hors ligne",
+  "lang": "fr",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#0a0f18",
-  "theme_color": "#0a0f18",
+  "background_color": "#0b131d",
+  "theme_color": "#0b131d",
   "orientation": "portrait",
+  "categories": ["sports", "utilities"],
   "icons": [
     {
       "src": "icon-192.png",
@@ -19,6 +23,20 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Jouer : tour en cours",
+      "short_name": "Jouer",
+      "url": "./index.html#jouer",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Mode Tournoi",
+      "short_name": "Tournoi",
+      "url": "./tournoi.html",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]
 }

@@ -11,6 +11,10 @@
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="stylesheet" href="css/tournament.css" />
   <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Pickleball" />
   <meta name="theme-color" content="#0a0f18" id="metaThemeColor" />
 
   <!-- Applique le thème clair/sombre AVANT le premier rendu, pour éviter un flash
@@ -18,7 +22,11 @@
        les deux pages du site). Le reste de la logique est dans js/shared/theme.js. -->
   <script>
     try {
-      if (localStorage.getItem("pb_theme") === "light") {
+      // Même règle par défaut que index.html (voir js/shared/theme.js) : sans
+      // choix explicite, sombre pour l'identité "Nocturne", clair sinon.
+      var pbSkin = localStorage.getItem("pb_skin") || "nuit";
+      var pbTheme = localStorage.getItem("pb_theme") || (pbSkin === "nuit" ? "dark" : "light");
+      if (pbTheme === "light") {
         document.documentElement.setAttribute("data-theme", "light");
       }
     } catch (e) {}
@@ -318,6 +326,7 @@
   <script src="js/shared/modal.js"></script>
   <script src="js/shared/theme.js"></script>
   <script src="js/shared/ui-controls.js"></script>
+  <script src="js/shared/pwa.js"></script>
 
   <!-- Mode Tournoi : scripts classiques (pas type="module"), chargés dans l'ordre. -->
   <script src="js/tournament/dom-elements.js"></script>

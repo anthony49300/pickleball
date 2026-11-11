@@ -4,16 +4,8 @@
 // FONCTIONS D'ANALYSE DU FORMULAIRE ET PRESENCE
 // =============================================================================
 
-// Icônes "œil" (masquer/afficher un tour, voir render() plus bas) en SVG
-// inline plutôt qu'en emoji : rendu identique et net sur toutes les
-// plateformes (contrairement aux emoji, dont le style varie beaucoup d'un
-// système à l'autre), et stroke="currentColor" suit automatiquement la
-// couleur du bouton (thème clair/sombre, survol...) sans rien coder en dur.
-const ICON_EYE_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
-const ICON_EYE_OFF_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
-
-// Libellés du niveau 1-5 (voir window.__PB_LEVELS__, section "Niveaux des
-// Joueurs") : 3 = valeur neutre par défaut tant que rien n'est renseigné.
+// Libellés du niveau 1-5 (voir window.__PB_LEVELS__ et la fiche joueur dans
+// players-ui.js) : 3 = valeur neutre par défaut tant que rien n'est renseigné.
 const LEVEL_LABELS = { 1: "Débutant", 2: "Occasionnel", 3: "Intermédiaire", 4: "Avancé", 5: "Expert" };
 
 /**
@@ -79,77 +71,26 @@ function updatePlayerCountBadge() {
 }
 
 /**
- * Synchronise l'interface des plages d'arrivée/départ pour chaque joueur.
+ * Garantit une plage de présence et un niveau par défaut pour chaque joueur,
+ * puis rafraîchit la liste des joueurs (pastilles, voir players-ui.js).
+ * Les réglages individuels se font dans la fiche joueur.
  */
 function syncPresenceInputs() {
   const players = parsePlayers(elPlayers.value);
   const totalRounds = parseInt(elRounds.value || "8", 10);
 
-  updatePlayerCountBadge();
-  elPresenceList.innerHTML = "";
-  if (elLevelsList) elLevelsList.innerHTML = "";
-
   players.forEach(p => {
     if (!window.__PB_PRESENCE__[p]) {
       window.__PB_PRESENCE__[p] = { start: 1, end: totalRounds };
     }
-
-    const item = document.createElement("div");
-    item.className = "presence-item";
-    item.innerHTML = `
-      <span><strong>${escapeHtml(p)}</strong></span>
-      <div class="presence-inputs">
-        <label style="font-size: 0.75rem;">De</label>
-        <input type="number" min="1" max="${totalRounds}" value="${window.__PB_PRESENCE__[p].start}" data-player="${escapeHtml(p)}" data-type="start" />
-        <label style="font-size: 0.75rem;">à</label>
-        <input type="number" min="1" max="${totalRounds}" value="${window.__PB_PRESENCE__[p].end}" data-player="${escapeHtml(p)}" data-type="end" />
-      </div>
-    `;
-    elPresenceList.appendChild(item);
-
-    if (elLevelsList) {
-      // 3 = valeur neutre par défaut (voir LEVEL_LABELS) : tant qu'elle n'est
-      // pas changée ici, ce joueur n'a aucun impact sur l'équilibrage (voir
-      // levelGapPenalty dans algorithm.js).
-      if (window.__PB_LEVELS__[p] == null) window.__PB_LEVELS__[p] = 3;
-
-      const levelItem = document.createElement("div");
-      levelItem.className = "presence-item";
-      const options = [1, 2, 3, 4, 5].map(n =>
-        `<option value="${n}" ${window.__PB_LEVELS__[p] === n ? "selected" : ""}>${n} — ${LEVEL_LABELS[n]}</option>`
-      ).join("");
-      levelItem.innerHTML = `
-        <span><strong>${escapeHtml(p)}</strong></span>
-        <select class="level-select" data-player="${escapeHtml(p)}">${options}</select>
-      `;
-      elLevelsList.appendChild(levelItem);
-    }
+    // 3 = valeur neutre par défaut (voir LEVEL_LABELS) : tant qu'elle n'est
+    // pas changée, ce joueur n'a aucun impact sur l'équilibrage (voir
+    // levelGapPenalty dans algorithm.js).
+    if (window.__PB_LEVELS__[p] == null) window.__PB_LEVELS__[p] = 3;
   });
-}
 
-// Écoute dynamique sur la présence (instantanée sur input et change)
-["change", "input"].forEach(evt => {
-  elPresenceList.addEventListener(evt, (e) => {
-    const p = e.target.dataset.player;
-    const type = e.target.dataset.type;
-    const val = parseInt(e.target.value, 10);
-
-    if (p && type && window.__PB_PRESENCE__[p]) {
-      window.__PB_PRESENCE__[p][type] = isNaN(val) ? 1 : val;
-      autoSaveState();
-    }
-  });
-});
-
-// Écoute dynamique sur les niveaux (voir syncPresenceInputs ci-dessus)
-if (elLevelsList) {
-  elLevelsList.addEventListener("change", (e) => {
-    const p = e.target.dataset.player;
-    if (!p || !e.target.classList.contains("level-select")) return;
-    const val = parseInt(e.target.value, 10);
-    window.__PB_LEVELS__[p] = isNaN(val) ? 3 : val;
-    autoSaveState();
-  });
+  updatePlayerCountBadge();
+  renderPlayerChips();
 }
 
 elPlayers.addEventListener("input", () => {
@@ -176,116 +117,128 @@ function renderEmptyState() {
   clearMessages();
   window.__PB_LAST_RESULT__ = null;
 
-  elSchedule.innerHTML = `
-    <div class="empty-state-card" style="text-align: center; padding: 2.5rem 1rem; border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px; margin: 1.5rem 0;">
-      <div style="font-size: 2rem; margin-bottom: 0.5rem;">🎾</div>
-      <h3 style="margin-bottom: 0.5rem;">Aucune session active</h3>
-      <p class="subtle" style="max-width: 400px; margin: 0 auto;">
-        Renseignez vos joueurs et vos paramètres, puis cliquez sur <strong>Générer</strong> pour créer un nouveau planning.
-      </p>
-    </div>
-  `;
-  
-  if (elSessionStepper) elSessionStepper.hidden = true;
+  elSchedule.innerHTML = "";
+  if (elSessionStepper) elSessionStepper.innerHTML = "";
   if (elDiag) elDiag.innerHTML = "";
   if (elDiagSection) elDiagSection.hidden = true;
-  
+
   elMeta.textContent = "";
   if (elRankingSection) elRankingSection.hidden = true;
   if (elHeatmapSection) elHeatmapSection.hidden = true;
-  
+
   btnCopy.disabled = true;
   btnCopyLink.disabled = true;
   btnSaveToHistory.disabled = true;
-  if (btnCollapseAllRounds) btnCollapseAllRounds.disabled = true;
-  if (btnExpandAllRounds) btnExpandAllRounds.disabled = true;
-  if (elConfigDetails) elConfigDetails.open = true;
+
+  refreshPlayView();
 }
 
 /**
- * Met à jour le Stepper d'Étape de Session.
+ * Un tour est complet quand TOUS ses matchs ont leurs deux scores saisis
+ * (un tour sans match, faute de joueurs, compte comme complet).
  */
-function updateSessionStepper(rounds) {
-  if (!elSessionStepper || !rounds || !rounds.length) return;
-  
-  elSessionStepper.hidden = false;
-  elSessionStepper.innerHTML = "";
-
-  // Un tour est considéré comme complété si TOUS ses matchs ont des scores saisis
-  let activeRoundIndex = -1;
-  const roundStatuses = rounds.map((matches, rIdx) => {
-    if (!matches.length) return true;
-    let isComplete = true;
-    matches.forEach((match, mIdx) => {
-      const sc = readMatchScore(window.__PB_SCORES__, rIdx, mIdx, match);
-      if (!sc || sc['1'] == null || sc['2'] == null) {
-        isComplete = false;
-      }
-    });
-    return isComplete;
+function isRoundComplete(rounds, rIdx) {
+  return rounds[rIdx].every((match, mIdx) => {
+    const sc = readMatchScore(window.__PB_SCORES__, rIdx, mIdx, match);
+    return !!sc && sc["1"] != null && sc["2"] != null;
   });
-
-  // Le tour actif est le premier tour non entièrement complété
-  activeRoundIndex = roundStatuses.findIndex(status => status === false);
-  if (activeRoundIndex === -1 && roundStatuses.length > 0) {
-    activeRoundIndex = roundStatuses.length - 1; // Tous complétés
-  }
-
-  rounds.forEach((_, idx) => {
-    const isCompleted = roundStatuses[idx];
-    const isActive = (idx === activeRoundIndex) && !isCompleted;
-
-    const stepItem = document.createElement("div");
-    stepItem.className = `step-item ${isCompleted ? 'completed' : ''} ${isActive ? 'active' : ''}`;
-    stepItem.innerHTML = `
-      <div class="step-number">${isCompleted ? '✓' : idx + 1}</div>
-      <span>Tour ${idx + 1}</span>
-    `;
-    elSessionStepper.appendChild(stepItem);
-
-    if (idx < rounds.length - 1) {
-      const divider = document.createElement("div");
-      divider.className = `step-divider ${isCompleted ? 'active' : ''}`;
-      elSessionStepper.appendChild(divider);
-    }
-  });
-
-  return activeRoundIndex;
 }
 
-let activeRoundScrollObserver = null;
-
 /**
- * Affiche/masque le bouton flottant "Revenir au tour en cours"
- * (#scrollToActiveBtn) selon que ce tour est actuellement visible à l'écran
- * ou non — inutile de l'afficher si le tour en cours est déjà sous les yeux.
- * Un IntersectionObserver (plutôt qu'un listener de scroll) évite tout calcul
- * à chaque pixel défilé ; il est reconstruit à chaque appel car l'élément
- * ".active-round" est recréé à chaque rendu (voir render() plus bas).
+ * Tour en cours : le premier tour pas encore complet (le dernier si tous le sont).
  */
-function updateScrollToActiveButton() {
-  if (!btnScrollToActive) return;
-
-  if (activeRoundScrollObserver) {
-    activeRoundScrollObserver.disconnect();
-    activeRoundScrollObserver = null;
-  }
-
-  const activeEl = elSchedule.querySelector(".round.active-round");
-  if (!activeEl) {
-    btnScrollToActive.hidden = true;
-    return;
-  }
-
-  activeRoundScrollObserver = new IntersectionObserver(
-    ([entry]) => { btnScrollToActive.hidden = !!entry?.isIntersecting; },
-    { threshold: 0.2 }
-  );
-  activeRoundScrollObserver.observe(activeEl);
+function getActiveRoundIndex(rounds) {
+  if (!rounds || !rounds.length) return -1;
+  const idx = rounds.findIndex((_, rIdx) => !isRoundComplete(rounds, rIdx));
+  return idx === -1 ? rounds.length - 1 : idx;
 }
 
 /**
- * Construit la structure HTML affichant les terrains, matchs, scores et diagnostics.
+ * Met à jour la frise des tours (#sessionStepper) : un segment par tour,
+ * plein s'il est complet, accentué s'il est en cours, encadré s'il est
+ * affiché. Chaque segment est un bouton qui affiche ce tour.
+ * @returns {number} l'index du tour en cours
+ */
+function updateSessionStepper(rounds, viewedIdx) {
+  if (!elSessionStepper || !rounds || !rounds.length) return -1;
+
+  const activeIdx = getActiveRoundIndex(rounds);
+  elSessionStepper.innerHTML = rounds.map((_, idx) => {
+    const done = isRoundComplete(rounds, idx);
+    const current = idx === activeIdx && !done;
+    const state = done ? ", scores saisis" : current ? ", en cours" : "";
+    return `<button type="button" class="dot${done ? " is-done" : ""}${current ? " is-current" : ""}${idx === viewedIdx ? " is-view" : ""}" data-round="${idx}" aria-label="Tour ${idx + 1}${state}"${idx === viewedIdx ? ' aria-current="step"' : ""}></button>`;
+  }).join("");
+
+  return activeIdx;
+}
+
+/**
+ * Carte d'un match : bandeau "terrain", puis une ligne par équipe avec ses
+ * boutons −/+ autour du champ de score (.score-input, écouté dans
+ * history-and-events.js). L'état visuel (gagnant, égalité...) est posé par
+ * refreshMatchCard.
+ */
+function buildMatchCard(match, rIdx, mIdx, courtLabel) {
+  const savedScore = readMatchScore(window.__PB_SCORES__, rIdx, mIdx, match);
+  const teamRow = (team, teamNo) => {
+    const label = escapeHtml(team.join(" et "));
+    const value = savedScore?.[teamNo] ?? "";
+    return `
+      <div class="team-row" data-team="${teamNo}">
+        <div class="team-names"><span>${team.map(escapeHtml).join("<br>")}</span><span class="win-tag">Gagnant</span></div>
+        <div class="score-ctl">
+          <button type="button" class="score-step" data-delta="-1" tabindex="-1" aria-label="Retirer un point à ${label}">−</button>
+          <input type="number" class="score-input" data-round="${rIdx}" data-match="${mIdx}" data-team="${teamNo}" min="0" max="99" inputmode="numeric" placeholder="–" value="${value}" aria-label="Score de ${label}, tour ${rIdx + 1}" />
+          <button type="button" class="score-step" data-delta="1" tabindex="-1" aria-label="Ajouter un point à ${label}">+</button>
+        </div>
+      </div>`;
+  };
+
+  const [t1, t2] = match;
+  return `
+    <article class="match-card" data-round="${rIdx}" data-match="${mIdx}">
+      <header class="court-strip"><span class="court-name">${escapeHtml(courtLabel)}</span><span class="court-state"></span></header>
+      ${teamRow(t1, "1")}
+      <div class="net"><span>contre</span></div>
+      ${teamRow(t2, "2")}
+      <p class="tie-warning" hidden>Égalité : aucun vainqueur enregistré. Une partie de pickleball ne se termine pas à égalité, vérifiez le score.</p>
+    </article>`;
+}
+
+/**
+ * Met à jour l'état visuel d'une carte de match à partir des scores en mémoire.
+ */
+function refreshMatchCard(card) {
+  const result = window.__PB_LAST_RESULT__;
+  if (!card || !result) return;
+  const rIdx = parseInt(card.dataset.round, 10);
+  const mIdx = parseInt(card.dataset.match, 10);
+  const match = result.rounds?.[rIdx]?.[mIdx];
+  if (!match) return;
+
+  const sc = readMatchScore(window.__PB_SCORES__, rIdx, mIdx, match);
+  const s1 = sc?.["1"], s2 = sc?.["2"];
+  const full = s1 != null && s2 != null;
+  const tie = full && s1 === s2;
+
+  const rows = card.querySelectorAll(".team-row");
+  rows[0]?.classList.toggle("is-win", full && s1 > s2);
+  rows[0]?.classList.toggle("is-lose", full && s1 < s2);
+  rows[1]?.classList.toggle("is-win", full && s2 > s1);
+  rows[1]?.classList.toggle("is-lose", full && s2 < s1);
+  card.classList.toggle("is-done", full && !tie);
+  card.classList.toggle("is-tie", tie);
+
+  const state = card.querySelector(".court-state");
+  if (state) state.textContent = !full ? "À saisir" : tie ? "Égalité ?" : `Terminé ${Math.max(s1, s2)}–${Math.min(s1, s2)}`;
+  const tieWarning = card.querySelector(".tie-warning");
+  if (tieWarning) tieWarning.hidden = !tie;
+}
+
+/**
+ * Construit tous les tours du planning (un seul est affiché à la fois, voir
+ * showRound dans navigation.js) ainsi que les diagnostics d'équité.
  */
 function render(result, players, numCourts, numRounds) {
   elSchedule.innerHTML = "";
@@ -293,119 +246,45 @@ function render(result, players, numCourts, numRounds) {
 
   const { rounds, benches, absents, stats } = result;
   const courtCustomNames = parseCourtNames();
+  const courtLabel = (mIdx) => courtCustomNames[mIdx] || `Terrain ${mIdx + 1}`;
 
-  elMeta.textContent = `${players.length} Joueurs · ${numCourts} Terrain(s) · ${numRounds} Tours`;
+  elMeta.textContent = `${players.length} joueurs · ${numCourts} terrain${numCourts > 1 ? "s" : ""} · ${numRounds} tour${numRounds > 1 ? "s" : ""}`;
 
-  const activeRoundIndex = updateSessionStepper(rounds);
+  const tagList = (names, extraClass = "") => `<div class="tags">${names.map(n => `<span class="tag${extraClass}">${escapeHtml(n)}</span>`).join("")}</div>`;
 
-  const hiddenRounds = Array.isArray(window.__PB_HIDDEN_ROUNDS__) ? window.__PB_HIDDEN_ROUNDS__ : [];
+  elSchedule.innerHTML = rounds.map((matches, idx) => {
+    const bench = benches[idx] || [];
+    const absent = absents[idx] || [];
+    const benchHtml = `
+      <div class="bench-card">
+        <div class="bench-group"><span class="eyebrow">Au banc</span>${bench.length ? tagList(bench) : `<span class="subtle">Personne ce tour-ci</span>`}</div>
+        ${absent.length ? `<div class="bench-group"><span class="eyebrow">Absents</span>${tagList(absent, " is-absent")}</div>` : ""}
+      </div>`;
 
-  rounds.forEach((matches, idx) => {
-    const wrap = document.createElement("div");
-    const isActiveRound = (idx === activeRoundIndex);
-    const isHidden = hiddenRounds.includes(idx);
-    wrap.className = `round ${isActiveRound ? 'active-round' : ''} ${isHidden ? 'round-collapsed' : ''}`;
+    const courtsHtml = matches.length
+      ? matches.map((m, mIdx) => buildMatchCard(m, idx, mIdx, courtLabel(mIdx))).join("")
+      : `<p class="subtle">Pas assez de joueurs disponibles pour un match ce tour-ci.</p>`;
 
-    const titleRow = document.createElement("div");
-    titleRow.className = "roundTitle";
+    const next = rounds[idx + 1];
+    const nextHtml = next
+      ? `<div class="next-card">
+          <span class="eyebrow">Ensuite · tour ${idx + 2}</span>
+          ${next.map((m, mIdx) => `<div class="next-row"><span class="next-court">${escapeHtml(courtCustomNames[mIdx] ? courtCustomNames[mIdx] : `T${mIdx + 1}`)}</span><span>${escapeHtml(m[0].join(" & "))} <em>contre</em> ${escapeHtml(m[1].join(" & "))}</span></div>`).join("")}
+          ${benches[idx + 1]?.length ? `<div class="next-row"><span class="next-court">Banc</span><span>${escapeHtml(benches[idx + 1].join(", "))}</span></div>` : ""}
+        </div>`
+      : `<div class="next-card"><span class="eyebrow">Dernier tour</span><span class="subtle">Le classement final est dans l'onglet Classement.</span></div>`;
 
-    const h3 = document.createElement("h3");
-    h3.textContent = `Tour ${idx + 1}`;
+    return `
+      <div class="round" data-round="${idx}" hidden>
+        <div class="play-grid">
+          ${benchHtml}
+          <div class="courts">${courtsHtml}</div>
+          ${nextHtml}
+        </div>
+      </div>`;
+  }).join("");
 
-    const tagsDiv = document.createElement("div");
-    tagsDiv.className = "round-tags";
-
-    if (isActiveRound) {
-      const activeBadge = document.createElement("span");
-      activeBadge.className = "active-round-badge";
-      activeBadge.textContent = "⚡ Tour en cours";
-      tagsDiv.appendChild(activeBadge);
-    }
-
-    if (benches[idx]?.length) {
-      const bench = document.createElement("span");
-      bench.className = "bench";
-      bench.textContent = `🪑 Banc: ${benches[idx].join(", ")}`;
-      tagsDiv.appendChild(bench);
-    }
-
-    if (absents[idx]?.length) {
-      const absent = document.createElement("span");
-      absent.className = "absent-tag";
-      absent.textContent = `⏸️ Inactifs: ${absents[idx].join(", ")}`;
-      tagsDiv.appendChild(absent);
-    }
-
-    // Masquage manuel d'un tour (les scores restent enregistrés normalement,
-    // voir window.__PB_HIDDEN_ROUNDS__ et la délégation de clic dans
-    // history-and-events.js) : pratique pour replier au fur et à mesure les
-    // tours déjà joués et ne garder à l'écran que ceux qui restent.
-    const hideBtn = document.createElement("button");
-    hideBtn.type = "button";
-    hideBtn.className = "round-hide-btn";
-    // Hors de l'ordre de tabulation : sinon, tabuler entre les champs de
-    // score d'un tour à l'autre passe systématiquement par ce bouton, ce qui
-    // casse le confort de saisie rapide au clavier (la touche Entrée, elle,
-    // saute directement au champ de score suivant — voir history-and-events.js).
-    hideBtn.tabIndex = -1;
-    hideBtn.dataset.round = idx;
-    hideBtn.innerHTML = `${isHidden ? ICON_EYE_SVG : ICON_EYE_OFF_SVG}<span>${isHidden ? "Afficher" : "Masquer"}</span>`;
-    hideBtn.title = isHidden ? "Réafficher ce tour" : "Masquer ce tour (les scores restent enregistrés)";
-    tagsDiv.appendChild(hideBtn);
-
-    titleRow.appendChild(h3);
-    titleRow.appendChild(tagsDiv);
-    wrap.appendChild(titleRow);
-
-    const content = document.createElement("div");
-    content.className = "round-content";
-
-    if (!matches.length) {
-      const p = document.createElement("div");
-      p.className = "subtle";
-      p.style.marginTop = "8px";
-      p.textContent = "Pas assez de joueurs disponibles pour un match ce tour-ci.";
-      content.appendChild(p);
-    } else {
-      const matchesList = document.createElement("div");
-      matchesList.className = "matches-list";
-
-      matches.forEach((m, mIdx) => {
-        const [t1, t2] = m;
-        const courtLabel = escapeHtml(courtCustomNames[mIdx] || `Terrain ${mIdx + 1}`);
-        const matchCard = document.createElement("div");
-        matchCard.className = "match-card";
-
-        // Récupération des scores sauvegardés en mémoire pour réinjection direct
-        const savedScore = readMatchScore(window.__PB_SCORES__, idx, mIdx, m);
-        const savedScore1 = savedScore?.['1'] ?? "";
-        const savedScore2 = savedScore?.['2'] ?? "";
-
-        const team1Label = t1.join(" & ");
-        const team2Label = t2.join(" & ");
-        const tieWarningHidden = !(savedScore1 !== "" && savedScore2 !== "" && savedScore1 === savedScore2);
-
-        matchCard.innerHTML = `
-          <span class="court-badge">${courtLabel}</span>
-          <div class="team-score">
-            <span class="team">${t1.map(escapeHtml).join(" & ")}</span>
-            <input type="number" class="score-input" data-round="${idx}" data-match="${mIdx}" data-team="1" min="0" max="99" inputmode="numeric" placeholder="-" value="${savedScore1}" aria-label="Score ${escapeHtml(team1Label)}, tour ${idx + 1}" />
-          </div>
-          <span class="vs">VS</span>
-          <span class="tie-warning" ${tieWarningHidden ? "hidden" : ""} title="Égalité : aucun vainqueur enregistré pour ce match">⚠️</span>
-          <div class="team-score">
-            <input type="number" class="score-input" data-round="${idx}" data-match="${mIdx}" data-team="2" min="0" max="99" inputmode="numeric" placeholder="-" value="${savedScore2}" aria-label="Score ${escapeHtml(team2Label)}, tour ${idx + 1}" />
-            <span class="team">${t2.map(escapeHtml).join(" & ")}</span>
-          </div>
-        `;
-        matchesList.appendChild(matchCard);
-      });
-      content.appendChild(matchesList);
-    }
-
-    wrap.appendChild(content);
-    elSchedule.appendChild(wrap);
-  });
+  elSchedule.querySelectorAll(".match-card").forEach(refreshMatchCard);
 
   const plays = players.map(p => [p, stats.playsCount.get(p) ?? 0]);
   const benchesCount = players.map(p => [p, stats.benchCount.get(p) ?? 0]);
@@ -416,13 +295,13 @@ function render(result, players, numCourts, numRounds) {
   const maxBen = Math.max(...benchesCount.map(x => x[1]));
 
   const tmTop = topPairs(stats.teammateCount).map(([k, v]) => `${escapeHtml(k.replace("||", " & "))} (${v})`).join(", ");
-  const opTop = topPairs(stats.opponentCount).map(([k, v]) => `${escapeHtml(k.replace("||", " vs "))} (${v})`).join(", ");
+  const opTop = topPairs(stats.opponentCount).map(([k, v]) => `${escapeHtml(k.replace("||", " contre "))} (${v})`).join(", ");
 
   // Détection de la présence de matchs en simple dans la session
   const hasSingles = stats.singlesCount && Array.from(stats.singlesCount.values()).some(v => v > 0);
   const ratioLabel = hasSingles
-    ? "Ratio individuel (J=Joué, S=Simple, B=Banc)"
-    : "Ratio individuel (J=Joué, B=Banc)";
+    ? "Par joueur (J = joué, S = simple, B = banc)"
+    : "Par joueur (J = joué, B = banc)";
 
   const fairnessLine = players
     .slice()
@@ -432,17 +311,17 @@ function render(result, players, numCourts, numRounds) {
       const b = stats.benchCount.get(p) ?? 0;
       const s = stats.singlesCount?.get(p) ?? 0;
       return hasSingles
-        ? `<strong>${escapeHtml(p)}</strong> : ${j}J / ${s}S / ${b}B`
-        : `<strong>${escapeHtml(p)}</strong> : ${j}J / ${b}B`;
+        ? `<strong>${escapeHtml(p)}</strong> ${j}J / ${s}S / ${b}B`
+        : `<strong>${escapeHtml(p)}</strong> ${j}J / ${b}B`;
     })
     .join(" · ");
 
   if (elDiag) {
     elDiag.innerHTML = `
-      <p><strong>Équilibre Matchs :</strong> Min ${minPlays} - Max ${maxPlays} joués</p>
-      <p><strong>Équilibre Banc :</strong> Min ${minBen} - Max ${maxBen} passages</p>
-      <p><strong>Paires les plus fréquentes :</strong> ${tmTop || "Aucune"}</p>
-      <p><strong>Oppositions les plus fréquentes :</strong> ${opTop || "Aucune"}</p>
+      <p><strong>Matchs joués :</strong> de ${minPlays} à ${maxPlays} par joueur</p>
+      <p><strong>Passages au banc :</strong> de ${minBen} à ${maxBen} par joueur</p>
+      <p><strong>Duos les plus fréquents :</strong> ${tmTop || "aucun"}</p>
+      <p><strong>Oppositions les plus fréquentes :</strong> ${opTop || "aucune"}</p>
       <p><strong>${ratioLabel} :</strong> ${fairnessLine}</p>
     `;
   }
@@ -455,17 +334,7 @@ function render(result, players, numCourts, numRounds) {
   btnCopy.disabled = false;
   btnCopyLink.disabled = false;
   btnSaveToHistory.disabled = false;
-  if (btnCollapseAllRounds) btnCollapseAllRounds.disabled = false;
-  if (btnExpandAllRounds) btnExpandAllRounds.disabled = false;
 
-  // Replie automatiquement la configuration une fois un planning affiché,
-  // pour ne pas avoir à défiler devant une longue carte de réglages déjà
-  // utilisée pour atteindre les matchs. Reste rouvrable à tout moment (la
-  // flèche du résumé), et se redéplie d'elle-même dès qu'il n'y a plus de
-  // planning (voir renderEmptyState).
-  if (elConfigDetails) elConfigDetails.open = false;
-
-  updateScrollToActiveButton();
+  // Nouveau planning (génération ou chargement) : on affiche le tour en cours.
+  showRound(getActiveRoundIndex(rounds));
 }
-
-

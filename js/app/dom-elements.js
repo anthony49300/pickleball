@@ -4,8 +4,6 @@
 // IHM & ELEMENTS DU DOM
 // =============================================================================
 
-const elConfigDetails = document.getElementById("configDetails");
-const elLevelsList = document.getElementById("levelsList");
 const elwBalance = document.getElementById("wBalance");
 const elPlayers = document.getElementById("players");
 const elCourts = document.getElementById("courts");
@@ -29,14 +27,11 @@ const btnNewSeed = document.getElementById("newSeed");
 
 const elSchedule = document.getElementById("schedule");
 const elSessionStepper = document.getElementById("sessionStepper");
-const btnScrollToActive = document.getElementById("scrollToActiveBtn");
 const elDiag = document.getElementById("diagnostics");
-const elDiagSection = document.getElementById("diagnosticsSection") || (elDiag ? elDiag.closest("section") || elDiag.parentElement : null);
+const elDiagSection = document.getElementById("diagnosticsSection");
 const elWarning = document.getElementById("warning");
 const elError = document.getElementById("error");
 const elMeta = document.getElementById("meta");
-const btnCollapseAllRounds = document.getElementById("collapseAllRoundsBtn");
-const btnExpandAllRounds = document.getElementById("expandAllRoundsBtn");
 
 const elRankingSection = document.getElementById("rankingSection");
 const elRankingTableBody = document.querySelector("#rankingTable tbody");
@@ -50,7 +45,6 @@ const elHeatmapContainer = document.getElementById("heatmapTableContainer");
 const btnHmModeTeammates = document.getElementById("hmModeTeammates");
 const btnHmModeOpponents = document.getElementById("hmModeOpponents");
 
-const elPresenceList = document.getElementById("presenceList");
 const elAutosaveBadge = document.getElementById("autosaveBadge");
 const elHistoryList = document.getElementById("historyList");
 const btnClearHistory = document.getElementById("clearHistoryBtn");
@@ -72,9 +66,10 @@ window.__PB_PRESENCE__ = {};
 // (neutre) et n'affecte donc jamais le planning tant qu'il n'est pas modifié
 // explicitement via la section "Niveaux des Joueurs".
 window.__PB_LEVELS__ = {};
-// Index (0-based) des tours repliés manuellement par l'utilisateur (bouton
-// "Masquer" dans l'en-tête de chaque tour) — purement visuel, les scores
-// restent enregistrés normalement. Voir render() dans form-and-render.js.
+// Index (0-based) des tours repliés par l'ancienne interface (un bouton
+// "Masquer" par tour). L'écran Jouer n'affiche plus qu'un tour à la fois et
+// n'utilise plus cette liste, mais elle est conservée dans l'état sauvegardé
+// ("hr") pour rester compatible avec les sessions et liens partagés existants.
 window.__PB_HIDDEN_ROUNDS__ = [];
 let currentHeatmapMode = "teammates";
 

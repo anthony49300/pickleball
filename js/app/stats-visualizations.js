@@ -45,12 +45,14 @@ function renderHeatmap() {
     html += `<tr><th>${escapeHtml(p1)}</th>`;
     players.forEach(p2 => {
       if (p1 === p2) {
-        html += `<td style="background: rgba(0,0,0,0.3); color: #555;">-</td>`;
+        html += `<td class="heatmap-self">–</td>`;
       } else {
+        // Intensité dérivée de la couleur d'accent de l'identité visuelle en
+        // cours (color-mix), pour rester lisible dans tous les thèmes.
         const count = getCount(map, pairKey(p1, p2));
-        const alpha = (count / maxVal) * 0.75 + (count > 0 ? 0.15 : 0);
-        const bg = count > 0 ? `rgba(204, 255, 0, ${alpha})` : "rgba(255, 255, 255, 0.02)";
-        const color = alpha > 0.4 ? "#000" : "#fff";
+        const pct = count > 0 ? Math.round((count / maxVal) * 80 + 15) : 0;
+        const bg = count > 0 ? `color-mix(in srgb, var(--accent) ${pct}%, var(--surface-2))` : "var(--surface-2)";
+        const color = pct > 55 ? "var(--on-accent)" : "var(--text)";
         html += `<td class="heatmap-cell" style="background: ${bg}; color: ${color};">${count}</td>`;
       }
     });
@@ -95,14 +97,18 @@ function updateRankings() {
   });
   
   let hasAnyScore = false;
+  let scoredMatches = 0;
+  let totalMatches = 0;
   const pairWins = new Map();
 
   result.rounds.forEach((matches, rIdx) => {
     matches.forEach((match, mIdx) => {
+      totalMatches++;
       const scores = readMatchScore(window.__PB_SCORES__, rIdx, mIdx, match);
-      
+
       if (scores && scores['1'] != null && scores['2'] != null) {
         hasAnyScore = true;
+        scoredMatches++;
         const [t1, t2] = match;
         const s1 = scores['1'];
         const s2 = scores['2'];
@@ -166,58 +172,85 @@ function updateRankings() {
   renderPodium(sortedPlayers);
   renderBadges(sortedPlayers, pairWins);
 
-  // Rendu du tableau de classement
-  elRankingTableBody.innerHTML = sortedPlayers.map((p, i) => {
-    const diffClass = p.diff > 0 ? "diff-positive" : (p.diff < 0 ? "diff-negative" : "");
-    const diffSign = p.diff > 0 ? "+" : "";
-    const winPct = p.m > 0 ? Math.round((p.w / p.m) * 100) : 0;
-    const avgPf = fmtDecimal(p.m > 0 ? p.pf / p.m : 0);
-    const avgPa = fmtDecimal(p.m > 0 ? p.pa / p.m : 0);
-    const bestWin = p.maxWin > 0 ? `+${p.maxWin}` : "—";
-    const worstLoss = p.maxLoss > 0 ? `-${p.maxLoss}` : "—";
+  const elRankingSummary = document.getElementById("rankingSummary");
+  if (elRankingSummary) {
+    elRankingSummary.textContent = scoredMatches === totalMatches
+      ? `Classement final · ${totalMatches} matchs`
+      : `${scoredMatches} match${scoredMatches > 1 ? "s" : ""} saisi${scoredMatches > 1 ? "s" : ""} sur ${totalMatches}`;
+  }
+
+  const fmtDiff = (d) => (d > 0 ? `+${d}` : d < 0 ? `−${Math.abs(d)}` : "0");
+  const diffClassOf = (d) => (d > 0 ? "diff-positive" : d < 0 ? "diff-negative" : "");
+  const rows = sortedPlayers.map((p, i) => {
     let streakLabel = "—";
     let streakClass = "";
     if (p.streak > 0) {
-      streakLabel = `🔥 ${p.streak}V`;
+      streakLabel = `${p.streak} V`;
       streakClass = "diff-positive";
     } else if (p.streak < 0) {
-      streakLabel = `❄️ ${Math.abs(p.streak)}D`;
+      streakLabel = `${Math.abs(p.streak)} D`;
       streakClass = "diff-negative";
     }
-    return `
+    return {
+      p,
+      rank: i + 1,
+      name: escapeHtml(p.name),
+      diff: fmtDiff(p.diff),
+      diffClass: diffClassOf(p.diff),
+      winPct: p.m > 0 ? Math.round((p.w / p.m) * 100) : 0,
+      avgPf: fmtDecimal(p.m > 0 ? p.pf / p.m : 0),
+      avgPa: fmtDecimal(p.m > 0 ? p.pa / p.m : 0),
+      bestWin: p.maxWin > 0 ? `+${p.maxWin}` : "—",
+      worstLoss: p.maxLoss > 0 ? `−${p.maxLoss}` : "—",
+      streakLabel,
+      streakClass,
+    };
+  });
+
+  // Tableau complet (affiché sur grand écran)
+  elRankingTableBody.innerHTML = rows.map(r => `
       <tr>
-        <td>${i + 1}</td>
-        <td>${escapeHtml(p.name)}</td>
-        <td>${p.m}</td>
-        <td>${p.w}</td>
-        <td>${p.l}</td>
-        <td>${winPct}%</td>
-        <td>${p.pf}</td>
-        <td>${p.pa}</td>
-        <td class="${diffClass}">${diffSign}${p.diff}</td>
-        <td>${avgPf} / ${avgPa}</td>
-        <td class="${p.maxWin > 0 ? "diff-positive" : ""}">${bestWin}</td>
-        <td class="${p.maxLoss > 0 ? "diff-negative" : ""}">${worstLoss}</td>
-        <td class="${streakClass}">${streakLabel}</td>
+        <td>${r.rank}</td>
+        <td>${r.name}</td>
+        <td>${r.p.m}</td>
+        <td>${r.p.w}</td>
+        <td>${r.p.l}</td>
+        <td>${r.winPct} %</td>
+        <td>${r.p.pf}</td>
+        <td>${r.p.pa}</td>
+        <td class="${r.diffClass}">${r.diff}</td>
+        <td>${r.avgPf} / ${r.avgPa}</td>
+        <td class="${r.p.maxWin > 0 ? "diff-positive" : ""}">${r.bestWin}</td>
+        <td class="${r.p.maxLoss > 0 ? "diff-negative" : ""}">${r.worstLoss}</td>
+        <td class="${r.streakClass}">${r.streakLabel}</td>
       </tr>
-    `;
-  }).join('');
+    `).join('');
 
-  // Ajout / Mise à jour de la note de départage explicative sous le tableau
-  let noteEl = document.getElementById("rankingTieBreakNote");
-  if (!noteEl) {
-    noteEl = document.createElement("p");
-    noteEl.id = "rankingTieBreakNote";
-    noteEl.className = "subtle";
-    noteEl.style.marginTop = "0.75rem";
-    noteEl.style.fontSize = "0.8rem";
-    const rankingTable = document.getElementById("rankingTable");
-    if (rankingTable && rankingTable.parentElement) {
-      rankingTable.parentElement.appendChild(noteEl);
-    }
+  // Cartes dépliables (affichées sur téléphone) : l'essentiel, puis le détail
+  // au toucher (<details> natif, aucun JS à prévoir).
+  const elRankingCards = document.getElementById("rankingCards");
+  if (elRankingCards) {
+    elRankingCards.innerHTML = rows.map(r => `
+      <li class="rk">
+        <details>
+          <summary>
+            <span class="rk-pos">${r.rank}</span>
+            <span class="rk-name">${r.name}<small>${r.p.w} V · ${r.p.l} D · ${r.p.m} match${r.p.m > 1 ? "s" : ""}</small></span>
+            <span class="diff ${r.diffClass}">${r.diff}</span>
+            <svg class="rk-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 12 15 18 9"/></svg>
+          </summary>
+          <div class="rk-detail">
+            <div><span>% victoires</span><b>${r.winPct} %</b></div>
+            <div><span>Points pour</span><b>${r.p.pf}</b></div>
+            <div><span>Points contre</span><b>${r.p.pa}</b></div>
+            <div><span>Moy. pour / contre</span><b>${r.avgPf} / ${r.avgPa}</b></div>
+            <div><span>Meilleure V</span><b class="${r.p.maxWin > 0 ? "diff-positive" : ""}">${r.bestWin}</b></div>
+            <div><span>Série en cours</span><b class="${r.streakClass}">${r.streakLabel}</b></div>
+          </div>
+        </details>
+      </li>
+    `).join('');
   }
-
-  noteEl.innerHTML = `💡 <strong>Règle de départage en cas d'égalité :</strong> 1. Taux de victoire (%) &nbsp;➔&nbsp; 2. Différentiel moyen par match &nbsp;➔&nbsp; 3. Nombre de victoires (V).`;
 }
 
 function renderPodium(sorted) {
@@ -226,27 +259,15 @@ function renderPodium(sorted) {
     return;
   }
 
-  const p1 = sorted[0];
-  const p2 = sorted[1];
-  const p3 = sorted[2];
+  const step = (p, cls, place) => `
+    <div class="pod ${cls}">
+      <span class="pod-name">${escapeHtml(p.name)}</span>
+      <span class="pod-sub">${p.w} V · ${p.diff > 0 ? "+" : ""}${p.diff}</span>
+      <div class="pod-bar" aria-label="${place}e place">${place}</div>
+    </div>`;
 
-  elPodiumContainer.innerHTML = `
-    <div class="podium-step silver">
-      <div class="podium-avatar">🥈</div>
-      <div class="podium-name">${escapeHtml(p2.name)}</div>
-      <div class="podium-stats">${p2.w}V · ${p2.diff > 0 ? '+' : ''}${p2.diff}</div>
-    </div>
-    <div class="podium-step gold">
-      <div class="podium-avatar">🥇</div>
-      <div class="podium-name">${escapeHtml(p1.name)}</div>
-      <div class="podium-stats">${p1.w}V · ${p1.diff > 0 ? '+' : ''}${p1.diff}</div>
-    </div>
-    <div class="podium-step bronze">
-      <div class="podium-avatar">🥉</div>
-      <div class="podium-name">${escapeHtml(p3.name)}</div>
-      <div class="podium-stats">${p3.w}V · ${p3.diff > 0 ? '+' : ''}${p3.diff}</div>
-    </div>
-  `;
+  // Ordre visuel classique : 2e, 1er, 3e.
+  elPodiumContainer.innerHTML = step(sorted[1], "p2", 2) + step(sorted[0], "p1", 1) + step(sorted[2], "p3", 3);
 }
 
 /**
@@ -351,12 +372,9 @@ function renderBadges(sorted, pairWins) {
 
   elBadgesContainer.innerHTML = badges.map(b => `
     <div class="badge-card">
-      <div class="badge-icon">${b.icon}</div>
-      <div>
-        <div class="badge-title">${b.title}</div>
-        <div class="badge-player">${escapeHtml(b.player)}</div>
-        <div class="badge-desc">${escapeHtml(b.desc)}</div>
-      </div>
+      <span class="eyebrow">${b.title}</span>
+      <span class="badge-player">${escapeHtml(b.player)}</span>
+      <span class="badge-desc">${escapeHtml(b.desc)}</span>
     </div>
   `).join('');
 }

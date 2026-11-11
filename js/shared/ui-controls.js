@@ -58,10 +58,40 @@ document.addEventListener("keydown", (e) => {
   if (e.key !== "Enter" || !e.target.classList.contains("score-input") || e.target.readOnly) return;
   e.preventDefault();
 
-  const inputs = Array.from(document.querySelectorAll(".score-input:not([readonly])"));
+  // Seuls les champs visibles comptent : en mode Rotation, un seul tour est
+  // affiché à la fois (les autres sont dans le DOM mais masqués).
+  const inputs = Array.from(document.querySelectorAll(".score-input:not([readonly])"))
+    .filter(el => el.offsetParent !== null);
   const next = inputs[inputs.indexOf(e.target) + 1];
   if (next) { next.focus(); next.select(); }
+  else e.target.blur();
 });
+
+/**
+ * Petit message de confirmation temporaire en bas de l'écran ("Lien copié",
+ * "Session enregistrée"...). Remplace l'ancien changement temporaire du
+ * libellé des boutons, qui ne se voyait plus une fois le bouton rangé dans
+ * un menu. L'élément est créé à la volée : rien à prévoir dans le HTML.
+ */
+let toastTimer = null;
+function showToast(message, duration = 2400) {
+  let el = document.getElementById("appToast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "appToast";
+    el.className = "toast";
+    el.setAttribute("role", "status");
+    el.setAttribute("aria-live", "polite");
+    document.body.appendChild(el);
+  }
+  el.textContent = message;
+  // Relance l'animation d'apparition même si un toast est déjà affiché.
+  el.hidden = true;
+  void el.offsetWidth;
+  el.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.hidden = true; }, duration);
+}
 
 /**
  * Câble une "vue liste" éditable (un champ texte + un bouton supprimer par

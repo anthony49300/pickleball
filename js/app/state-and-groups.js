@@ -169,6 +169,10 @@ function loadState(state) {
     window.__PB_SCORES__ = {};
   }
 
+  // Curseurs réécrits ci-dessus sans événement "input" : on resynchronise
+  // les valeurs affichées à côté (voir navigation.js).
+  syncSliderOutputs();
+
   if (state.p && parsePlayers(state.p).length >= 4) {
     generateSession(true);
   } else {
@@ -201,7 +205,7 @@ function renderPlayerGroups() {
   const groups = getPlayerGroups();
 
   if (!groups.length) {
-    elPlayerGroupsList.innerHTML = `<p class="subtle">Aucun groupe enregistré pour le&nbsp;moment.</p>`;
+    elPlayerGroupsList.innerHTML = `<p class="hint">Aucun groupe enregistré pour le&nbsp;moment.</p>`;
     return;
   }
 
@@ -209,11 +213,11 @@ function renderPlayerGroups() {
     <div class="group-card">
       <div>
         <h4>${escapeHtml(g.name)}</h4>
-        <div class="subtle" style="font-size: 0.78rem; margin-top: 2px;">👥 ${g.players.length} joueur(s)</div>
+        <div class="hint">${g.players.length} joueur${g.players.length > 1 ? "s" : ""}</div>
       </div>
       <div class="group-actions">
-        <button type="button" class="secondary load-group-btn" data-id="${g.id}">📥 Charger</button>
-        <button type="button" class="secondary danger del-group-btn" data-id="${g.id}" title="Supprimer ce groupe">🗑️</button>
+        <button type="button" class="load-group-btn" data-id="${g.id}">Charger</button>
+        <button type="button" class="secondary danger del-group-btn" data-id="${g.id}" aria-label="Supprimer le groupe ${escapeHtml(g.name)}">Supprimer</button>
       </div>
     </div>
   `).join('');
@@ -252,8 +256,7 @@ if (btnSavePlayerGroup) {
     renderPlayerGroups();
 
     elNewGroupName.value = "";
-    btnSavePlayerGroup.textContent = "✓ Groupe enregistré !";
-    setTimeout(() => (btnSavePlayerGroup.textContent = "💾 Enregistrer les joueurs actuels"), 1200);
+    showToast(`Groupe « ${name} » enregistré`);
   });
 }
 
@@ -280,6 +283,7 @@ if (elPlayerGroupsList) {
         clearMessages();
         syncPresenceInputs();
         autoSaveState();
+        showToast(`Groupe « ${group.name} » chargé : ${group.players.length} joueurs`);
       }
     } else if (btn.classList.contains("del-group-btn")) {
       const filtered = groups.filter(g => g.id !== id);
