@@ -2,296 +2,388 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>JF Pickleball — Mode Tournoi</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>JF Pickleball — Tournoi</title>
 
-  <!-- Favicon Balle de Pickleball SVG (identique à index.html, pour une identité cohérente) -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2245%22 fill=%22%23ffd700%22/><circle cx=%2235%22 cy=%2235%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2265%22 cy=%2235%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2250%22 cy=%2250%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2235%22 cy=%2265%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2265%22 cy=%2265%22 r=%226%22 fill=%22%230a0f18%22/></svg>">
+  <!-- Favicon Balle de Pickleball SVG (identique à index.html) -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2245%22 fill=%22%23ccff00%22/><circle cx=%2235%22 cy=%2235%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2265%22 cy=%2235%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2250%22 cy=%2250%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2235%22 cy=%2265%22 r=%226%22 fill=%22%230a0f18%22/><circle cx=%2265%22 cy=%2265%22 r=%226%22 fill=%22%230a0f18%22/></svg>">
 
-  <link rel="stylesheet" href="css/styles.css" />
-  <link rel="stylesheet" href="css/tournament.css" />
+  <!-- Mêmes feuilles de style que index.html : polices embarquées + app.css
+       (identités visuelles, composants communs et styles propres au Tournoi). -->
+  <link rel="stylesheet" href="css/fonts.css" />
+  <link rel="stylesheet" href="css/app.css" />
+
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icon-192.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Pickleball" />
-  <meta name="theme-color" content="#0a0f18" id="metaThemeColor" />
+  <meta name="theme-color" content="#0b131d" id="metaThemeColor" />
 
-  <!-- Applique le thème clair/sombre AVANT le premier rendu, pour éviter un flash
-       (identique à index.html — la clé localStorage "pb_theme" est partagée entre
-       les deux pages du site). Le reste de la logique est dans js/shared/theme.js. -->
+  <!-- Identité visuelle et thème appliqués AVANT le premier rendu (même règle
+       que index.html, choix partagés entre les deux pages ; voir js/shared/theme.js). -->
   <script>
     try {
-      // Même règle par défaut que index.html (voir js/shared/theme.js) : sans
-      // choix explicite, sombre pour l'identité "Nocturne", clair sinon.
       var pbSkin = localStorage.getItem("pb_skin") || "nuit";
       var pbTheme = localStorage.getItem("pb_theme") || (pbSkin === "nuit" ? "dark" : "light");
-      if (pbTheme === "light") {
-        document.documentElement.setAttribute("data-theme", "light");
-      }
+      document.documentElement.setAttribute("data-skin", pbSkin);
+      if (pbTheme === "light") document.documentElement.setAttribute("data-theme", "light");
     } catch (e) {}
   </script>
 </head>
 <body>
-  <header class="container header-bar">
-    <h1>
-      <svg width="32" height="32" viewBox="0 0 100 100" style="vertical-align: middle;">
-        <circle cx="50" cy="50" r="45" fill="#ffd700"/>
-        <circle cx="35" cy="35" r="5" fill="#0a0f18"/>
-        <circle cx="65" cy="35" r="5" fill="#0a0f18"/>
-        <circle cx="50" cy="50" r="5" fill="#0a0f18"/>
-        <circle cx="35" cy="65" r="5" fill="#0a0f18"/>
-        <circle cx="65" cy="65" r="5" fill="#0a0f18"/>
-      </svg>
-      JF Pickleball — Tournoi
-    </h1>
-    <nav class="mode-tabs" aria-label="Mode de l'application">
-      <a href="index.html" class="mode-tab">⚡ Rotation</a>
-      <a href="tournoi.html" class="mode-tab active" aria-current="page">🏆 Tournoi</a>
+  <div class="app">
+    <!-- ======================= BARRE DU HAUT ======================= -->
+    <header class="topbar">
+      <a class="brand" href="tournoi.html" aria-label="JF Pickleball, Tournoi">
+        <svg width="28" height="28" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+          <circle cx="50" cy="50" r="46" fill="var(--ball)"/>
+          <circle cx="34" cy="32" r="6" fill="var(--ball-dot)"/>
+          <circle cx="66" cy="32" r="6" fill="var(--ball-dot)"/>
+          <circle cx="50" cy="50" r="6" fill="var(--ball-dot)"/>
+          <circle cx="34" cy="68" r="6" fill="var(--ball-dot)"/>
+          <circle cx="66" cy="68" r="6" fill="var(--ball-dot)"/>
+        </svg>
+        <span class="brand-name">JF Pickleball</span>
+      </a>
+
+      <div class="menu-wrap">
+        <button type="button" id="modeMenuBtn" class="mode-pill" aria-haspopup="true" aria-expanded="false" aria-controls="modeMenu">
+          Tournoi
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div id="modeMenu" class="menu menu-left" role="menu" hidden>
+          <a role="menuitem" class="menu-item" href="index.html"><span>Rotation<small>Les partenaires changent à chaque tour</small></span></a>
+          <a role="menuitem" class="menu-item" href="tournoi.html" aria-current="page"><span>Tournoi<small>Équipes fixes, poules puis phase finale</small></span><span class="check" aria-hidden="true">✓</span></a>
+        </div>
+      </div>
+
+      <span class="spacer"></span>
+
+      <div id="autosaveBadge" class="save-badge" title="Toutes les modifications sont enregistrées sur cet appareil"><i aria-hidden="true"></i><span>Enregistré</span></div>
+
+      <div class="menu-wrap">
+        <button type="button" id="moreMenuBtn" class="icon-btn" aria-label="Plus d'actions" aria-haspopup="true" aria-expanded="false" aria-controls="moreMenu">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
+        </button>
+        <div id="moreMenu" class="menu menu-right" role="menu" hidden>
+          <button type="button" role="menuitem" id="themeToggleBtn" class="menu-item" data-with-label="1"></button>
+          <div class="menu-label eyebrow" id="skinPickerLabel">Identité visuelle</div>
+          <div class="skin-picker" role="group" aria-labelledby="skinPickerLabel">
+            <button type="button" class="skin-choice" data-skin-choice="nuit" aria-pressed="false"><span class="skin-swatch" aria-hidden="true"><span style="background:#0b131d"></span><span style="background:#17476a"></span><span style="background:#d6f43a"></span></span>Nocturne</button>
+            <button type="button" class="skin-choice" data-skin-choice="plein-air" aria-pressed="false"><span class="skin-swatch" aria-hidden="true"><span style="background:#2b7a50"></span><span style="background:#1f5bd6"></span><span style="background:#ffcf33"></span></span>Plein air</button>
+            <button type="button" class="skin-choice" data-skin-choice="score" aria-pressed="false"><span class="skin-swatch" aria-hidden="true"><span style="background:#16171b"></span><span style="background:#f1f2f4"></span><span style="background:#ff5a1f"></span></span>Tableau d'affichage</button>
+          </div>
+          <hr />
+          <button type="button" role="menuitem" id="copyTournamentLink" class="menu-item">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            <span>Partager le tournoi<small>Lien avec les équipes, poules et scores</small></span>
+          </button>
+          <hr />
+          <button type="button" role="menuitem" id="aboutBtn" class="menu-item">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <span>À propos</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ======================= NAVIGATION ======================= -->
+    <nav class="tabbar" aria-label="Navigation principale">
+      <button type="button" class="tab" data-screen-tab="preparer">
+        <span class="tab-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2.2" fill="var(--surface)"/><circle cx="16" cy="12" r="2.2" fill="var(--surface)"/><circle cx="7" cy="18" r="2.2" fill="var(--surface)"/></svg></span>
+        <span>Préparer</span>
+      </button>
+      <button type="button" class="tab" data-screen-tab="jouer">
+        <span class="tab-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="14" rx="1.5"/><line x1="12" y1="5" x2="12" y2="19"/><line x1="8.5" y1="5" x2="8.5" y2="19" stroke-width="1.2"/><line x1="15.5" y1="5" x2="15.5" y2="19" stroke-width="1.2"/></svg></span>
+        <span>Jouer</span>
+        <span class="tab-badge" id="playTabBadge" hidden></span>
+      </button>
+      <button type="button" class="tab" data-screen-tab="classement">
+        <span class="tab-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg></span>
+        <span>Classement</span>
+      </button>
+      <button type="button" class="tab" data-screen-tab="historique">
+        <span class="tab-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg></span>
+        <span>Historique</span>
+      </button>
     </nav>
-    <div class="header-actions" style="display:flex; align-items:center; gap:10px;">
-      <div id="autosaveBadge" class="save-badge btn-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="20 6 9 17 4 12"/></svg><span>Sauvegardé</span></div>
-      <button id="themeToggleBtn" class="secondary" style="font-size: 0.9rem; padding: 6px 10px;" title="Changer de thème (clair/sombre)" aria-label="Changer de thème">🌙</button>
-      <button id="copyTournamentLink" class="secondary btn-icon" style="font-size: 0.8rem; padding: 6px 12px;" type="button" title="Copier un lien de partage de ce tournoi"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span>Partager</span></button>
+
+    <main class="screens">
+      <!-- ======================= ÉCRAN PRÉPARER ======================= -->
+      <section class="screen" data-screen="preparer" aria-labelledby="titlePreparer" hidden>
+        <div class="screen-head">
+          <div>
+            <h1 id="titlePreparer">Préparer</h1>
+            <p>Équipes, poules et terrains du tournoi.</p>
+          </div>
+        </div>
+
+        <div class="prep-grid">
+          <div class="block">
+            <div class="block-head">
+              <h2>Équipes <span id="teamCountBadge" class="count-badge">0 équipe</span></h2>
+              <button type="button" id="teamsTextToggle" class="link-btn">Saisie en texte</button>
+            </div>
+            <p class="hint">Paires fixes : chaque équipe garde le même partenaire du début à la fin.</p>
+
+            <div id="teamChips" class="chips"></div>
+            <div class="add-row" id="addTeamRow">
+              <input id="addTeamInput" type="text" placeholder="Alice & Bob, puis Entrée" autocomplete="off" autocapitalize="words" enterkeyhint="done" aria-label="Équipe à ajouter, deux joueurs séparés par &amp;" />
+              <button type="button" id="addTeamBtn" class="secondary">Ajouter</button>
+            </div>
+            <textarea id="teams" rows="8" placeholder="Alice &amp; Bob&#10;Chloé &amp; David&#10;Émilie &amp; Farid" aria-label="Liste des équipes, une par ligne" hidden></textarea>
+            <p class="hint" id="teamsHint">Touchez une équipe pour régler son niveau ou la retirer.</p>
+
+            <details class="fold" id="autoFormTeamsDetails">
+              <summary>Former les équipes automatiquement</summary>
+              <div class="fold-body">
+                <div class="field">
+                  <label class="eyebrow" for="importGroupSelect">Depuis un groupe enregistré (mode Rotation)</label>
+                  <div class="group-save-row">
+                    <select id="importGroupSelect">
+                      <option value="">— Choisir un groupe enregistré —</option>
+                    </select>
+                    <button id="importGroupBtn" class="secondary" type="button">Importer</button>
+                  </div>
+                  <span class="hint">Les joueurs sont associés deux par deux, dans l'ordre du groupe.</span>
+                </div>
+
+                <div class="field">
+                  <label class="eyebrow" for="individualPlayers">Ou depuis une liste de joueurs</label>
+                  <textarea id="individualPlayers" rows="4" placeholder="Alice&#10;Bob&#10;Chloé&#10;David"></textarea>
+                  <span class="hint">Un joueur par ligne, ou séparés par des virgules. Si des niveaux sont renseignés ci-dessous, le plus fort est associé au plus faible pour équilibrer les équipes.</span>
+                </div>
+                <div id="individualPlayerLevelsList" class="level-rows"></div>
+                <button id="formPairsBtn" class="secondary" type="button">Former les paires</button>
+                <p class="hint">Dans les deux cas, les paires formées remplacent la liste d'équipes ci-dessus.</p>
+              </div>
+            </details>
+          </div>
+
+          <div class="block">
+            <h2>Poules et terrains</h2>
+            <div class="steppers">
+              <div class="stepper-box">
+                <label class="eyebrow" for="numPools">Poules</label>
+                <div class="stepper" data-min="1" data-max="16">
+                  <button type="button" class="stepper-btn" data-step="-1" aria-label="Une poule de moins">−</button>
+                  <input id="numPools" type="number" min="1" max="16" value="2" inputmode="numeric" />
+                  <button type="button" class="stepper-btn" data-step="1" aria-label="Une poule de plus">+</button>
+                </div>
+              </div>
+              <div class="stepper-box">
+                <label class="eyebrow" for="qualifiersPerPool">Qualifiés par poule</label>
+                <div class="stepper" data-min="1" data-max="8">
+                  <button type="button" class="stepper-btn" data-step="-1" aria-label="Un qualifié de moins par poule">−</button>
+                  <input id="qualifiersPerPool" type="number" min="1" max="8" value="2" inputmode="numeric" />
+                  <button type="button" class="stepper-btn" data-step="1" aria-label="Un qualifié de plus par poule">+</button>
+                </div>
+              </div>
+              <div class="stepper-box">
+                <label class="eyebrow" for="numCourts">Terrains</label>
+                <div class="stepper" data-min="1" data-max="16">
+                  <button type="button" class="stepper-btn" data-step="-1" aria-label="Un terrain de moins">−</button>
+                  <input id="numCourts" type="number" min="1" max="16" value="2" inputmode="numeric" />
+                  <button type="button" class="stepper-btn" data-step="1" aria-label="Un terrain de plus">+</button>
+                </div>
+              </div>
+            </div>
+            <p class="hint" id="formatHint"></p>
+
+            <div class="field">
+              <label class="eyebrow" for="poolAssignMode">Répartition des équipes en poules</label>
+              <select id="poolAssignMode">
+                <option value="random">Aléatoire</option>
+                <option value="seeded">Têtes de série (ordre de la liste d'équipes)</option>
+                <option value="balanced">Équilibrée selon le niveau des équipes</option>
+                <option value="manual">Manuelle (je choisis la poule de chaque équipe)</option>
+              </select>
+            </div>
+
+            <label class="field">
+              <span class="eyebrow">Noms des terrains (optionnel)</span>
+              <input id="courtNames" type="text" placeholder="Court central, Court 2…" />
+            </label>
+            <p class="hint">Chaque poule reçoit au moins un terrain dédié quand il y en a assez ; sinon les poules se partagent les terrains à tour de rôle.</p>
+          </div>
+        </div>
+
+        <p id="teamsWarning" class="msg warning" hidden></p>
+        <p id="teamsError" class="msg error" role="alert" hidden></p>
+
+        <!-- RÉPARTITION MANUELLE (mode "Manuelle" uniquement) -->
+        <section class="block" id="manualAssignSection" aria-labelledby="titleManual" hidden>
+          <h2 id="titleManual">Répartition manuelle</h2>
+          <p class="hint">Choisissez la poule de chaque équipe, puis validez.</p>
+          <div id="manualAssignList" class="level-rows"></div>
+          <button id="confirmManualAssign" type="button">Valider la répartition</button>
+        </section>
+
+        <div class="cta-bar">
+          <button type="button" id="generatePools" class="cta">Générer les poules</button>
+        </div>
+      </section>
+
+      <!-- ======================= ÉCRAN JOUER ======================= -->
+      <section class="screen" data-screen="jouer" aria-labelledby="titleJouer" hidden>
+        <div id="playEmpty" class="empty">
+          <h2>Aucun tournoi en cours</h2>
+          <p>Saisissez au moins 2 équipes, choisissez le nombre de poules et de terrains, puis générez les poules.</p>
+          <button type="button" data-goto="preparer">Préparer le tournoi</button>
+        </div>
+
+        <div id="playView" class="screen" hidden>
+          <div class="screen-head">
+            <div>
+              <h1 id="titleJouer">Jouer</h1>
+              <p id="tournamentSummary" hidden></p>
+            </div>
+          </div>
+
+          <div id="tournamentProgress" class="t-progress" aria-label="Avancement du tournoi" hidden></div>
+
+          <div class="stage-tabs" role="tablist" aria-label="Phase du tournoi">
+            <button type="button" role="tab" class="stage-tab" data-stage="poules" aria-selected="true">Poules<span class="stage-count" data-stage-count="poules" hidden></span></button>
+            <button type="button" role="tab" class="stage-tab" data-stage="finale" aria-selected="false">Phase finale<span class="stage-count" data-stage-count="finale" hidden></span></button>
+            <button type="button" role="tab" class="stage-tab" data-stage="classement" aria-selected="false" title="Matchs de classement des équipes non qualifiées">Consolante<span class="stage-count" data-stage-count="classement" hidden></span></button>
+          </div>
+
+          <!-- PROCHAINS MATCHS : tous les matchs sans score, toutes phases confondues -->
+          <details class="block next-block" id="nextMatchesSection" hidden>
+            <summary><span>Prochains matchs</span><span class="count-badge" id="nextMatchesCount"></span></summary>
+            <div id="nextMatchesContainer" class="next-matches-list"></div>
+          </details>
+
+          <!-- PHASE DE POULES -->
+          <div class="stage-panel" data-stage-panel="poules">
+            <section id="poolsSection" class="screen" aria-label="Phase de poules" hidden>
+              <div class="block-head">
+                <p class="hint">Chaque équipe affronte toutes les autres équipes de sa poule.</p>
+                <div class="head-actions">
+                  <button type="button" id="collapseAllPoolsBtn" class="secondary">Tout replier</button>
+                  <button type="button" id="expandAllPoolsBtn" class="secondary">Tout déplier</button>
+                </div>
+              </div>
+              <div id="poolsDoneCallout" class="callout" hidden>
+                <div>
+                  <strong>Poules terminées</strong>
+                  <p class="hint">Lancez la phase finale pour les qualifiés, puis la consolante pour les autres équipes.</p>
+                </div>
+                <button type="button" data-stage-go="finale">Phase finale →</button>
+              </div>
+              <div id="poolsContainer" class="pools-container"></div>
+            </section>
+          </div>
+
+          <!-- PHASE FINALE -->
+          <div class="stage-panel" data-stage-panel="finale" hidden>
+            <section class="screen" aria-label="Phase finale">
+              <div class="block-head">
+                <p class="hint">Élimination directe entre les qualifiés, mais les équipes battues continuent à jouer entre elles jusqu'à ce que chacune ait une place précise.</p>
+                <div class="head-actions">
+                  <button id="toggleBracketViewBtn" class="secondary" type="button" title="Change aussi l'affichage de la consolante">Vue arbre</button>
+                  <button id="generateFinalPhase" type="button" disabled>Générer la phase finale</button>
+                </div>
+              </div>
+              <div id="finalPhaseContainer" class="pools-container"></div>
+            </section>
+          </div>
+
+          <!-- CONSOLANTE : matchs de classement des équipes non qualifiées -->
+          <div class="stage-panel" data-stage-panel="classement" hidden>
+            <section class="screen" aria-label="Consolante">
+              <div class="block-head">
+                <p class="hint">Consolante : les équipes non qualifiées jouent elles aussi jusqu'au bout pour obtenir une place précise, à la suite de celles de la phase finale.</p>
+                <div class="head-actions">
+                  <button id="generateConsolationPhase" type="button" disabled>Générer la consolante</button>
+                </div>
+              </div>
+              <div id="consolationPhaseContainer" class="pools-container"></div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================= ÉCRAN CLASSEMENT ======================= -->
+      <section class="screen" data-screen="classement" aria-labelledby="titleClassement" hidden>
+        <div class="screen-head">
+          <div>
+            <h1 id="titleClassement">Classement</h1>
+            <p id="rankingSummary"></p>
+          </div>
+        </div>
+
+        <section id="finalRankingSection" class="screen" aria-label="Classement final" hidden>
+          <div class="block-head">
+            <h2 class="eyebrow">Classement final du tournoi</h2>
+            <div class="head-actions">
+              <button id="exportFinalRankingPng" class="secondary btn-icon" type="button">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>Image</span>
+              </button>
+            </div>
+          </div>
+          <div id="finalRankingContainer" class="capture"></div>
+        </section>
+
+        <section class="screen" id="poolStandingsSection" aria-labelledby="titlePoolStandings" hidden>
+          <h2 id="titlePoolStandings" class="eyebrow">Classements de poule</h2>
+          <p class="hint">En cas d'égalité : victoires, puis écart de points, puis points marqués. Les équipes qualifiées sont mises en avant. Le crayon renomme une équipe, le panneau la déclare forfait.</p>
+          <div id="poolStandingsContainer" class="pool-standings-container"></div>
+        </section>
+
+        <div class="empty ranking-empty">
+          <h2>Pas encore de classement</h2>
+          <p>Les classements de poule apparaissent dès que les poules sont générées.</p>
+          <button type="button" data-goto="preparer" class="secondary">Préparer le tournoi</button>
+        </div>
+      </section>
+
+      <!-- ======================= ÉCRAN HISTORIQUE ======================= -->
+      <section class="screen" data-screen="historique" aria-labelledby="titleHistorique" hidden>
+        <div class="screen-head">
+          <div>
+            <h1 id="titleHistorique">Historique</h1>
+            <p>Tournois enregistrés sur cet appareil.</p>
+          </div>
+          <div class="head-actions">
+            <button type="button" id="clearTournamentHistoryBtn" class="secondary danger">Vider l'historique</button>
+          </div>
+        </div>
+
+        <article class="h-card live" id="currentTournamentCard" hidden>
+          <div class="h-top"><span class="h-name">Tournoi en cours</span><span class="live-pill">En cours</span></div>
+          <div class="progress"><i id="currentTournamentProgress"></i></div>
+          <div class="h-meta" id="currentTournamentMeta"></div>
+          <div class="history-actions">
+            <button type="button" data-goto="jouer">Reprendre</button>
+            <button type="button" id="saveTournamentToHistory" class="secondary">Enregistrer dans l'historique</button>
+          </div>
+        </article>
+
+        <div id="tournamentHistoryList" class="history-grid"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ======================= FICHE ÉQUIPE ======================= -->
+  <div id="teamSheet" class="sheet-layer" hidden>
+    <div class="sheet-backdrop" data-close-sheet></div>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="teamSheetTitle">
+      <div class="grab" aria-hidden="true"></div>
+      <h3 id="teamSheetTitle" tabindex="-1"></h3>
+      <div class="field">
+        <div class="block-head"><span class="eyebrow" id="teamSheetLevelLabel">Niveau de l'équipe</span><strong class="level-text" id="teamSheetLevelText"></strong></div>
+        <div class="levels" id="teamSheetLevels" role="group" aria-labelledby="teamSheetLevelLabel"></div>
+        <span class="hint">Sert à la répartition « Équilibrée selon le niveau ». Au niveau 3, l'équipe ne pèse pas sur l'équilibrage.</span>
+      </div>
+      <div class="sheet-actions">
+        <button type="button" id="teamSheetRemove" class="secondary danger">Retirer l'équipe</button>
+        <button type="button" data-close-sheet>Terminé</button>
+      </div>
     </div>
-  </header>
-
-  <main class="container grid">
-    <!-- RESUME CHIFFRE : vue d'ensemble immédiate ("24 équipes · 6 poules ·
-         8 terrains"), utile pour ne pas avoir à tout parcourir pour savoir
-         où on en est à grande échelle. Masqué tant qu'aucune poule n'existe
-         (voir renderTournamentProgress). -->
-    <div id="tournamentSummary" class="subtle" style="grid-column: 1 / -1; font-size: 0.85rem; margin-top: -8px;" hidden></div>
-
-    <!-- BARRE DE PROGRESSION DU TOURNOI : vue d'ensemble Poules → Phase finale
-         (+ Matchs de classement, en parallèle) → Classement final. Masquée
-         tant qu'aucune poule n'existe (voir renderTournamentProgress). -->
-    <div id="tournamentProgress" class="session-stepper" style="grid-column: 1 / -1;" hidden></div>
-
-    <!-- PROCHAINS MATCHS : liste consolidée de tous les matchs (poules et
-         brackets confondus) sans score encore saisi, pour savoir en un coup
-         d'œil quoi faire ensuite sans naviguer entre les sections. Masquée
-         tant qu'il n'y a rien à jouer (voir renderNextMatches). -->
-    <section class="card" id="nextMatchesSection" style="grid-column: 1 / -1;" hidden>
-      <h2>👉 Prochains matchs</h2>
-      <div id="nextMatchesContainer" class="next-matches-list"></div>
-    </section>
-
-    <!-- SECTION EQUIPES -->
-    <section class="card">
-      <details id="teamsDetails" open>
-      <summary class="card-summary-h2">⚔️ Équipes du tournoi</summary>
-      <p class="subtle" style="font-size: 0.85rem; margin-top:-8px; margin-bottom: 12px;">
-        Le mode Tournoi joue en paires fixes : chaque équipe garde le même partenaire du début à la fin, contrairement au mode Rotation qui varie les partenaires à chaque tour.
-      </p>
-
-      <label class="label label-with-badge" for="teams">
-        <span>Équipes (une paire par ligne, ex: "Alice &amp; Bob")</span>
-        <span id="teamCountBadge" class="count-badge">0 équipe</span>
-      </label>
-      <textarea id="teams" rows="6" placeholder="Alice &amp; Bob&#10;Chloé &amp; David&#10;Émilie &amp; Farid"></textarea>
-      <div id="teamsListView" class="editable-list-view" hidden></div>
-      <div class="actions-secondary" style="margin-top: 8px;">
-        <button type="button" id="teamsListToggle" class="secondary" style="font-size: 0.8rem; padding: 6px 12px;">📝 Vue liste</button>
-        <button type="button" id="teamsListAdd" class="secondary" style="font-size: 0.8rem; padding: 6px 12px;" hidden>➕ Ajouter une ligne</button>
-      </div>
-
-      <!-- FORMATION AUTOMATIQUE DES EQUIPES -->
-      <details class="details" id="autoFormTeamsDetails" style="margin-top: 10px;">
-        <summary>🎲 Générer les équipes automatiquement</summary>
-
-        <p class="subtle" style="font-size: 0.82rem; margin: 6px 0 8px;">Depuis un groupe de joueurs déjà enregistré (mode Rotation) :</p>
-        <div class="group-save-row">
-          <select id="importGroupSelect">
-            <option value="">— Choisir un groupe enregistré —</option>
-          </select>
-          <button id="importGroupBtn" class="secondary" type="button">📥 Importer (paires successives)</button>
-        </div>
-
-        <p class="subtle" style="font-size: 0.82rem; margin: 14px 0 8px;">Ou depuis une liste libre de joueurs individuels (un par ligne, ou séparés par des virgules) :</p>
-        <textarea id="individualPlayers" rows="4" placeholder="Alice&#10;Bob&#10;Chloé&#10;David"></textarea>
-
-        <!-- NIVEAUX DES JOUEURS INDIVIDUELS (OPTIONNEL) -->
-        <p class="subtle" style="font-size: 0.78rem; margin: 10px 0 6px;">
-          Niveau par joueur (optionnel) : s'il est renseigné, "Former des paires" associe le plus fort avec le plus faible pour équilibrer les équipes formées, plutôt que d'associer au hasard.
-        </p>
-        <div id="individualPlayerLevelsList" class="presence-grid">
-          <!-- Rempli dynamiquement en JS -->
-        </div>
-
-        <div class="actions-secondary" style="margin-top: 8px;">
-          <button id="formPairsBtn" class="secondary" type="button">🎲 Former des paires aléatoirement</button>
-        </div>
-
-        <p class="subtle" style="font-size: 0.78rem; margin-top: 10px;">
-          Dans les deux cas, les paires formées remplacent le champ "Équipes" ci-dessus — à ajuster ensuite si besoin.
-        </p>
-      </details>
-
-      <!-- NIVEAUX DES EQUIPES (OPTIONNEL) -->
-      <details class="details" id="teamLevelsDetails" style="margin-top: 10px;">
-        <summary>🎚️ Niveaux des Équipes (Optionnel)</summary>
-        <p class="subtle" style="font-size: 0.82rem; margin: 6px 0 12px;">
-          Renseignez un niveau par équipe pour répartir les poules de façon équilibrée (mode "Équilibré par niveau" ci-dessous). Si vous ne touchez à rien ici, les autres modes de répartition ne sont pas affectés.
-        </p>
-        <div id="teamLevelsList" class="presence-grid">
-          <!-- Rempli dynamiquement en JS -->
-        </div>
-      </details>
-
-      <p id="teamsWarning" class="warning" hidden></p>
-      <p id="teamsError" class="error" hidden></p>
-      </details>
-    </section>
-
-    <!-- SECTION CONFIG POULES -->
-    <section class="card">
-      <details id="poolsConfigDetails" open>
-      <summary class="card-summary-h2">🔧 Configuration des poules</summary>
-
-      <div class="row">
-        <div>
-          <label class="label" for="numPools">👥 Nombre de poules</label>
-          <div class="stepper" data-min="1" data-max="16">
-            <button type="button" class="stepper-btn" data-step="-1" aria-label="Diminuer le nombre de poules">−</button>
-            <input id="numPools" type="number" min="1" max="16" value="2" />
-            <button type="button" class="stepper-btn" data-step="1" aria-label="Augmenter le nombre de poules">+</button>
-          </div>
-        </div>
-        <div>
-          <label class="label" for="qualifiersPerPool">🎟️ Qualifiés par poule</label>
-          <div class="stepper" data-min="1" data-max="8">
-            <button type="button" class="stepper-btn" data-step="-1" aria-label="Diminuer le nombre de qualifiés">−</button>
-            <input id="qualifiersPerPool" type="number" min="1" max="8" value="2" />
-            <button type="button" class="stepper-btn" data-step="1" aria-label="Augmenter le nombre de qualifiés">+</button>
-          </div>
-        </div>
-        <div>
-          <label class="label" for="numCourts">🏟️ Nombre de terrains disponibles</label>
-          <div class="stepper" data-min="1" data-max="16">
-            <button type="button" class="stepper-btn" data-step="-1" aria-label="Diminuer le nombre de terrains">−</button>
-            <input id="numCourts" type="number" min="1" max="16" value="2" />
-            <button type="button" class="stepper-btn" data-step="1" aria-label="Augmenter le nombre de terrains">+</button>
-          </div>
-        </div>
-      </div>
-
-      <label class="label" for="poolAssignMode" style="margin-top: 14px;">🔀 Répartition des équipes en poules</label>
-      <select id="poolAssignMode">
-        <option value="random">Aléatoire</option>
-        <option value="seeded">Tête de série (l'ordre de la liste ci-dessus = le classement des têtes de série)</option>
-        <option value="balanced">Équilibré par niveau (voir "Niveaux des Équipes" ci-dessus)</option>
-        <option value="manual">Manuelle (je choisis moi-même la poule de chaque équipe)</option>
-      </select>
-
-      <p class="subtle" style="font-size: 0.8rem; margin-top: 14px;">
-        Chaque poule reçoit au moins 1 terrain dédié dès qu'il y en a assez pour ça (les terrains en trop vont aux poules les plus grandes, pour paralléliser davantage) — sinon les poules se partagent les terrains disponibles, à tour de rôle.
-      </p>
-      <label class="label" for="courtNames">🏷️ Noms des terrains (optionnel, séparés par des virgules — sinon "Terrain 1", "Terrain 2"...)</label>
-      <input id="courtNames" type="text" placeholder="ex: Court Central, Court 1, Terrain A" />
-
-      <div class="actions" style="margin-top: 16px;">
-        <button id="generatePools" class="btn-primary-lg">⚡ Générer les poules</button>
-      </div>
-      </details>
-    </section>
-
-    <!-- REPARTITION MANUELLE (n'apparaît qu'en mode "Manuelle") -->
-    <section class="card" id="manualAssignSection" style="grid-column: 1 / -1;" hidden>
-      <h2>✋ Répartition manuelle</h2>
-      <p class="subtle" style="font-size: 0.85rem;">Choisissez la poule de chaque équipe, puis validez.</p>
-      <div id="manualAssignList" class="manual-assign-list"></div>
-      <div class="actions" style="margin-top: 16px;">
-        <button id="confirmManualAssign" class="btn-primary-lg">✅ Valider la répartition</button>
-      </div>
-    </section>
-
-    <!-- PHASE DE POULES : calendrier + saisie des scores -->
-    <section class="card" id="poolsSection" style="grid-column: 1 / -1;" hidden>
-      <div class="headerRow">
-        <h2>👥 Phase de poules</h2>
-        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-          <button type="button" id="collapseAllPoolsBtn" class="secondary" style="font-size: 0.8rem; padding: 6px 12px;">🔽 Tout replier</button>
-          <button type="button" id="expandAllPoolsBtn" class="secondary" style="font-size: 0.8rem; padding: 6px 12px;">🔼 Tout déplier</button>
-        </div>
-      </div>
-      <div id="poolsContainer" class="pools-container"></div>
-    </section>
-
-    <!-- CLASSEMENTS DE POULE -->
-    <section class="card" id="poolStandingsSection" style="grid-column: 1 / -1;" hidden>
-      <div class="headerRow">
-        <h2>🏆 Classements de poule</h2>
-      </div>
-      <p class="subtle" style="font-size: 0.85rem;">
-        En cas d'égalité : 1. victoires → 2. différentiel de points → 3. points marqués. Les équipes qualifiées pour la phase finale sont surlignées.
-      </p>
-      <div id="poolStandingsContainer" class="pool-standings-container"></div>
-    </section>
-
-    <!-- PHASE FINALE -->
-    <section class="card" style="grid-column: 1 / -1;">
-      <div class="headerRow">
-        <h2>🥇 Phase finale</h2>
-        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-          <button id="toggleBracketViewBtn" class="secondary" type="button" style="font-size: 0.8rem; padding: 6px 12px;" title="Change aussi l'affichage des matchs de classement">🌳 Vue arbre</button>
-          <button id="generateFinalPhase" class="secondary" type="button" disabled>⚡ Générer la phase finale</button>
-        </div>
-      </div>
-      <p class="subtle" style="font-size: 0.85rem;">
-        À partir des équipes qualifiées de chaque poule (tous les matchs de poule doivent être terminés). Élimination directe, mais les équipes battues continuent à jouer entre elles pour se classer, jusqu'à ce que tout le monde ait une place précise — personne ne s'arrête après une seule défaite.
-      </p>
-      <div id="finalPhaseContainer" class="pools-container"></div>
-    </section>
-
-    <!-- MATCHS DE CLASSEMENT (équipes non qualifiées) -->
-    <section class="card" style="grid-column: 1 / -1;">
-      <div class="headerRow">
-        <h2>🥈 Matchs de classement</h2>
-        <button id="generateConsolationPhase" class="secondary" type="button" disabled>⚡ Générer les matchs de classement</button>
-      </div>
-      <p class="subtle" style="font-size: 0.85rem;">
-        Pour les équipes NON qualifiées : même principe que la phase finale, pour qu'elles continuent elles aussi à jouer et obtiennent une place précise (à la suite de celles de la phase finale) plutôt que de s'arrêter à la fin des poules.
-      </p>
-      <div id="consolationPhaseContainer" class="pools-container"></div>
-    </section>
-
-    <!-- CLASSEMENT FINAL DU TOURNOI -->
-    <section class="card" id="finalRankingSection" style="grid-column: 1 / -1;" hidden>
-      <div class="headerRow">
-        <h2>🏆 Classement final du tournoi</h2>
-        <button id="exportFinalRankingPng" class="secondary btn-icon" type="button"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>Exporter le classement</span></button>
-      </div>
-      <div id="finalRankingContainer"></div>
-    </section>
-
-    <!-- HISTORIQUE DES TOURNOIS -->
-    <section class="card" style="grid-column: 1 / -1;">
-      <div class="headerRow">
-        <h2>📜 Historique des tournois</h2>
-        <div class="actions-secondary" style="margin: 0;">
-          <button id="saveTournamentToHistory" class="secondary btn-icon" type="button" style="font-size: 0.8rem; padding: 6px 12px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg><span>Enregistrer ce tournoi</span></button>
-          <button id="clearTournamentHistoryBtn" class="secondary" type="button" style="font-size: 0.8rem; padding: 6px 12px;">🗑️ Vider l'historique</button>
-        </div>
-      </div>
-      <p class="subtle" style="font-size: 0.85rem;">
-        Sauvegarde manuelle (distincte de la sauvegarde automatique) : utile pour retrouver un tournoi une fois qu'un nouveau a été généré à sa place.
-      </p>
-      <div id="tournamentHistoryList" class="history-grid">
-        <p class="subtle">Aucun tournoi enregistré pour le&nbsp;moment.</p>
-      </div>
-    </section>
-  </main>
-
-  <!-- BOUTON FLOTTANT "REVENIR À L'ÉTAPE EN COURS" (masqué tant qu'elle est
-       déjà visible à l'écran, ou qu'il n'y a rien en cours) -->
-  <button id="scrollToActiveBtn" class="fab-scroll-active" type="button" title="Revenir à l'étape en cours" aria-label="Revenir à l'étape en cours" hidden>
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
-  </button>
-
-  <footer class="container subtle footer">
-    <p>JF Pickleball — Mode Tournoi (poules &amp; phase finale) · <button type="button" id="aboutBtn" class="footer-link">ℹ️ À propos</button></p>
-  </footer>
+  </div>
 
   <!-- MODALE GENERIQUE (remplace confirm/alert/prompt natifs du navigateur) -->
   <div id="modalOverlay" class="modal-overlay" hidden>
@@ -307,8 +399,8 @@
       </div>
       <div class="modal-actions">
         <button type="button" id="modalCancelBtn" class="secondary">Annuler</button>
-        <button type="button" id="modalDownloadBtn" class="secondary" hidden>📥 Télécharger</button>
-        <button type="button" id="modalShareBtn" class="secondary" hidden>📤 Partager</button>
+        <button type="button" id="modalDownloadBtn" class="secondary" hidden>Télécharger</button>
+        <button type="button" id="modalShareBtn" class="secondary" hidden>Partager</button>
         <button type="button" id="modalConfirmBtn">Confirmer</button>
       </div>
     </div>
@@ -320,13 +412,14 @@
   <script src="js/vendor/lz-string.min.js"></script>
   <script src="js/vendor/html2canvas.min.js"></script>
 
-  <!-- Modules partagés avec index.html : modale générique, thème clair/sombre
-       et câblage des steppers (+/- sur "Nombre de poules", etc.). -->
+  <!-- Modules partagés avec index.html : modale, thème/identité visuelle,
+       steppers et boutons de score, toast, hors ligne, écrans et menus. -->
   <script src="js/shared/version.js"></script>
   <script src="js/shared/modal.js"></script>
   <script src="js/shared/theme.js"></script>
   <script src="js/shared/ui-controls.js"></script>
   <script src="js/shared/pwa.js"></script>
+  <script src="js/shared/shell.js"></script>
 
   <!-- Mode Tournoi : scripts classiques (pas type="module"), chargés dans l'ordre. -->
   <script src="js/tournament/dom-elements.js"></script>
@@ -334,6 +427,8 @@
   <script src="js/tournament/render.js"></script>
   <script src="js/tournament/state.js"></script>
   <script src="js/tournament/events.js"></script>
+  <script src="js/tournament/teams-ui.js"></script>
+  <script src="js/tournament/navigation.js"></script>
   <script src="js/tournament/init.js"></script>
 </body>
 </html>

@@ -238,21 +238,9 @@ btnGenerate.addEventListener("click", () => {
   });
 });
 
-// Boutons −/+ autour de chaque score : modifient le champ puis redéclenchent
-// "input", exactement comme une saisie au clavier (enregistrement, gagnant,
-// classement... passent tous par le listener ci-dessus).
-elSchedule.addEventListener("click", (e) => {
-  const btn = e.target.closest(".score-step");
-  if (!btn) return;
-  const input = btn.closest(".score-ctl")?.querySelector(".score-input");
-  if (!input) return;
-
-  const delta = parseInt(btn.dataset.delta, 10) || 0;
-  const current = parseInt(input.value, 10);
-  const next = isNaN(current) ? Math.max(0, delta) : Math.min(99, Math.max(0, current + delta));
-  input.value = next;
-  input.dispatchEvent(new Event("input", { bubbles: true }));
-});
+// Boutons −/+ autour de chaque score : voir js/shared/ui-controls.js (commun
+// aux deux pages). Ils modifient le champ puis redéclenchent "input", donc
+// passent par le listener ci-dessus comme une saisie au clavier.
 
 // Navigation clavier rapide (Entrée -> champ de score suivant) : voir
 // js/shared/ui-controls.js, module chargé sur les deux pages.

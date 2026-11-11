@@ -33,7 +33,7 @@ let saveBadgePulseTimer = null;
 
 /**
  * Fait "pulser" le badge de sauvegarde (bref pic d'opacité, voir la classe
- * .save-badge-pulse dans styles.css) au lieu de changer son opacité en dur à
+ * .save-badge-pulse dans app.css) au lieu de changer son opacité en dur à
  * chaque appel : un debounce (clearTimeout/setTimeout) évite qu'il clignote à
  * chaque frappe lors d'une saisie rapide — il ne redescend au repos qu'une
  * fois la saisie terminée.

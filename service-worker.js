@@ -23,7 +23,7 @@
 // de ce fichier suffit à déclencher la mise à jour du service worker ; pensez
 // alors à incrémenter CACHE_VERSION pour repartir d'un cache propre.
 
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 3;
 const CACHE_NAME = `pb-app-v${CACHE_VERSION}`;
 
 const PRECACHE_URLS = [
@@ -37,8 +37,6 @@ const PRECACHE_URLS = [
 
   "css/app.css",
   "css/fonts.css",
-  "css/styles.css",
-  "css/tournament.css",
 
   "fonts/barlow-400.woff2",
   "fonts/barlow-500.woff2",
@@ -59,6 +57,7 @@ const PRECACHE_URLS = [
   "js/shared/theme.js",
   "js/shared/ui-controls.js",
   "js/shared/pwa.js",
+  "js/shared/shell.js",
 
   "js/app/algorithm.js",
   "js/app/dom-elements.js",
@@ -75,6 +74,8 @@ const PRECACHE_URLS = [
   "js/tournament/state.js",
   "js/tournament/render.js",
   "js/tournament/events.js",
+  "js/tournament/teams-ui.js",
+  "js/tournament/navigation.js",
   "js/tournament/init.js",
 ];
 

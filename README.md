@@ -52,6 +52,17 @@ L'application est organisée autour des moments d'une session. Sur téléphone, 
 
 En haut de l'écran, le sélecteur **Rotation ▾** permet de passer au mode **Tournoi**, et le menu **⋮** regroupe les actions ponctuelles : thème clair/sombre, identité visuelle, copie et partage, « À propos » et réinitialisation.
 
+### Mode Tournoi
+
+Le mode **Tournoi** (sélecteur **Rotation ▾** en haut de l'écran) joue en équipes fixes, avec la même organisation en quatre écrans :
+
+| Écran | Rôle |
+|---|---|
+| **Préparer** | Équipes en pastilles (« Alice & Bob », puis Entrée), niveau de chaque équipe dans sa fiche, formation automatique des paires depuis un groupe ou une liste de joueurs, nombre de poules, de qualifiés et de terrains, mode de répartition. |
+| **Jouer** | Avancement du tournoi et trois onglets de phase : **Poules**, **Phase finale** (élimination directe, chacun joue jusqu'à obtenir une place précise, en vue liste ou arbre) et **Consolante** (même principe pour les équipes non qualifiées). Chaque onglet indique les matchs restant à jouer ; « Prochains matchs » les regroupe toutes phases confondues. |
+| **Classement** | Classement final avec podium (dès que la phase finale ou la consolante est résolue), puis classements de poule, où l'on peut renommer une équipe ou la déclarer forfait. |
+| **Historique** | Le tournoi en cours et les tournois enregistrés. |
+
 ---
 
 ## Préparer une session

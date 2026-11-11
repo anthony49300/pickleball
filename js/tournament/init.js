@@ -41,4 +41,8 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   updateTeamCountBadge();
+  renderIndividualPlayerLevels();
+
+  // Écran et phase à afficher (voir navigation.js), une fois l'état restauré.
+  initTournamentNavigation();
 });

@@ -8,10 +8,8 @@
 const TOURNAMENT_STORAGE_KEY = "pb_tournament_autosave";
 const TOURNAMENT_HISTORY_KEY = "pb_tournament_history";
 
-// Icônes du badge de sauvegarde (voir autoSaveTournamentState) : SVG inline,
-// même logique que les icônes "œil" (rendu identique partout, currentColor
-// suit la couleur du badge — vert en cas de succès, rouge en cas d'erreur).
-const ICON_CHECK_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="20 6 9 17 4 12"/></svg>';
+// Icône du badge de sauvegarde en cas d'échec (voir autoSaveTournamentState) :
+// SVG inline, currentColor suit la couleur d'erreur du badge.
 const ICON_ALERT_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
 let tournamentSaveBadgePulseTimer = null;
 
@@ -36,7 +34,7 @@ function getTournamentState() {
 
 /**
  * Sauvegarde l'état courant dans localStorage et met à jour le badge d'en-tête :
- * bref pic d'opacité (.save-badge-pulse, voir styles.css) plutôt qu'un
+ * bref pic d'opacité (.save-badge-pulse, voir app.css) plutôt qu'un
  * changement d'opacité en dur — un debounce (clearTimeout/setTimeout) évite
  * qu'il clignote à chaque frappe lors d'une saisie rapide. En cas d'échec
  * (localStorage indisponible), le badge reste affiché en rouge tant que le
@@ -47,7 +45,7 @@ function autoSaveTournamentState() {
     localStorage.setItem(TOURNAMENT_STORAGE_KEY, JSON.stringify(getTournamentState()));
     if (elAutosaveBadge) {
       elAutosaveBadge.classList.remove("save-badge-error");
-      elAutosaveBadge.innerHTML = `${ICON_CHECK_SVG}<span>Sauvegardé</span>`;
+      elAutosaveBadge.innerHTML = `<i aria-hidden="true"></i><span>Enregistré</span>`;
       elAutosaveBadge.classList.add("save-badge-pulse");
       clearTimeout(tournamentSaveBadgePulseTimer);
       tournamentSaveBadgePulseTimer = setTimeout(() => {
@@ -131,7 +129,7 @@ function applyTournamentState(state) {
   // préférence chargée (sinon il resterait sur son libellé par défaut après
   // un rechargement, en décalage avec la vue réellement affichée ci-dessus).
   if (btnToggleBracketView) {
-    btnToggleBracketView.textContent = state.tournament?.bracketViewMode === "tree" ? "📋 Vue liste" : "🌳 Vue arbre";
+    btnToggleBracketView.textContent = state.tournament?.bracketViewMode === "tree" ? "Vue liste" : "Vue arbre";
   }
 }
 
@@ -212,23 +210,21 @@ function saveTournamentToHistory() {
  */
 function renderTournamentHistory(history = getTournamentHistory()) {
   if (!elTournamentHistoryList) return;
+  const btnClear = document.getElementById("clearTournamentHistoryBtn");
+  if (btnClear) btnClear.disabled = !history.length;
   if (!history.length) {
-    elTournamentHistoryList.innerHTML = `<p class="subtle">Aucun tournoi enregistré pour le&nbsp;moment.</p>`;
+    elTournamentHistoryList.innerHTML = `<p class="subtle">Aucun tournoi enregistré pour l'instant. Utilisez « Enregistrer dans l'historique » sur le tournoi en cours pour le retrouver ici.</p>`;
     return;
   }
 
   elTournamentHistoryList.innerHTML = history.map(item => `
-    <div class="history-card">
-      <div>
-        <h4>${escapeHtml(item.date)}</h4>
-        <div class="subtle" style="font-size: 0.8rem; margin-top: 4px;">
-          ⚔️ ${item.teamsCount} équipe${item.teamsCount > 1 ? "s" : ""} · 👥 ${item.numPools} poule${item.numPools > 1 ? "s" : ""}
-        </div>
-      </div>
+    <article class="history-card">
+      <div class="h-top"><span class="h-name">${escapeHtml(item.date)}</span></div>
+      <div class="h-meta"><span><b>${item.teamsCount}</b> équipe${item.teamsCount > 1 ? "s" : ""}</span><span><b>${item.numPools}</b> poule${item.numPools > 1 ? "s" : ""}</span></div>
       <div class="history-actions">
-        <button class="secondary load-tournament-hist-btn" data-id="${item.id}">Charger</button>
-        <button class="secondary del-tournament-hist-btn" data-id="${item.id}" style="color: var(--danger);">Supprimer</button>
+        <button type="button" class="secondary load-tournament-hist-btn" data-id="${item.id}">Charger</button>
+        <button type="button" class="secondary danger del-tournament-hist-btn" data-id="${item.id}">Supprimer</button>
       </div>
-    </div>
+    </article>
   `).join("");
 }
