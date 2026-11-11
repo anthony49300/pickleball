@@ -181,8 +181,14 @@ elModalOverlay.addEventListener("click", (e) => {
  */
 if (btnAbout) {
   btnAbout.addEventListener("click", () => {
+    // Informations d'affichage, utiles pour diagnostiquer un problème de taille
+    // ou de mise en page sur un appareil précis : largeur de mise en page vue
+    // par la page, taille de l'écran, zoom du navigateur et densité de pixels.
+    const vv = window.visualViewport;
+    const zoom = vv ? Math.round(vv.scale * 100) : 100;
+    const display = `Affichage : ${document.documentElement.clientWidth} × ${window.innerHeight} px · écran ${screen.width} × ${screen.height} · zoom ${zoom} % · densité ${(window.devicePixelRatio || 1).toFixed(2)}`;
     alertModal(
-      `JF Pickleball — version ${APP_VERSION}\nModes Rotation & Tournoi.`,
+      `JF Pickleball — version ${APP_VERSION}\nModes Rotation & Tournoi.\n\n${display}`,
       { title: "À propos", iconHtml: ABOUT_ICON_SVG }
     );
   });

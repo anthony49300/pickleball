@@ -987,13 +987,17 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
 .sheet h3:focus { outline: none; }
 .sheet-actions { display: flex; justify-content: space-between; gap: 10px; }
 
+/* Centré sur toute la largeur (left/right + marges auto) plutôt qu'avec
+   left: 50% + translate, qui limitait un message long à la moitié de l'écran. */
 .toast {
   position: fixed;
-  left: 50%;
+  left: 16px;
+  right: 16px;
   bottom: calc(var(--tabbar-h) + 24px + env(safe-area-inset-bottom, 0px));
   z-index: 70;
-  max-width: calc(100vw - 32px);
-  transform: translateX(-50%);
+  width: fit-content;
+  max-width: 560px;
+  margin-inline: auto;
   padding: 10px 16px;
   border-radius: 14px;
   text-align: center;
@@ -1004,7 +1008,7 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
   box-shadow: 0 10px 24px -10px var(--shadow);
   animation: toast-in 0.2s ease-out;
 }
-@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px); } }
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
 
 .modal-overlay {
   position: fixed;
