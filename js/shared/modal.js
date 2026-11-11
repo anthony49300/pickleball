@@ -8,13 +8,10 @@
 // toute page qui inclut le balisage de la modale (voir index.html, section
 // "MODALE GENERIQUE") et souhaite utiliser confirmModal/alertModal/etc.
 
-// Reprend le logo "balle" de l'en-tête (voir index.html/tournoi.html, <h1>),
-// pour la modale "À propos" (voir plus bas) : fill="currentColor" plutôt
-// qu'une couleur fixe, pour suivre --pickle-yellow (via .modal-icon svg dans
-// styles.css) qui diffère déjà entre les deux pages (vert-jaune en Rotation,
-// doré en Tournoi) — sans ça, cette icône aurait une couleur figée, fausse
-// sur l'une des deux pages.
-const ABOUT_ICON_SVG = '<svg width="40" height="40" viewBox="0 0 100 100" aria-hidden="true" focusable="false"><circle cx="50" cy="50" r="45" fill="currentColor"/><circle cx="35" cy="35" r="5" fill="#0a0f18"/><circle cx="65" cy="35" r="5" fill="#0a0f18"/><circle cx="50" cy="50" r="5" fill="#0a0f18"/><circle cx="35" cy="65" r="5" fill="#0a0f18"/><circle cx="65" cy="65" r="5" fill="#0a0f18"/></svg>';
+// Reprend le logo "balle" de la barre du haut (voir index.html/tournoi.html)
+// pour la modale "À propos" (voir plus bas) : couleurs de la balle de
+// l'identité visuelle en cours (variables --ball et --ball-dot, css/app.css).
+const ABOUT_ICON_SVG = '<svg width="40" height="40" viewBox="0 0 100 100" aria-hidden="true" focusable="false"><circle cx="50" cy="50" r="45" fill="var(--ball)"/><circle cx="35" cy="35" r="5" fill="var(--ball-dot)"/><circle cx="65" cy="35" r="5" fill="var(--ball-dot)"/><circle cx="50" cy="50" r="5" fill="var(--ball-dot)"/><circle cx="35" cy="65" r="5" fill="var(--ball-dot)"/><circle cx="65" cy="65" r="5" fill="var(--ball-dot)"/></svg>';
 
 const elModalOverlay = document.getElementById("modalOverlay");
 const elModalIcon = document.getElementById("modalIcon");
@@ -174,8 +171,7 @@ elModalOverlay.addEventListener("click", (e) => {
 });
 
 /**
- * Bouton "À propos" du pied de page (#aboutBtn, discret exprès — voir
- * .footer-link dans styles.css) : affiche juste le numéro de version
+ * Bouton "À propos" du menu ⋮ (#aboutBtn) : affiche juste le numéro de version
  * (APP_VERSION, voir js/shared/version.js), sans rien d'autre à construire —
  * réutilise alertModal() telle quelle.
  */

@@ -17,6 +17,10 @@ const ICON_EYE_OFF_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="
 // Rotation, voir LEVEL_LABELS dans js/app/form-and-render.js).
 const TEAM_LEVEL_LABELS = { 1: "Débutant", 2: "Occasionnel", 3: "Intermédiaire", 4: "Avancé", 5: "Expert" };
 
+// Icônes des actions "Renommer" et "Forfait" (classements de poule).
+const ICON_EDIT_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
+const ICON_FORFEIT_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>';
+
 /**
  * Met à jour le badge "X équipe(s)" à côté du champ de saisie, et la liste
  * des niveaux par équipe (voir renderTeamLevelsList) : les deux dépendent du
@@ -26,6 +30,8 @@ function updateTeamCountBadge() {
   const { teams } = parseTeams(elTeams.value);
   elTeamCountBadge.textContent = `${teams.length} équipe${teams.length > 1 ? "s" : ""}`;
   renderTeamLevelsList(teams, window.__PT_TEAM_LEVELS__);
+  // Pastilles d'équipe de l'écran Préparer (voir teams-ui.js).
+  renderTeamChips();
 }
 
 /**
@@ -134,6 +140,7 @@ function renderManualAssignList(teams, numPools, currentAssignment) {
  * @param {Set<string>} hiddenMatchKeys
  */
 function wrapHideableMatch(hideKey, label, innerHtml, hiddenMatchKeys) {
+  label = label.replace(" vs ", " contre ");
   const isHidden = !!hiddenMatchKeys?.has(hideKey);
   return `
     <div class="match-wrapper ${isHidden ? "match-hidden" : ""}">
@@ -145,10 +152,86 @@ function wrapHideableMatch(hideKey, label, innerHtml, hiddenMatchKeys) {
 }
 
 /**
- * Affiche le calendrier de chaque poule avec les champs de saisie des scores.
- * Reprend exactement le visuel "terrain de pickleball" du mode Rotation
- * (mêmes classes : match-card, court-badge, team-score, team, vs, score-input)
- * pour une apparence cohérente entre les deux modes.
+ * Carte d'un match (poule ou bracket), même format que le mode Rotation (voir
+ * buildMatchCard dans js/app/form-and-render.js et css/app.css) : bandeau
+ * "terrain", puis une ligne par équipe avec ses boutons −/+ autour du champ
+ * de score. Les attributs data-* des champs sont fournis par l'appelant : ce
+ * sont eux que lisent les listeners de saisie (events.js), inchangés.
+ * L'état visuel (gagnant, égalité...) est posé par paintScoreCard.
+ * @param {Object} o
+ * @param {string} o.courtLabel - déjà échappé
+ * @param {string} o.nameA
+ * @param {string} o.nameB
+ * @param {*} o.scoreA
+ * @param {*} o.scoreB
+ * @param {string} o.inputClass - classes du champ de score
+ * @param {string} o.dataAttrs - attributs data-* communs aux deux champs
+ * @param {boolean} [o.readonly] - match déjà joué (historique de bracket)
+ * @param {boolean} [o.forfeit] - résultat automatique (forfait)
+ */
+function buildTournamentMatchCard({ courtLabel, nameA, nameB, scoreA, scoreB, inputClass, dataAttrs, readonly = false, forfeit = false }) {
+  const row = (name, side, value) => {
+    const label = escapeHtml(name);
+    const minus = readonly ? "" : `<button type="button" class="score-step" data-delta="-1" tabindex="-1" aria-label="Retirer un point à ${label}">−</button>`;
+    const plus = readonly ? "" : `<button type="button" class="score-step" data-delta="1" tabindex="-1" aria-label="Ajouter un point à ${label}">+</button>`;
+    return `
+      <div class="team-row">
+        <div class="team-names"><span>${label}</span><span class="win-tag">Gagnant</span></div>
+        <div class="score-ctl${readonly ? " is-readonly" : ""}">
+          ${minus}
+          <input type="number" class="${inputClass}" min="0" max="99" inputmode="numeric" placeholder="–" ${dataAttrs} data-side="${side}" ${readonly ? "readonly" : ""} value="${value ?? ""}" aria-label="Score de ${label}" />
+          ${plus}
+        </div>
+      </div>`;
+  };
+  return `
+    <article class="match-card"${forfeit ? ' data-forfeit="1"' : ""}${readonly ? ' data-readonly="1"' : ""}>
+      <header class="court-strip"><span class="court-name">${courtLabel}</span><span class="court-state"></span></header>
+      ${row(nameA, "a", scoreA)}
+      <div class="net"><span>contre</span></div>
+      ${row(nameB, "b", scoreB)}
+      <p class="tie-warning" hidden>Égalité : aucun vainqueur. Une partie de pickleball ne se termine pas à égalité, vérifiez le score.</p>
+    </article>`;
+}
+
+/**
+ * Met à jour l'état visuel d'une carte de match à partir de ses deux champs
+ * de score (gagnant, perdant, égalité, état du bandeau). Ne lit que le DOM :
+ * appelé après chaque rendu et à chaque saisie (voir navigation.js).
+ */
+function paintScoreCard(card) {
+  if (!card) return;
+  const inputs = card.querySelectorAll(".score-input");
+  if (inputs.length !== 2) return;
+  const a = parseInt(inputs[0].value, 10);
+  const b = parseInt(inputs[1].value, 10);
+  const full = !isNaN(a) && !isNaN(b);
+  const tie = full && a === b;
+  const rows = card.querySelectorAll(".team-row");
+  rows[0]?.classList.toggle("is-win", full && a > b);
+  rows[0]?.classList.toggle("is-lose", full && a < b);
+  rows[1]?.classList.toggle("is-win", full && b > a);
+  rows[1]?.classList.toggle("is-lose", full && b < a);
+  card.classList.toggle("is-done", full && !tie);
+  card.classList.toggle("is-tie", tie);
+  const state = card.querySelector(".court-state");
+  if (state) {
+    state.textContent = card.dataset.forfeit
+      ? "Forfait"
+      : !full ? (card.dataset.readonly ? "Non joué" : "À saisir") : tie ? "Égalité ?" : `Terminé ${Math.max(a, b)}–${Math.min(a, b)}`;
+  }
+  const tieWarning = card.querySelector(".tie-warning");
+  if (tieWarning) tieWarning.hidden = !tie;
+}
+
+function paintScoreCards(container) {
+  container?.querySelectorAll(".match-card").forEach(paintScoreCard);
+}
+
+/**
+ * Affiche le calendrier de chaque poule avec les champs de saisie des scores
+ * (cartes de match au même format que le mode Rotation, voir
+ * buildTournamentMatchCard).
  * @param {Array} pools
  * @param {string[]} courtNames - noms de terrains optionnels (voir #courtNames)
  * @param {number[][]} courtAllocation - pour chaque poule, les index de
@@ -159,50 +242,35 @@ function wrapHideableMatch(hideKey, label, innerHtml, hiddenMatchKeys) {
  * @param {Set<string>} hiddenMatchKeys - voir wrapHideableMatch
  */
 function renderPools(pools, courtNames = [], courtAllocation = [], hiddenPoolIndices = [], hiddenMatchKeys = new Set()) {
-  // Replie automatiquement les cartes "Équipes"/"Configuration des poules" dès
-  // que des poules existent (plus besoin d'y revenir pour voir les matchs),
-  // et les redéplie d'elle-même s'il n'y a plus de poules (reset, tournoi
-  // vide) — reste rouvrable à tout moment via la flèche du résumé.
-  const hasPools = pools.length > 0;
-  if (elTeamsDetails) elTeamsDetails.open = !hasPools;
-  if (elPoolsConfigDetails) elPoolsConfigDetails.open = !hasPools;
-
   elPoolsContainer.innerHTML = pools.map((pool, poolIdx) => {
     const isPoolHidden = hiddenPoolIndices.includes(poolIdx);
 
     const roundsHtml = pool.rounds.map((matches, rIdx) => {
       const matchesHtml = matches.map((match, mIdx) => {
         if (match.bye) {
-          return `<div class="subtle" style="padding: 6px 2px;">🪑 Repos ce tour : <strong>${escapeHtml(match.team.name)}</strong></div>`;
+          return `<div class="bye-row"><span class="eyebrow">Repos</span><span>${escapeHtml(match.team.name)}</span></div>`;
         }
 
         const score = pool.scores[`${rIdx}-${mIdx}`] || {};
         const globalCourtIdx = poolCourtIndex(courtAllocation, poolIdx, mIdx);
-        const courtLabel = escapeHtml(formatCourtLabel(courtNames, globalCourtIdx));
-        const forfeitBadge = score.forfeit ? `<span class="forfeit-badge" title="Résultat automatique (forfait)">🚫 Forfait</span>` : "";
-        const matchCardHtml = `
-          <div class="match-card">
-            <span class="court-badge">${courtLabel}</span>
-            ${forfeitBadge}
-            <div class="team-score">
-              <span class="team">${escapeHtml(match.a.name)}</span>
-              <input type="number" class="score-input" min="0" placeholder="-" data-pool="${poolIdx}" data-round="${rIdx}" data-match="${mIdx}" data-side="a" value="${score.a ?? ""}" />
-            </div>
-            <span class="vs">VS</span>
-            <div class="team-score">
-              <input type="number" class="score-input" min="0" placeholder="-" data-pool="${poolIdx}" data-round="${rIdx}" data-match="${mIdx}" data-side="b" value="${score.b ?? ""}" />
-              <span class="team">${escapeHtml(match.b.name)}</span>
-            </div>
-          </div>
-        `;
+        const matchCardHtml = buildTournamentMatchCard({
+          courtLabel: escapeHtml(formatCourtLabel(courtNames, globalCourtIdx)),
+          nameA: match.a.name,
+          nameB: match.b.name,
+          scoreA: score.a,
+          scoreB: score.b,
+          inputClass: "score-input",
+          dataAttrs: `data-pool="${poolIdx}" data-round="${rIdx}" data-match="${mIdx}"`,
+          forfeit: !!score.forfeit,
+        });
         const hideKey = `pool:${poolIdx}:${rIdx}:${mIdx}`;
         const label = `${escapeHtml(match.a.name)} vs ${escapeHtml(match.b.name)}`;
         return wrapHideableMatch(hideKey, label, matchCardHtml, hiddenMatchKeys);
       }).join("");
 
       return `
-        <div class="round">
-          <div class="roundTitle"><h3>Journée ${rIdx + 1}</h3></div>
+        <div class="pool-round">
+          <h4 class="eyebrow">Journée ${rIdx + 1}</h4>
           <div class="matches-list">${matchesHtml}</div>
         </div>
       `;
@@ -212,12 +280,14 @@ function renderPools(pools, courtNames = [], courtAllocation = [], hiddenPoolInd
       <div class="pool-card ${isPoolHidden ? "pool-collapsed" : ""}">
         <div class="pool-card-header">
           <h3 class="pool-card-title">${escapeHtml(pool.name)}</h3>
-          <button type="button" class="round-hide-btn pool-hide-btn" tabindex="-1" data-pool-index="${poolIdx}" title="${isPoolHidden ? "Afficher cette poule" : "Masquer cette poule"}">${isPoolHidden ? ICON_EYE_SVG : ICON_EYE_OFF_SVG}<span>${isPoolHidden ? "Afficher" : "Masquer"}</span></button>
+          <button type="button" class="pool-hide-btn" tabindex="-1" data-pool-index="${poolIdx}" title="${isPoolHidden ? "Afficher cette poule" : "Masquer cette poule"}">${isPoolHidden ? ICON_EYE_SVG : ICON_EYE_OFF_SVG}<span>${isPoolHidden ? "Afficher" : "Masquer"}</span></button>
         </div>
         <div class="pool-content">${roundsHtml}</div>
       </div>
     `;
   }).join("");
+
+  paintScoreCards(elPoolsContainer);
 }
 
 /**
@@ -239,14 +309,17 @@ function renderPoolStandings(pools, qualifiersPerPool, forfeitedTeamIds = new Se
       const forfeited = forfeitedTeamIds.has(s.team.id);
       const diffSign = s.diff > 0 ? "+" : "";
       const teamNameEscaped = escapeHtml(s.team.name);
+      const diffClass = s.diff > 0 ? "diff-positive" : s.diff < 0 ? "diff-negative" : "";
       return `
         <tr class="${qualified ? "qualified" : ""} ${forfeited ? "forfeited" : ""}">
           <td>${i + 1}</td>
           <td>
-            <span class="team-name-text">${teamNameEscaped}</span>
-            <span class="team-name-actions">
-              <button type="button" class="icon-btn team-rename-btn" data-team-id="${s.team.id}" title="Renommer l'équipe" aria-label="Renommer ${teamNameEscaped}">✏️</button>
-              <button type="button" class="icon-btn team-forfeit-btn ${forfeited ? "active" : ""}" data-team-id="${s.team.id}" data-team-name="${teamNameEscaped}" title="${forfeited ? "Annuler le forfait" : "Déclarer forfait"}" aria-label="${forfeited ? "Annuler le forfait de" : "Déclarer forfait pour"} ${teamNameEscaped}">🚫</button>
+            <span class="team-cell">
+              <span class="team-name-text">${teamNameEscaped}</span>
+              <span class="team-name-actions">
+                <button type="button" class="icon-btn team-rename-btn" data-team-id="${s.team.id}" title="Renommer l'équipe" aria-label="Renommer ${teamNameEscaped}">${ICON_EDIT_SVG}</button>
+                <button type="button" class="icon-btn team-forfeit-btn ${forfeited ? "active" : ""}" data-team-id="${s.team.id}" data-team-name="${teamNameEscaped}" title="${forfeited ? "Annuler le forfait" : "Déclarer forfait"}" aria-label="${forfeited ? "Annuler le forfait de" : "Déclarer forfait pour"} ${teamNameEscaped}" aria-pressed="${forfeited}">${ICON_FORFEIT_SVG}</button>
+              </span>
             </span>
           </td>
           <td>${s.m}</td>
@@ -254,7 +327,7 @@ function renderPoolStandings(pools, qualifiersPerPool, forfeitedTeamIds = new Se
           <td>${s.l}</td>
           <td>${s.pf}</td>
           <td>${s.pa}</td>
-          <td>${diffSign}${s.diff}</td>
+          <td class="${diffClass}">${diffSign}${s.diff}</td>
         </tr>
       `;
     }).join("");
@@ -262,21 +335,23 @@ function renderPoolStandings(pools, qualifiersPerPool, forfeitedTeamIds = new Se
     return `
       <div class="pool-standing-card">
         <h3>${escapeHtml(pool.name)}</h3>
-        <table class="ranking-table">
-          <thead>
-            <tr>
-              <th>Rang</th>
-              <th>Équipe</th>
-              <th>MJ</th>
-              <th>V</th>
-              <th>D</th>
-              <th>PP</th>
-              <th>PC</th>
-              <th>+/-</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
+        <div class="table-wrap">
+          <table class="ranking-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Équipe</th>
+                <th title="Matchs joués">MJ</th>
+                <th title="Victoires">V</th>
+                <th title="Défaites">D</th>
+                <th title="Points pour">PP</th>
+                <th title="Points contre">PC</th>
+                <th>+/−</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
       </div>
     `;
   }).join("");
@@ -321,7 +396,7 @@ function refreshBracketGenerateButtons(pools, qualifiersPerPool, forfeitedTeamId
     const nonQualified = seedNonQualifiedTeams(pools, qualifiersPerPool, forfeitedTeamIds);
     const ready = poolsComplete && nonQualified.length >= 2;
     btnGenerateConsolationPhase.disabled = !ready;
-    btnGenerateConsolationPhase.title = ready ? "" : (!poolsComplete ? notCompleteTitle : "Il faut au moins 2 équipes non qualifiées pour générer des matchs de classement.");
+    btnGenerateConsolationPhase.title = ready ? "" : (!poolsComplete ? notCompleteTitle : "Il faut au moins 2 équipes non qualifiées pour générer une consolante.");
   }
 }
 
@@ -360,7 +435,7 @@ function renderBracketPairs(pairs, scores, editable, segmentId, courtNames = [],
 
     if (a.bye || b.bye) {
       const realTeam = a.bye ? b.team : a.team;
-      return `<div class="subtle" style="padding: 6px 2px;">🪑 <strong>${escapeHtml(realTeam.name)}</strong> qualifié(e) sans jouer (repos)</div>`;
+      return `<div class="bye-row"><span class="eyebrow">Repos</span><span><strong>${escapeHtml(realTeam.name)}</strong> passe au tour suivant sans jouer</span></div>`;
     }
 
     const aForfeited = forfeitedTeamIds?.has(a.team.id);
@@ -368,28 +443,21 @@ function renderBracketPairs(pairs, scores, editable, segmentId, courtNames = [],
     if (aForfeited || bForfeited) {
       const winner = aForfeited ? b.team : a.team;
       const loser = aForfeited ? a.team : b.team;
-      return `<div class="subtle" style="padding: 6px 2px;">🚫 <strong>${escapeHtml(loser.name)}</strong> forfait — <strong>${escapeHtml(winner.name)}</strong> qualifié(e) sans jouer</div>`;
+      return `<div class="bye-row is-forfeit"><span class="eyebrow">Forfait</span><span><strong>${escapeHtml(loser.name)}</strong> forfait : <strong>${escapeHtml(winner.name)}</strong> passe sans jouer</span></div>`;
     }
 
     const score = scores[idx] || {};
-    const readonlyAttr = editable ? "" : "readonly";
-    const dataAttrs = editable ? `data-segment="${segmentId}" data-match="${idx}"` : "";
     const courtIdx = activeCourtAssignment?.get(`${phaseIdx}-${segmentId}-${idx}`) ?? idx;
-    const courtLabel = escapeHtml(courtNames[courtIdx] || `Terrain ${courtIdx + 1}`);
-    const matchCardHtml = `
-      <div class="match-card">
-        <span class="court-badge">${courtLabel}</span>
-        <div class="team-score">
-          <span class="team">${escapeHtml(a.team.name)}</span>
-          <input type="number" class="score-input bracket-score-input" min="0" placeholder="-" ${dataAttrs} data-side="a" ${readonlyAttr} value="${score.a ?? ""}" />
-        </div>
-        <span class="vs">VS</span>
-        <div class="team-score">
-          <input type="number" class="score-input bracket-score-input" min="0" placeholder="-" ${dataAttrs} data-side="b" ${readonlyAttr} value="${score.b ?? ""}" />
-          <span class="team">${escapeHtml(b.team.name)}</span>
-        </div>
-      </div>
-    `;
+    const matchCardHtml = buildTournamentMatchCard({
+      courtLabel: escapeHtml(courtNames[courtIdx] || `Terrain ${courtIdx + 1}`),
+      nameA: a.team.name,
+      nameB: b.team.name,
+      scoreA: score.a,
+      scoreB: score.b,
+      inputClass: "score-input bracket-score-input",
+      dataAttrs: editable ? `data-segment="${segmentId}" data-match="${idx}"` : "",
+      readonly: !editable,
+    });
     const hideKey = `bracket:${phaseIdx}:${segmentId}:${idx}`;
     const label = `${escapeHtml(a.team.name)} vs ${escapeHtml(b.team.name)}`;
     return wrapHideableMatch(hideKey, label, matchCardHtml, hiddenMatchKeys);
@@ -420,26 +488,24 @@ function renderBracketPhase(phase, container, courtNames = [], activeCourtAssign
   }
 
   const historyCards = phase.rounds.map(round => `
-    <div class="pool-card">
-      <h3 class="pool-card-title">${escapeHtml(round.label)}</h3>
-      <div class="round">
-        <div class="matches-list">${renderBracketPairs(round.pairs, round.scores, false, round.segmentId, courtNames, null, phaseIdx, forfeitedTeamIds, hiddenMatchKeys)}</div>
-      </div>
+    <div class="pool-card is-past">
+      <div class="pool-card-header"><h3 class="pool-card-title">${escapeHtml(round.label)}</h3><span class="eyebrow">Joué</span></div>
+      <div class="matches-list">${renderBracketPairs(round.pairs, round.scores, false, round.segmentId, courtNames, null, phaseIdx, forfeitedTeamIds, hiddenMatchKeys)}</div>
     </div>
   `);
 
   const activeCards = phase.segments
     .filter(segment => segment.slots.length > 1)
     .map(segment => `
-      <div class="pool-card">
-        <h3 class="pool-card-title">${escapeHtml(segmentLabel(segment))}</h3>
-        <div class="round">
-          <div class="matches-list">${renderBracketPairs(segmentPairs(segment), segment.scores, true, segment.id, courtNames, activeCourtAssignment, phaseIdx, forfeitedTeamIds, hiddenMatchKeys)}</div>
-        </div>
+      <div class="pool-card is-live">
+        <div class="pool-card-header"><h3 class="pool-card-title">${escapeHtml(segmentLabel(segment))}</h3><span class="eyebrow round-status is-live">En cours</span></div>
+        <div class="matches-list">${renderBracketPairs(segmentPairs(segment), segment.scores, true, segment.id, courtNames, activeCourtAssignment, phaseIdx, forfeitedTeamIds, hiddenMatchKeys)}</div>
       </div>
     `);
 
-  container.innerHTML = [...historyCards, ...activeCards].join("");
+  // Tours en cours d'abord : c'est là qu'on saisit ; l'historique suit.
+  container.innerHTML = [...activeCards, ...historyCards.reverse()].join("");
+  paintScoreCards(container);
 }
 
 /**
@@ -450,7 +516,7 @@ function renderBracketPhase(phase, container, courtNames = [], activeCourtAssign
 function renderBracketTreeLeaf(node) {
   const content = node.team
     ? escapeHtml(node.team.name)
-    : `<span class="subtle">à déterminer</span>`;
+    : `<span class="muted">à déterminer</span>`;
   return `
     <div class="bracket-tree-node bracket-tree-leaf">
       <span class="bracket-tree-rank">Place ${node.rankStart}</span>
@@ -473,18 +539,16 @@ function renderBracketTreeGroup(node, courtNames, activeCourtAssignment, phaseId
     return `
       <div class="bracket-tree-node pool-card">
         <h3 class="pool-card-title">${escapeHtml(label)}</h3>
-        <p class="subtle" style="font-size: 0.85rem; margin: 0;">À déterminer</p>
+        <p class="hint">À déterminer</p>
       </div>
     `;
   }
 
   const editable = node.status === "active";
   return `
-    <div class="bracket-tree-node pool-card">
+    <div class="bracket-tree-node pool-card${editable ? " is-live" : ""}">
       <h3 class="pool-card-title">${escapeHtml(label)}</h3>
-      <div class="round">
-        <div class="matches-list">${renderBracketPairs(node.pairs, node.scores, editable, node.id, courtNames, activeCourtAssignment, phaseIdx, forfeitedTeamIds, hiddenMatchKeys)}</div>
-      </div>
+      <div class="matches-list">${renderBracketPairs(node.pairs, node.scores, editable, node.id, courtNames, activeCourtAssignment, phaseIdx, forfeitedTeamIds, hiddenMatchKeys)}</div>
     </div>
   `;
 }
@@ -530,6 +594,7 @@ function renderBracketTree(phase, container, courtNames = [], activeCourtAssignm
       ).join("");
     return `<div class="bracket-tree-column">${nodesHtml}</div>`;
   }).join("")}</div>`;
+  paintScoreCards(container);
 }
 
 /**
@@ -624,7 +689,7 @@ function collectNextMatches(tournament) {
 
   [
     { phase: tournament.finalPhase, label: "Phase finale", phaseIdx: 0 },
-    { phase: tournament.consolationPhase, label: "Matchs de classement", phaseIdx: 1 }
+    { phase: tournament.consolationPhase, label: "Consolante", phaseIdx: 1 }
   ].forEach(({ phase, label, phaseIdx }) => {
     if (!phase) return;
     phase.segments
@@ -659,16 +724,19 @@ function renderNextMatches(tournament) {
 
   const items = tournament?.pools?.length ? collectNextMatches(tournament) : [];
 
+  const elCount = document.getElementById("nextMatchesCount");
+
   if (!items.length) {
     elNextMatchesSection.hidden = true;
     elNextMatchesContainer.innerHTML = "";
     return;
   }
 
+  if (elCount) elCount.textContent = String(items.length);
   elNextMatchesContainer.innerHTML = items.map(item => `
     <div class="next-match-row">
       <span class="next-match-source">${escapeHtml(item.source)}</span>
-      <span class="next-match-teams">${escapeHtml(item.teamA)} <span class="vs-inline">vs</span> ${escapeHtml(item.teamB)}</span>
+      <span class="next-match-teams">${escapeHtml(item.teamA)} <span class="vs-inline">contre</span> ${escapeHtml(item.teamB)}</span>
       ${item.court ? `<span class="next-match-court">${escapeHtml(item.court)}</span>` : ""}
     </div>
   `).join("");
@@ -695,7 +763,7 @@ function renderTournamentSummary(tournament) {
   const courtsCount = Math.max(1, tournament.numCourts || 1);
 
   elTournamentSummary.textContent =
-    `⚔️ ${teamsCount} équipe${teamsCount > 1 ? "s" : ""} · 👥 ${poolsCount} poule${poolsCount > 1 ? "s" : ""} · 🏟️ ${courtsCount} terrain${courtsCount > 1 ? "s" : ""}`;
+    `${teamsCount} équipe${teamsCount > 1 ? "s" : ""} · ${poolsCount} poule${poolsCount > 1 ? "s" : ""} · ${courtsCount} terrain${courtsCount > 1 ? "s" : ""}`;
   elTournamentSummary.hidden = false;
 }
 
@@ -714,6 +782,8 @@ function renderTournamentSummary(tournament) {
 function renderTournamentProgress(tournament) {
   renderNextMatches(tournament);
   renderTournamentSummary(tournament);
+  // Onglets de phase, badges, carte "Tournoi en cours"... (voir navigation.js)
+  refreshTournamentNav(tournament);
 
   if (!elTournamentProgress) return;
 
@@ -734,22 +804,20 @@ function renderTournamentProgress(tournament) {
   const steps = [
     { label: "Poules", started: true, done: poolsDone },
     { label: "Phase finale", started: finalStarted, done: finalDone },
-    { label: "Matchs de classement", started: consolationStarted, done: consolationDone },
+    { label: "Consolante", started: consolationStarted, done: consolationDone },
     { label: "Classement final", started: rankingReady, done: rankingReady }
   ];
 
-  elTournamentProgress.innerHTML = steps.map((step, i) => {
+  // Frise compacte : un segment par étape (fait, en cours, à venir).
+  elTournamentProgress.innerHTML = steps.map(step => {
     const isActive = step.started && !step.done;
-    const stepHtml = `
-      <div class="step-item ${step.done ? "completed" : ""} ${isActive ? "active" : ""}">
-        <div class="step-number">${step.done ? "✓" : i + 1}</div>
-        <span>${escapeHtml(step.label)}</span>
+    const state = step.done ? "terminé" : isActive ? "en cours" : "à venir";
+    return `
+      <div class="t-step${step.done ? " is-done" : ""}${isActive ? " is-current" : ""}" aria-label="${escapeHtml(step.label)} : ${state}">
+        <span class="t-step-bar"></span>
+        <span class="t-step-label">${escapeHtml(step.label)}</span>
       </div>
     `;
-    const dividerHtml = i < steps.length - 1
-      ? `<div class="step-divider ${step.done ? "active" : ""}"></div>`
-      : "";
-    return stepHtml + dividerHtml;
   }).join("");
 
   elTournamentProgress.hidden = false;
@@ -775,26 +843,15 @@ function renderFinalPodium(combined, statsByTeamId) {
     return `${s.w}V · ${diff > 0 ? "+" : ""}${diff}`;
   };
 
+  // Même podium que le mode Rotation (voir renderPodium, js/app/stats-visualizations.js).
+  const step = (r, cls, place) => `
+    <div class="pod ${cls}">
+      <span class="pod-name pod-name-team">${escapeHtml(r.team.name)}</span>
+      <span class="pod-sub">${statLine(r)}</span>
+      <div class="pod-bar" aria-label="${place}e place">${place}</div>
+    </div>`;
   const [p1, p2, p3] = combined;
-  return `
-    <div class="podium-container">
-      <div class="podium-step silver">
-        <div class="podium-avatar">🥈</div>
-        <div class="podium-name">${escapeHtml(p2.team.name)}</div>
-        <div class="podium-stats">${statLine(p2)}</div>
-      </div>
-      <div class="podium-step gold">
-        <div class="podium-avatar">🥇</div>
-        <div class="podium-name">${escapeHtml(p1.team.name)}</div>
-        <div class="podium-stats">${statLine(p1)}</div>
-      </div>
-      <div class="podium-step bronze">
-        <div class="podium-avatar">🥉</div>
-        <div class="podium-name">${escapeHtml(p3.team.name)}</div>
-        <div class="podium-stats">${statLine(p3)}</div>
-      </div>
-    </div>
-  `;
+  return `<div class="podium">${step(p2, "p2", 2)}${step(p1, "p1", 1)}${step(p3, "p3", 3)}</div>`;
 }
 
 /**
@@ -874,7 +931,7 @@ function renderFinalRanking(tournament) {
     return `
       <tr class="forfeited">
         <td>${combined.length + i + 1}</td>
-        <td>${escapeHtml(team.name)} <span class="forfeit-badge-inline">🚫 Forfait</span></td>
+        <td>${escapeHtml(team.name)} <span class="forfeit-badge-inline">Forfait</span></td>
         <td>${s.m}</td>
         <td>${s.w}</td>
         <td>${s.l}</td>
@@ -887,30 +944,26 @@ function renderFinalRanking(tournament) {
 
   elFinalRankingContainer.innerHTML = `
     ${renderFinalPodium(combined, statsByTeamId)}
-    <div style="overflow-x:auto;">
+    <div class="table-wrap">
       <table class="ranking-table">
         <thead>
           <tr>
-            <th>Rang</th>
+            <th>#</th>
             <th>Équipe</th>
-            <th>MJ</th>
-            <th>V</th>
-            <th>D</th>
-            <th>PP</th>
-            <th>PC</th>
-            <th>+/-</th>
+            <th title="Matchs joués">MJ</th>
+            <th title="Victoires">V</th>
+            <th title="Défaites">D</th>
+            <th title="Points pour">PP</th>
+            <th title="Points contre">PC</th>
+            <th>+/−</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
-    <p class="subtle" style="margin-top: 0.75rem; font-size: 0.8rem;">
-      💡 <strong>Le rang est déterminé par le parcours en phase finale et matchs de classement</strong> (qui a gagné/perdu chaque match d'élimination), pas par les statistiques ci-dessus — elles sont uniquement informatives.
-    </p>
+    <p class="tiebreak-note">Le rang vient du parcours en phase finale et en consolante (qui a battu qui), pas des statistiques du tableau, qui sont seulement indicatives.</p>
     ${forfeitedBeforeBracket.length ? `
-      <p class="subtle" style="font-size: 0.8rem;">
-        🚫 <strong>${forfeitedBeforeBracket.length > 1 ? "Équipes forfait" : "Équipe forfait"}</strong> avant le tirage d'un bracket : sa place dans la poule a été prise par l'équipe suivante (voir le classement de poule), d'où les dernières places ci-dessus.
-      </p>
+      <p class="tiebreak-note">${forfeitedBeforeBracket.length > 1 ? "Les équipes forfait" : "L'équipe forfait"} avant le tirage de la phase finale ${forfeitedBeforeBracket.length > 1 ? "ont été remplacées" : "a été remplacée"} par l'équipe suivante de sa poule, d'où les dernières places.</p>
     ` : ""}
   `;
   elFinalRankingSection.hidden = false;

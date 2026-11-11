@@ -246,10 +246,18 @@ btnGeneratePools.addEventListener("click", async () => {
   elManualAssignSection.hidden = true;
   renderPools(pools, courtNames, courtAllocation, [], new Set());
   renderPoolStandings(pools, qualifiersPerPool, new Set());
-  renderTournamentProgress(window.__PT_TOURNAMENT__);
   elPoolsSection.hidden = false;
   elPoolStandingsSection.hidden = false;
+  // Une génération précédente a pu laisser des brackets et un classement
+  // final à l'écran : on repart d'un affichage propre.
+  renderBothBracketPhases(window.__PT_TOURNAMENT__);
+  renderFinalRanking(window.__PT_TOURNAMENT__);
+  renderTournamentProgress(window.__PT_TOURNAMENT__);
   autoSaveTournamentState();
+  goToStage("poules");
+  showToast(elTeamsWarning && !elTeamsWarning.hidden
+    ? elTeamsWarning.textContent
+    : `${pools.length} poule${pools.length > 1 ? "s" : ""} générée${pools.length > 1 ? "s" : ""}`, elTeamsWarning && !elTeamsWarning.hidden ? 5000 : 2400);
 });
 
 // --------------------------------------------------
@@ -276,10 +284,14 @@ btnConfirmManualAssign.addEventListener("click", () => {
   elManualAssignSection.hidden = true;
   renderPools(pools, courtNames, courtAllocation, [], new Set());
   renderPoolStandings(pools, qualifiersPerPool, new Set());
-  renderTournamentProgress(window.__PT_TOURNAMENT__);
   elPoolsSection.hidden = false;
   elPoolStandingsSection.hidden = false;
+  renderBothBracketPhases(window.__PT_TOURNAMENT__);
+  renderFinalRanking(window.__PT_TOURNAMENT__);
+  renderTournamentProgress(window.__PT_TOURNAMENT__);
   autoSaveTournamentState();
+  goToStage("poules");
+  showToast("Poules générées");
 });
 
 // --------------------------------------------------
@@ -524,7 +536,7 @@ wireMatchHideButtons(elConsolationPhaseContainer);
  * deux, voir engine.js) : mêmes vérifications, seules la source des équipes
  * et le décalage de classement changent.
  */
-function wireBracketGenerateButton(button, { phaseKey, getSeededTeams, getRankOffset, notEnoughMessage }) {
+function wireBracketGenerateButton(button, { phaseKey, stage, doneMessage, getSeededTeams, getRankOffset, notEnoughMessage }) {
   button.addEventListener("click", async () => {
     const tournament = window.__PT_TOURNAMENT__;
     if (!tournament) {
@@ -561,6 +573,8 @@ function wireBracketGenerateButton(button, { phaseKey, getSeededTeams, getRankOf
     renderFinalRanking(tournament);
     renderTournamentProgress(tournament);
     autoSaveTournamentState();
+    goToStage(stage);
+    showToast(doneMessage);
   });
 }
 
@@ -603,6 +617,8 @@ function wireBracketScoreInputs(container, phaseKey) {
 
 wireBracketGenerateButton(btnGenerateFinalPhase, {
   phaseKey: "finalPhase",
+  stage: "finale",
+  doneMessage: "Phase finale générée",
   // Une équipe forfait AVANT ce tirage (donc encore en phase de poules)
   // libère sa place : la suivante de sa poule est qualifiée à sa place,
   // plutôt que de lui laisser une place vide en phase finale qu'elle
@@ -614,9 +630,11 @@ wireBracketGenerateButton(btnGenerateFinalPhase, {
 
 wireBracketGenerateButton(btnGenerateConsolationPhase, {
   phaseKey: "consolationPhase",
+  stage: "classement",
+  doneMessage: "Consolante générée",
   getSeededTeams: t => seedNonQualifiedTeams(t.pools, t.qualifiersPerPool, new Set(t.forfeitedTeamIds || [])),
   getRankOffset: t => seedQualifiedTeams(t.pools, t.qualifiersPerPool, new Set(t.forfeitedTeamIds || [])).length,
-  notEnoughMessage: "Il faut au moins 2 équipes non qualifiées pour générer des matchs de classement."
+  notEnoughMessage: "Il faut au moins 2 équipes non qualifiées pour générer une consolante."
 });
 
 wireBracketScoreInputs(elFinalPhaseContainer, "finalPhase");
@@ -635,7 +653,7 @@ if (btnToggleBracketView) {
 
     const nowTree = tournament.bracketViewMode !== "tree";
     tournament.bracketViewMode = nowTree ? "tree" : "list";
-    btnToggleBracketView.textContent = nowTree ? "📋 Vue liste" : "🌳 Vue arbre";
+    btnToggleBracketView.textContent = nowTree ? "Vue liste" : "Vue arbre";
 
     renderBothBracketPhases(tournament);
     autoSaveTournamentState();
@@ -653,15 +671,15 @@ if (btnExportFinalRankingPng) {
     // innerHTML (pas textContent) pour restaurer l'icône SVG du bouton une
     // fois l'export terminé, sinon elle disparaîtrait.
     const originalBtnHtml = btnExportFinalRankingPng.innerHTML;
-    btnExportFinalRankingPng.textContent = "⏳ Génération...";
+    btnExportFinalRankingPng.textContent = "Génération…";
+    btnExportFinalRankingPng.disabled = true;
 
-    // Fond de capture assorti au thème courant (sinon le texte du thème clair,
-    // sombre, deviendrait illisible sur un fond figé à l'autre couleur).
-    const isLight = document.documentElement.getAttribute("data-theme") === "light";
+    // Fond de capture = fond de l'identité visuelle et du thème en cours.
+    const pageBg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() || "#0b131d";
 
     try {
       const canvas = await html2canvas(elFinalRankingContainer, {
-        backgroundColor: isLight ? "#eef2f7" : "#0a0f18",
+        backgroundColor: pageBg,
         scale: 2
       });
 
@@ -680,6 +698,7 @@ if (btnExportFinalRankingPng) {
       );
     } finally {
       btnExportFinalRankingPng.innerHTML = originalBtnHtml;
+      btnExportFinalRankingPng.disabled = false;
     }
   });
 }
@@ -725,11 +744,7 @@ if (btnCopyTournamentLink) {
     }
 
     if (await copyTextRobust(urlToShare)) {
-      // innerHTML (pas textContent) pour restaurer l'icône SVG du bouton
-      // après le message de confirmation temporaire.
-      const originalHtml = btnCopyTournamentLink.innerHTML;
-      btnCopyTournamentLink.textContent = "Lien copié !";
-      setTimeout(() => { btnCopyTournamentLink.innerHTML = originalHtml; }, 1500);
+      showToast("Lien copié");
     } else {
       await copyFallbackModal(urlToShare, { title: "Copier le lien de partage", icon: "🔗" });
     }
@@ -752,6 +767,12 @@ if (elTournamentHistoryList) {
       if (item) {
         applyTournamentState(item.state);
         autoSaveTournamentState();
+        if (window.__PT_TOURNAMENT__) {
+          goToStage(autoStage(window.__PT_TOURNAMENT__));
+          showToast("Tournoi chargé");
+        } else {
+          showScreen("preparer");
+        }
       }
     } else if (e.target.classList.contains("del-tournament-hist-btn")) {
       history = history.filter(x => x.id !== id);
@@ -771,11 +792,7 @@ if (btnSaveTournamentToHistory) {
       );
       return;
     }
-    // innerHTML (pas textContent) pour restaurer l'icône SVG du bouton après
-    // le message de confirmation temporaire.
-    const originalHtml = btnSaveTournamentToHistory.innerHTML;
-    btnSaveTournamentToHistory.textContent = "Tournoi enregistré !";
-    setTimeout(() => { btnSaveTournamentToHistory.innerHTML = originalHtml; }, 1200);
+    showToast("Tournoi enregistré dans l'historique");
   });
 }
 

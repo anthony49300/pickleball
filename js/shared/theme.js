@@ -25,7 +25,7 @@ const THEME_STORAGE_KEY = "pb_theme";
 const SKIN_STORAGE_KEY = "pb_skin";
 const SKINS = ["nuit", "plein-air", "score"];
 // Couleurs de repli de la barre d'adresse mobile, pour une page qui ne
-// définit pas la variable CSS --bg (styles.css de tournoi.html).
+// définit pas la variable CSS --bg (toutes les pages actuelles la définissent).
 const THEME_COLOR_DARK = "#0a0f18";
 const THEME_COLOR_LIGHT = "#eef2f7";
 

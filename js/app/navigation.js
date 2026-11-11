@@ -1,21 +1,16 @@
 "use strict";
 
 // =============================================================================
-// NAVIGATION : ÉCRANS, MENUS ET AFFICHAGE TOUR PAR TOUR
+// NAVIGATION (mode Rotation) : AFFICHAGE TOUR PAR TOUR
 // =============================================================================
-// Quatre écrans (Préparer, Jouer, Classement, Historique), un seul visible à
-// la fois. L'écran affiché est reflété dans l'URL (#jouer...) pour survivre à
-// un rechargement ; le lien de partage (?d=...) n'en dépend pas (voir
-// buildShareableUrl, qui ne reprend que origin + pathname).
+// Les écrans, les onglets et les menus sont gérés par js/shared/shell.js
+// (commun avec la page Tournoi). Ici : ce qui est propre à l'écran Jouer du
+// mode Rotation.
 //
 // Écran Jouer : tous les tours sont présents dans le DOM (voir render() dans
 // form-and-render.js) mais un seul est affiché. Changer de tour ne fait que
 // basculer leur attribut hidden : aucune saisie en cours n'est perdue.
 
-const SCREENS = ["preparer", "jouer", "classement", "historique"];
-
-const elScreens = document.querySelectorAll("[data-screen]");
-const elScreenTabs = document.querySelectorAll("[data-screen-tab]");
 const elPlayTabBadge = document.getElementById("playTabBadge");
 const elPlayEmpty = document.getElementById("playEmpty");
 const elPlayView = document.getElementById("playView");
@@ -29,91 +24,7 @@ const elCurrentSessionCard = document.getElementById("currentSessionCard");
 const elCurrentSessionProgress = document.getElementById("currentSessionProgress");
 const elCurrentSessionMeta = document.getElementById("currentSessionMeta");
 
-let currentScreen = null;
 let viewedRound = 0;
-
-// ---------------------------------------------------------------------------
-// Écrans
-// ---------------------------------------------------------------------------
-
-function showScreen(name, { scroll = true } = {}) {
-  if (!SCREENS.includes(name)) name = "preparer";
-  const changed = name !== currentScreen;
-  currentScreen = name;
-
-  elScreens.forEach(el => { el.hidden = el.dataset.screen !== name; });
-  elScreenTabs.forEach(tab => {
-    if (tab.dataset.screenTab === name) tab.setAttribute("aria-current", "page");
-    else tab.removeAttribute("aria-current");
-  });
-
-  if (window.location.hash !== `#${name}`) {
-    window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#${name}`);
-  }
-  if (changed && scroll) window.scrollTo(0, 0);
-}
-
-elScreenTabs.forEach(tab => tab.addEventListener("click", () => showScreen(tab.dataset.screenTab)));
-
-// Boutons "Préparer la session", "Reprendre"... (data-goto="écran")
-document.addEventListener("click", (e) => {
-  const btn = e.target.closest("[data-goto]");
-  if (btn) showScreen(btn.dataset.goto);
-});
-
-// ---------------------------------------------------------------------------
-// Menus déroulants (Rotation ▾ et ⋮)
-// ---------------------------------------------------------------------------
-
-const MENUS = [
-  [document.getElementById("modeMenuBtn"), document.getElementById("modeMenu")],
-  [document.getElementById("moreMenuBtn"), document.getElementById("moreMenu")],
-].filter(([btn, menu]) => btn && menu);
-
-function closeMenus(exceptMenu = null) {
-  MENUS.forEach(([btn, menu]) => {
-    if (menu === exceptMenu) return;
-    menu.hidden = true;
-    btn.setAttribute("aria-expanded", "false");
-  });
-}
-
-MENUS.forEach(([btn, menu]) => {
-  btn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const open = menu.hidden;
-    closeMenus(menu);
-    menu.hidden = !open;
-    btn.setAttribute("aria-expanded", String(open));
-    // Ouverture au clavier (e.detail === 0) : focus sur la première action.
-    if (open && e.detail === 0) menu.querySelector("[role='menuitem']:not(:disabled), button:not(:disabled)")?.focus();
-  });
-
-  // Une action du menu le referme (le choix d'identité visuelle aussi :
-  // l'effet est immédiat et visible).
-  menu.addEventListener("click", (e) => {
-    if (e.target.closest("[role='menuitem'], [data-skin-choice]")) {
-      closeMenus();
-    }
-  });
-});
-
-document.addEventListener("click", (e) => {
-  if (!e.target.closest(".menu-wrap")) closeMenus();
-});
-
-document.addEventListener("keydown", (e) => {
-  if (e.key !== "Escape") return;
-  const open = MENUS.find(([, menu]) => !menu.hidden);
-  if (open) {
-    closeMenus();
-    open[0].focus();
-  }
-});
-
-// ---------------------------------------------------------------------------
-// Écran Jouer : un tour à la fois
-// ---------------------------------------------------------------------------
 
 function showRound(idx) {
   const rounds = window.__PB_LAST_RESULT__?.rounds;
@@ -220,26 +131,12 @@ if (btnNextStep) {
 }
 
 /**
- * Valeurs affichées à côté des curseurs du Mode expert : ui-controls.js ne
- * les met à jour qu'à la saisie, pas quand une session chargée (sauvegarde,
- * historique, lien partagé) réécrit les curseurs.
- */
-function syncSliderOutputs() {
-  document.querySelectorAll(".slider-field input[type='range']").forEach(range => {
-    const output = range.closest(".slider-field")?.querySelector(".slider-value");
-    if (output) output.textContent = range.value;
-  });
-}
-
-/**
  * Premier affichage, appelé par init.js une fois la session restaurée : écran
  * de l'URL (#jouer...) s'il y en a un, sinon Jouer si une session est en
  * cours, Préparer sinon.
  */
 function initNavigation() {
   syncSliderOutputs();
-  const fromHash = window.location.hash.replace("#", "");
-  const fallback = window.__PB_LAST_RESULT__ ? "jouer" : "preparer";
-  showScreen(SCREENS.includes(fromHash) ? fromHash : fallback, { scroll: false });
+  showScreen(screenFromHash() || (window.__PB_LAST_RESULT__ ? "jouer" : "preparer"), { scroll: false });
   refreshPlayView();
 }

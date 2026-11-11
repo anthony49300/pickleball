@@ -68,6 +68,26 @@ document.addEventListener("keydown", (e) => {
 });
 
 /**
+ * Boutons −/+ autour d'un champ de score (.score-step dans un .score-ctl),
+ * communs aux deux pages : modifient le champ puis redéclenchent "input",
+ * exactement comme une saisie au clavier (enregistrement, gagnant,
+ * classement... passent tous par les listeners existants). Un champ en
+ * lecture seule (match de bracket déjà joué) n'est jamais modifié.
+ */
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".score-step");
+  if (!btn || btn.disabled) return;
+  const input = btn.closest(".score-ctl")?.querySelector(".score-input");
+  if (!input || input.readOnly || input.disabled) return;
+
+  const delta = parseInt(btn.dataset.delta, 10) || 0;
+  const current = parseInt(input.value, 10);
+  const next = isNaN(current) ? Math.max(0, delta) : Math.min(99, Math.max(0, current + delta));
+  input.value = next;
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+});
+
+/**
  * Petit message de confirmation temporaire en bas de l'écran ("Lien copié",
  * "Session enregistrée"...). Remplace l'ancien changement temporaire du
  * libellé des boutons, qui ne se voyait plus une fois le bouton rangé dans
