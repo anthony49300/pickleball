@@ -565,6 +565,8 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
 }
 :root[data-skin="score"] .cta { font-size: 1.2rem; }
 .cta.secondary { box-shadow: none; }
+.cta-row { display: flex; gap: 8px; }
+.cta-row .cta { flex: 1 1 0; min-width: 0; }
 .cta-note { text-align: center; font-size: 0.78rem; color: var(--muted); }
 
 /* =============================================================================
@@ -1308,6 +1310,7 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
   .screens { padding: 24px 32px 32px; }
   .cta-bar { bottom: 0; margin: 0 -32px; padding: 16px 32px 22px; }
   .cta { justify-self: end; max-width: 380px; }
+  .cta-row { justify-self: end; width: 100%; max-width: 560px; }
   .cta-note { text-align: right; }
   .toast { bottom: 28px; }
 

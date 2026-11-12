@@ -23,7 +23,7 @@
 // de ce fichier suffit à déclencher la mise à jour du service worker ; pensez
 // alors à incrémenter CACHE_VERSION pour repartir d'un cache propre.
 
-const CACHE_VERSION = 3;
+const CACHE_VERSION = 4;
 const CACHE_NAME = `pb-app-v${CACHE_VERSION}`;
 
 const PRECACHE_URLS = [

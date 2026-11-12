@@ -80,6 +80,12 @@ L'écran **Préparer** contient deux blocs.
 - Un rappel indique combien de joueurs jouent et combien sont en pause à chaque tour.
 - **Noms des terrains** *(optionnel)* : par défaut « Terrain 1 », « Terrain 2 »… ; vous pouvez les nommer (ex. « Court central, Court 2 »).
 - **Pas de pause deux fois de suite** : un joueur n'est jamais en pause sur deux tours consécutifs.
+- **Varier d'une semaine à l'autre** *(activé par défaut)* : l'application se souvient des duos et oppositions joués lors des dernières sessions sur cet appareil (tours notés uniquement) et évite de les refaire. La dernière session compte le plus, les 3 précédentes de moins en moins. Rien à enregistrer à la main : cette mémoire est indépendante de l'historique, et effacée par « Tout réinitialiser ».
+
+**Nouvelle session ou mise à jour ?**
+- Sans aucun score saisi, **Générer les matchs** tire automatiquement un nouvel identifiant de session, pour ne jamais rejouer à l'identique le planning de la semaine passée avec la même liste de joueurs.
+- Dès qu'un score est saisi, le bouton devient **Mettre à jour les matchs** : après une arrivée ou un départ, les tours déjà notés restent figés et seuls les suivants sont recalculés (même identifiant, même session).
+- **Nouvelle session** (à côté) efface les matchs, les scores et les arrivées/départs, mais garde les joueurs, leurs niveaux et les réglages : c'est le bouton à utiliser chaque semaine.
 
 ### Cas particulier : 6 joueurs sur 2 terrains ou plus
 
@@ -122,7 +128,7 @@ Dans **Préparer**, ouvrez **Mode expert** pour affiner la façon dont les match
 | **Précision du calcul** | Une valeur élevée cherche une combinaison plus optimale (mais plus lente à calculer) ; une valeur basse calcule quasi instantanément. |
 | **Partenaires testés par joueur** | Nombre de partenaires potentiels testés par joueur pour accélérer le calcul. |
 | **Pénaliser fortement les répétitions** *(interrupteur)* | Il devient quasiment impossible qu'un même duo se reforme une 3ᵉ fois dans la session. |
-| **Identifiant de session** | La « graine » du tirage. Mêmes joueurs, même format et même identifiant : même planning. Le bouton à côté en tire un nouveau. |
+| **Identifiant de session** | La « graine » du tirage. Mêmes joueurs, même format et même identifiant : même planning. Le bouton à côté en tire un nouveau. Un identifiant saisi ou tiré ici (ou venant d'un lien partagé) est respecté par « Générer les matchs » ; sinon un nouveau est tiré à chaque nouvelle session. |
 
 Les réglages par défaut conviennent à la grande majorité des sessions.
 

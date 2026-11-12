@@ -29,6 +29,9 @@ window.addEventListener("DOMContentLoaded", () => {
       const jsonString = LZString.decompressFromEncodedURIComponent(sharedData);
       const state = JSON.parse(jsonString);
       loadState(state);
+      // Planning partagé : on garde sa graine (voir le bouton Générer).
+      window.__PB_SEED_PINNED__ = true;
+      autoSaveState();
     } catch (e) {
       console.error(e);
       if (elError) {
@@ -52,6 +55,8 @@ window.addEventListener("DOMContentLoaded", () => {
       renderEmptyState();
     }
   }
+
+  renderPairMemoryInfo();
 
   // Écran à afficher (voir navigation.js), une fois la session restaurée.
   initNavigation();

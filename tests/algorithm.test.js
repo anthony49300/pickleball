@@ -32,7 +32,7 @@ const assert = require("assert");
 const algoPath = path.join(__dirname, "..", "js", "app", "algorithm.js");
 const code = fs.readFileSync(algoPath, "utf8");
 vm.runInThisContext(code, { filename: algoPath });
-const { scheduleRotations, matchScoreKey, readMatchScore, writeMatchScore, getFrozenRounds, bestSplitForFour, levelGapPenalty } = global;
+const { scheduleRotations, matchScoreKey, readMatchScore, writeMatchScore, getFrozenRounds, bestSplitForFour, levelGapPenalty, countSessionPairs, buildPriorCounts } = global;
 
 let passed = 0;
 let failed = 0;
@@ -367,6 +367,37 @@ test("scheduleRotations sans wBalance (undefined, comme avant cette fonctionnali
   const withoutLevelsAtAll = scheduleRotations([...players], 2, 4, "seed-levels-2", DEFAULT_OPTIONS, noPresence());
 
   assert.strictEqual(JSON.stringify(withLevelsNoBalance.rounds), JSON.stringify(withoutLevelsAtAll.rounds));
+});
+
+test("mémoire des semaines précédentes vide : planning strictement identique (non-régression)", () => {
+  const players = makePlayers(15);
+  const plain = scheduleRotations([...players], 4, 8, "seed-mem-1", DEFAULT_OPTIONS, noPresence());
+  const withEmpty = scheduleRotations([...players], 4, 8, "seed-mem-1", DEFAULT_OPTIONS, noPresence(), [], {}, buildPriorCounts([]));
+  assert.strictEqual(JSON.stringify(withEmpty.rounds), JSON.stringify(plain.rounds));
+});
+
+test("mémoire des semaines précédentes : moins de duos répétés d'une semaine à l'autre, stats de session inchangées", () => {
+  const players = makePlayers(15);
+  const sessionPairs = (res) => countSessionPairs(res.rounds.map(matches => ({ matches })));
+  const repeatedDuos = (prev, next) => Object.keys(next.t).filter(k => prev.t[k]).length;
+
+  let withMemory = 0;
+  let withoutMemory = 0;
+  for (let i = 0; i < 10; i++) {
+    const week1 = scheduleRotations([...players], 4, 8, `semaine1-${i}`, DEFAULT_OPTIONS, noPresence());
+    const pairs1 = sessionPairs(week1);
+    const week2Plain = scheduleRotations([...players], 4, 8, `semaine2-${i}`, DEFAULT_OPTIONS, noPresence());
+    const week2Mem = scheduleRotations([...players], 4, 8, `semaine2-${i}`, DEFAULT_OPTIONS, noPresence(), [], {}, buildPriorCounts([pairs1]));
+    withoutMemory += repeatedDuos(pairs1, sessionPairs(week2Plain));
+    withMemory += repeatedDuos(pairs1, sessionPairs(week2Mem));
+
+    // Les stats renvoyées ne comptent que la session elle-même (entiers).
+    const own = sessionPairs(week2Mem).t;
+    for (const [k, v] of week2Mem.stats.teammateCount) {
+      assert.strictEqual(v, own[k], `duo ${k} : ${v} en stats, ${own[k]} réellement joué`);
+    }
+  }
+  assert.ok(withMemory < withoutMemory, `duos répétés avec mémoire (${withMemory}) devrait être < sans mémoire (${withoutMemory})`);
 });
 
 // ---------------------------------------------------------------------------

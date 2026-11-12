@@ -96,7 +96,18 @@ function refreshPlayView() {
   }
 }
 
+/**
+ * Bas de l'écran Préparer : avec des scores déjà saisis, « Générer » met à jour
+ * la session en cours (tours notés figés) et « Nouvelle session » apparaît.
+ */
+function refreshPrepareCta() {
+  const hasScores = Object.keys(window.__PB_SCORES__ || {}).length > 0;
+  if (btnNewSession) btnNewSession.hidden = !hasScores;
+  if (btnGenerate) btnGenerate.textContent = hasScores ? "Mettre à jour les matchs" : "Générer les matchs";
+}
+
 function refreshCurrentSessionCard() {
+  refreshPrepareCta();
   if (!elCurrentSessionCard) return;
   const rounds = window.__PB_LAST_RESULT__?.rounds;
   if (!rounds || !rounds.length) {
