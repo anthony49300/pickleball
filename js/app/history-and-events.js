@@ -82,6 +82,10 @@ if (elHistoryList) {
       const item = history.find(x => x.id === id);
       if (item) {
         loadState(item.state);
+        // Session rechargée telle quelle : sa graine ne doit pas être
+        // remplacée par un tirage automatique (voir le bouton Générer).
+        window.__PB_SEED_PINNED__ = true;
+        autoSaveState();
         if (window.__PB_LAST_RESULT__) {
           showScreen("jouer");
           showToast("Session chargée");
@@ -133,6 +137,7 @@ if (btnResetAll) {
 
     localStorage.removeItem("pb_autosave");
     localStorage.removeItem("pb_history");
+    localStorage.removeItem(PAIR_MEMORY_KEY);
 
     // Réinitialise l'état en mémoire
     window.__PB_SCORES__ = {};
@@ -140,6 +145,8 @@ if (btnResetAll) {
     window.__PB_LEVELS__ = {};
     window.__PB_HIDDEN_ROUNDS__ = [];
     window.__PB_LAST_RESULT__ = null;
+    window.__PB_SESSION_ID__ = null;
+    window.__PB_SEED_PINNED__ = false;
 
     // Réinitialise les champs du formulaire à leurs valeurs par défaut
     elPlayers.value = "";
@@ -155,6 +162,7 @@ if (btnResetAll) {
     elPartnerK.value = "10";
     elSquare.checked = true;
     elAvoidB2B.checked = true;
+    if (elPairMemory) elPairMemory.checked = true;
 
     // Nettoie l'URL (retire un éventuel paramètre de partage ?d=...) sans recharger
     window.history.replaceState({}, "", window.location.pathname);
@@ -164,6 +172,7 @@ if (btnResetAll) {
     syncPresenceInputs();
     renderEmptyState();
     renderHistory();
+    renderPairMemoryInfo();
     showScreen("preparer");
     showToast("Page réinitialisée");
   });
@@ -185,13 +194,28 @@ if (btnSaveToHistory) {
 
 // La liste de joueurs (pastilles + fiche joueur) est gérée par players-ui.js.
 
+// Graine choisie explicitement (bouton « Nouvelle graine » ou saisie) : elle
+// est respectée par le bouton Générer au lieu d'être remplacée par un tirage.
 btnNewSeed.addEventListener("click", () => {
   elSeed.value = generateSeed();
+  window.__PB_SEED_PINNED__ = true;
   autoSaveState();
+});
+elSeed.addEventListener("input", () => {
+  window.__PB_SEED_PINNED__ = true;
 });
 
 btnGenerate.addEventListener("click", () => {
   const hasScores = Object.keys(window.__PB_SCORES__).length > 0;
+  if (!hasScores) {
+    // Nouvelle session (aucun score encore saisi) : nouvelle graine, sauf si
+    // l'utilisateur en a fixé une, pour ne pas reproduire à l'identique le
+    // planning de la semaine passée avec la même liste de joueurs. Avec des
+    // scores (arrivée/départ en cours de session), la graine et la session
+    // sont conservées : les tours notés restent figés (voir generateSession).
+    if (!window.__PB_SEED_PINNED__) elSeed.value = generateSeed();
+    window.__PB_SESSION_ID__ = newSessionId();
+  }
   generateSession(hasScores);
   // Planning prêt (pas d'erreur affichée) : on passe directement à l'écran Jouer.
   if (window.__PB_LAST_RESULT__ && (!elError || elError.hidden)) {
@@ -204,6 +228,36 @@ btnGenerate.addEventListener("click", () => {
       : `${n} tour${n > 1 ? "s" : ""} générés`, elWarning && !elWarning.hidden ? 5000 : 2400);
   }
 });
+
+// NOUVELLE SESSION : efface matchs, scores et arrivées/départs, mais garde les
+// joueurs, leurs niveaux et les réglages (la session terminée reste dans la
+// mémoire « Varier d'une semaine à l'autre », et dans l'historique si elle y a
+// été enregistrée).
+if (btnNewSession) {
+  btnNewSession.addEventListener("click", async () => {
+    const confirmed = await confirmModal(
+      "Les matchs et les scores de la session en cours vont être effacés de l'écran. Les joueurs et les réglages sont conservés.\n\nPour la garder, enregistrez-la d'abord dans l'historique.",
+      { title: "Démarrer une nouvelle session ?", confirmText: "Nouvelle session", icon: "🔄" }
+    );
+    if (!confirmed) return;
+
+    window.__PB_SCORES__ = {};
+    window.__PB_PRESENCE__ = {};
+    window.__PB_HIDDEN_ROUNDS__ = [];
+    window.__PB_LAST_RESULT__ = null;
+    window.__PB_SESSION_ID__ = null;
+    window.__PB_SEED_PINNED__ = false;
+    elSeed.value = generateSeed();
+
+    clearMessages();
+    syncPresenceInputs();
+    renderEmptyState();
+    autoSaveState();
+    renderPairMemoryInfo();
+    showScreen("preparer");
+    showToast("Nouvelle session prête : générez les matchs");
+  });
+}
 
 // Écoute instantanée sur la saisie des scores (input + change)
 ["input", "change"].forEach(evt => {
@@ -246,7 +300,7 @@ btnGenerate.addEventListener("click", () => {
 // js/shared/ui-controls.js, module chargé sur les deux pages.
 
 // Écoute instantanée de tous les paramètres du formulaire (input + change)
-[elPlayers, elCourts, elRounds, elSeed, elCourtNames, elwT, elwO, elwP, elwBalance, elBeamWidth, elPartnerK, elSquare, elAvoidB2B].forEach(el => {
+[elPlayers, elCourts, elRounds, elSeed, elCourtNames, elwT, elwO, elwP, elwBalance, elBeamWidth, elPartnerK, elSquare, elAvoidB2B, elPairMemory].forEach(el => {
   if (el) {
     ["change", "input"].forEach(evt => {
       el.addEventListener(evt, () => {

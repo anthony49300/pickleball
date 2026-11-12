@@ -18,12 +18,15 @@ const elBeamWidth = document.getElementById("beamWidth");
 const elPartnerK = document.getElementById("partnerK");
 const elSquare = document.getElementById("squareRepeats");
 const elAvoidB2B = document.getElementById("avoidB2B");
+const elPairMemory = document.getElementById("pairMemory");
+const elPairMemoryInfo = document.getElementById("pairMemoryInfo");
 
 const btnGenerate = document.getElementById("generate");
 const btnCopy = document.getElementById("copy");
 const btnCopyLink = document.getElementById("copyLink");
 const btnSaveToHistory = document.getElementById("saveToHistory");
 const btnNewSeed = document.getElementById("newSeed");
+const btnNewSession = document.getElementById("newSessionBtn");
 
 const elSchedule = document.getElementById("schedule");
 const elSessionStepper = document.getElementById("sessionStepper");

@@ -190,6 +190,11 @@
               <input id="avoidB2B" type="checkbox" class="switch" checked />
             </label>
 
+            <label class="switch-row" for="pairMemory">
+              <span>Varier d'une semaine à l'autre<small>Évite de refaire les duos et oppositions des dernières sessions sur cet appareil. <span id="pairMemoryInfo"></span></small></span>
+              <input id="pairMemory" type="checkbox" class="switch" checked />
+            </label>
+
             <details class="fold" id="expertDetails">
               <summary><span>Mode expert <small>· réglages de l'algorithme</small></span></summary>
               <div class="fold-body">
@@ -246,7 +251,10 @@
         <p id="error" class="msg error" role="alert" hidden></p>
 
         <div class="cta-bar">
-          <button type="button" id="generate" class="cta">Générer les matchs</button>
+          <div class="cta-row">
+            <button type="button" id="newSessionBtn" class="cta secondary" hidden>Nouvelle session</button>
+            <button type="button" id="generate" class="cta">Générer les matchs</button>
+          </div>
         </div>
       </section>
 

@@ -510,8 +510,15 @@ function beamSearchRound(
  *   vaut 3 (neutre), donc tant que rien n'est renseigné ici le planning
  *   généré est rigoureusement identique à avant l'introduction de ce
  *   paramètre, quels que soient numCourts/numRounds/options.wBalance.
+ * @param {{teammate: Map<string,number>, opponent: Map<string,number>}|null} [priorCounts] -
+ *   mémoire des semaines précédentes (voir buildPriorCounts) : duos et
+ *   oppositions déjà joués lors des dernières sessions, pondérés. Ces valeurs
+ *   amorcent les compteurs utilisés pour NOTER les affiches (un duo qui a
+ *   beaucoup joué ensemble récemment est moins choisi), mais ne sont pas
+ *   comptées dans les statistiques renvoyées (diagnostics de la session).
+ *   Absent ou vide : planning rigoureusement identique à avant.
  */
-function scheduleRotations(players, numCourts, numRounds, seedText, options, presenceMap, frozenRounds = [], levelsMap = {}) {
+function scheduleRotations(players, numCourts, numRounds, seedText, options, presenceMap, frozenRounds = [], levelsMap = {}, priorCounts = null) {
   const rng = makeRng(seedText);
   players = players.map(p => p.trim()).filter(Boolean);
   if (players.length < 4) throw new Error("Il faut au moins 4 joueurs.");
@@ -521,8 +528,11 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
   shuffleInPlace(players, rng);
   const benchQueue = [...players];
 
-  const teammateCount = new Map();
-  const opponentCount = new Map();
+  // Amorcés avec la mémoire des semaines précédentes (voir priorCounts).
+  const priorTeammate = priorCounts?.teammate instanceof Map ? priorCounts.teammate : new Map();
+  const priorOpponent = priorCounts?.opponent instanceof Map ? priorCounts.opponent : new Map();
+  const teammateCount = new Map(priorTeammate);
+  const opponentCount = new Map(priorOpponent);
   const playsCount = new Map();
   const benchCount = new Map();
   const singlesCount = new Map();
@@ -739,7 +749,79 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
     rounds.push(matches);
   }
 
-  return { rounds, benches, absents, stats: { teammateCount, opponentCount, playsCount, benchCount, singlesCount } };
+  return {
+    rounds, benches, absents,
+    stats: {
+      teammateCount: withoutPrior(teammateCount, priorTeammate),
+      opponentCount: withoutPrior(opponentCount, priorOpponent),
+      playsCount, benchCount, singlesCount
+    }
+  };
+}
+
+/**
+ * Retire d'un compteur la part venant de la mémoire des semaines précédentes
+ * (voir scheduleRotations, paramètre priorCounts) pour ne garder que ce qui a
+ * été joué pendant la session : les comptes de session sont entiers, d'où
+ * l'arrondi (la mémoire, pondérée, est fractionnaire).
+ * @param {Map<string,number>} counts
+ * @param {Map<string,number>} prior
+ * @returns {Map<string,number>}
+ */
+function withoutPrior(counts, prior) {
+  if (!prior.size) return counts;
+  const out = new Map();
+  for (const [k, v] of counts) {
+    const own = Math.round(v - (prior.get(k) ?? 0));
+    if (own > 0) out.set(k, own);
+  }
+  return out;
+}
+
+// =============================================================================
+// MÉMOIRE ENTRE LES SESSIONS (semaines précédentes)
+// =============================================================================
+
+/**
+ * Compte les duos et oppositions des tours joués d'une session (tours figés,
+ * voir getFrozenRounds), sous une forme sérialisable (localStorage).
+ * @param {Array<{matches: Array}>} playedRounds
+ * @returns {{t: Object<string,number>, o: Object<string,number>}}
+ */
+function countSessionPairs(playedRounds) {
+  const t = {};
+  const o = {};
+  const inc = (obj, k) => { obj[k] = (obj[k] ?? 0) + 1; };
+  for (const round of playedRounds) {
+    for (const [t1, t2] of round.matches) {
+      if (t1.length === 2) inc(t, pairKey(t1[0], t1[1]));
+      if (t2.length === 2) inc(t, pairKey(t2[0], t2[1]));
+      for (const x of t1) for (const y of t2) inc(o, pairKey(x, y));
+    }
+  }
+  return { t, o };
+}
+
+/**
+ * Construit le paramètre priorCounts de scheduleRotations à partir de la
+ * mémoire des sessions précédentes (la plus récente en premier), chacune
+ * pondérée selon son ancienneté : 0.6 pour la dernière, puis 0.4, 0.25 et
+ * 0.15 (au-delà, ignorée). Un duo déjà formé la semaine passée pèse donc
+ * moins qu'une répétition au sein de la session elle-même (poids 1).
+ * @param {Array<{t: Object<string,number>, o: Object<string,number>}>} sessions
+ * @returns {{teammate: Map<string,number>, opponent: Map<string,number>}}
+ */
+function buildPriorCounts(sessions) {
+  const teammate = new Map();
+  const opponent = new Map();
+  // Pas de const au niveau racine dans ce fichier (voir tests/algorithm.test.js).
+  const weights = [0.6, 0.4, 0.25, 0.15];
+  (sessions || []).slice(0, weights.length).forEach((s, i) => {
+    const w = weights[i];
+    for (const [k, v] of Object.entries(s?.t || {})) incCount(teammate, k, w * v);
+    for (const [k, v] of Object.entries(s?.o || {})) incCount(opponent, k, w * v);
+  });
+  return { teammate, opponent };
 }
 
 

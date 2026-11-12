@@ -22,6 +22,9 @@ function getCurrentState() {
     pk: elPartnerK.value,
     sq: elSquare.checked,
     b2b: elAvoidB2B.checked,
+    mem: elPairMemory ? elPairMemory.checked : true,
+    sp: !!window.__PB_SEED_PINNED__,
+    sid: window.__PB_SESSION_ID__ || null,
     sc: window.__PB_SCORES__ || {},
     pr: window.__PB_PRESENCE__ || {},
     lv: window.__PB_LEVELS__ || {},
@@ -53,7 +56,79 @@ function pulseSaveBadge() {
 function autoSaveState() {
   const state = getCurrentState();
   localStorage.setItem("pb_autosave", JSON.stringify(state));
+  recordPairMemory();
   pulseSaveBadge();
+}
+
+// =============================================================================
+// MÉMOIRE ENTRE LES SESSIONS (« Varier d'une semaine à l'autre »)
+// =============================================================================
+// Chaque session (identifiée par __PB_SESSION_ID__, attribué quand on génère
+// une nouvelle session, indépendant de la graine) laisse ici le compte de ses
+// duos et oppositions réellement joués (tours notés). À la génération d'une
+// session suivante, les dernières entrées amorcent l'algorithme (voir
+// buildPriorCounts dans algorithm.js) pour varier les affiches d'une semaine
+// à l'autre. Indépendant de l'historique manuel : rien à enregistrer à la
+// main. Effacé par « Tout réinitialiser ».
+const PAIR_MEMORY_KEY = "pb_pair_memory";
+const PAIR_MEMORY_MAX = 6;
+
+function getPairMemory() {
+  try {
+    const list = JSON.parse(localStorage.getItem(PAIR_MEMORY_KEY) || "[]");
+    return Array.isArray(list) ? list : [];
+  } catch {
+    return [];
+  }
+}
+
+function newSessionId() {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+/**
+ * Met à jour l'entrée de la session en cours dans la mémoire : ses tours notés
+ * (voir getFrozenRounds). Sans tour noté, l'entrée est retirée (scores effacés,
+ * planning régénéré avant de jouer...).
+ */
+function recordPairMemory() {
+  const sid = window.__PB_SESSION_ID__;
+  if (!sid) return;
+  const played = getFrozenRounds(window.__PB_LAST_RESULT__, window.__PB_SCORES__ || {});
+  const memory = getPairMemory();
+  const idx = memory.findIndex(e => e.sid === sid);
+  if (!played.length) {
+    if (idx === -1) return;
+    memory.splice(idx, 1);
+  } else {
+    const at = idx !== -1 ? memory[idx].at : Date.now();
+    const entry = { sid, at, ...countSessionPairs(played) };
+    if (idx !== -1) memory[idx] = entry;
+    else memory.push(entry);
+    memory.sort((a, b) => b.at - a.at);
+    memory.length = Math.min(memory.length, PAIR_MEMORY_MAX);
+  }
+  try {
+    localStorage.setItem(PAIR_MEMORY_KEY, JSON.stringify(memory));
+  } catch {
+    // Stockage plein ou indisponible : la mémoire est un plus, pas bloquant.
+  }
+  renderPairMemoryInfo();
+}
+
+/** Sessions précédentes (hors session en cours), la plus récente d'abord. */
+function getPreviousSessionsMemory() {
+  const sid = window.__PB_SESSION_ID__;
+  return getPairMemory().filter(e => e.sid !== sid);
+}
+
+/** Petit rappel sous l'interrupteur « Varier d'une semaine à l'autre ». */
+function renderPairMemoryInfo() {
+  if (!elPairMemoryInfo) return;
+  const n = Math.min(getPreviousSessionsMemory().length, 4);
+  elPairMemoryInfo.textContent = n
+    ? `${n} session${n > 1 ? "s" : ""} précédente${n > 1 ? "s" : ""} prise${n > 1 ? "s" : ""} en compte.`
+    : "Aucune session précédente pour l'instant.";
 }
 
 /**
@@ -125,7 +200,12 @@ function generateSession(preserveScores = true) {
       ? getFrozenRounds(window.__PB_LAST_RESULT__, window.__PB_SCORES__)
       : [];
 
-    const result = scheduleRotations(players, numCourts, numRounds, seedText, options, window.__PB_PRESENCE__, frozenRounds, window.__PB_LEVELS__);
+    // Mémoire des semaines précédentes (voir PAIR_MEMORY_KEY), si activée.
+    const priorCounts = elPairMemory && elPairMemory.checked
+      ? buildPriorCounts(getPreviousSessionsMemory())
+      : null;
+
+    const result = scheduleRotations(players, numCourts, numRounds, seedText, options, window.__PB_PRESENCE__, frozenRounds, window.__PB_LEVELS__, priorCounts);
     window.__PB_LAST_RESULT__ = result;
 
     render(result, players, numCourts, numRounds);
@@ -157,6 +237,12 @@ function loadState(state) {
   if (state.pk !== undefined) elPartnerK.value = state.pk;
   if (state.sq !== undefined) elSquare.checked = state.sq;
   if (state.b2b !== undefined) elAvoidB2B.checked = state.b2b;
+  if (elPairMemory) elPairMemory.checked = state.mem !== false;
+  window.__PB_SEED_PINNED__ = !!state.sp;
+  // Session enregistrée avant l'introduction de l'identifiant de session : on
+  // lui en donne un si elle a des scores (c'est bien une session en cours).
+  window.__PB_SESSION_ID__ = state.sid
+    || (state.sc && Object.keys(state.sc).length ? newSessionId() : null);
   if (state.pr) window.__PB_PRESENCE__ = state.pr;
   window.__PB_LEVELS__ = state.lv && typeof state.lv === "object" ? state.lv : {};
   window.__PB_HIDDEN_ROUNDS__ = Array.isArray(state.hr) ? state.hr : [];
