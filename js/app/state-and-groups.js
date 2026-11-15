@@ -139,7 +139,7 @@ function generateSession(preserveScores = true) {
   btnCopy.disabled = true;
 
   if (!preserveScores) {
-    window.__PB_SCORES__ = {};
+    window.__PB_SCORES__ = Object.create(null);
     window.__PB_HIDDEN_ROUNDS__ = [];
     if (elRankingSection) elRankingSection.hidden = true;
   }

@@ -44,7 +44,7 @@ function updateTeamCountBadge() {
 function renderTeamLevelsList(teams, levels) {
   if (!elTeamLevelsList) return;
   elTeamLevelsList.innerHTML = teams.map(team => {
-    const current = levels[team.id] ?? 3;
+    const current = ownValue(levels, team.id) ?? 3;
     const options = [1, 2, 3, 4, 5].map(n =>
       `<option value="${n}" ${n === current ? "selected" : ""}>${n} — ${TEAM_LEVEL_LABELS[n]}</option>`
     ).join("");
@@ -70,7 +70,7 @@ function renderIndividualPlayerLevels() {
   const levels = window.__PT_PLAYER_LEVELS__;
 
   elIndividualPlayerLevelsList.innerHTML = players.map(p => {
-    const current = levels[p] ?? 3;
+    const current = ownValue(levels, p) ?? 3;
     const options = [1, 2, 3, 4, 5].map(n =>
       `<option value="${n}" ${n === current ? "selected" : ""}>${n} — ${TEAM_LEVEL_LABELS[n]}</option>`
     ).join("");

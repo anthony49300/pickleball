@@ -62,13 +62,16 @@ const btnSavePlayerGroup = document.getElementById("savePlayerGroupBtn");
 // avec les autres pages du site, chargés avant celui-ci — voir index.html).
 
 // Variables globales de mémoire
-window.__PB_SCORES__ = {};
-window.__PB_PRESENCE__ = {};
+// Tables indexées par nom de joueur : sans prototype (Object.create(null)),
+// pour qu'un joueur nommé "__proto__" ou "constructor" y soit une clé comme
+// une autre. Même format JSON une fois sauvegardées.
+window.__PB_SCORES__ = Object.create(null);
+window.__PB_PRESENCE__ = Object.create(null);
 // Niveau (1-5) par joueur, entièrement optionnel (voir levelGapPenalty dans
 // algorithm.js) : un joueur absent de cette table compte comme niveau 3
 // (neutre) et n'affecte donc jamais le planning tant qu'il n'est pas modifié
 // explicitement via la section "Niveaux des Joueurs".
-window.__PB_LEVELS__ = {};
+window.__PB_LEVELS__ = Object.create(null);
 // Index (0-based) des tours repliés par l'ancienne interface (un bouton
 // "Masquer" par tour). L'écran Jouer n'affiche plus qu'un tour à la fois et
 // n'utilise plus cette liste, mais elle est conservée dans l'état sauvegardé

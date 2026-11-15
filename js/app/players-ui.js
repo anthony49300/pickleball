@@ -75,8 +75,8 @@ function renderPlayerChips() {
   }
 
   elPlayerChips.innerHTML = players.map(p => {
-    const level = window.__PB_LEVELS__[p] ?? 3;
-    const pr = window.__PB_PRESENCE__[p];
+    const level = ownValue(window.__PB_LEVELS__, p) ?? 3;
+    const pr = ownValue(window.__PB_PRESENCE__, p);
     const tags = [];
     if (pr && pr.start > 1) tags.push(`dès T${pr.start}`);
     if (pr && pr.end < totalRounds) tags.push(`jusqu'à T${pr.end}`);
@@ -139,7 +139,7 @@ if (btnPlayersTextToggle) {
 // ---------------------------------------------------------------------------
 
 function renderSheetLevels() {
-  const level = window.__PB_LEVELS__[sheetPlayer] ?? 3;
+  const level = ownValue(window.__PB_LEVELS__, sheetPlayer) ?? 3;
   // Boutons numérotés (les libellés complets ne tiennent pas sur 5 colonnes
   // à largeur de téléphone) ; le libellé du niveau choisi s'affiche dessous.
   elSheetLevels.innerHTML = [1, 2, 3, 4, 5].map(k => `
@@ -153,7 +153,7 @@ function openPlayerSheet(name, trigger) {
   sheetPlayer = name;
   sheetReturnFocus = trigger || null;
   const total = totalRoundsValue();
-  if (!window.__PB_PRESENCE__[name]) window.__PB_PRESENCE__[name] = { start: 1, end: total };
+  if (!ownValue(window.__PB_PRESENCE__, name)) window.__PB_PRESENCE__[name] = { start: 1, end: total };
   const pr = window.__PB_PRESENCE__[name];
 
   elSheetTitle.textContent = name;
@@ -215,7 +215,7 @@ if (elPlayerSheet) {
   const onPresenceInput = (e) => {
     if (!sheetPlayer) return;
     const total = totalRoundsValue();
-    const pr = window.__PB_PRESENCE__[sheetPlayer] || (window.__PB_PRESENCE__[sheetPlayer] = { start: 1, end: total });
+    const pr = ownValue(window.__PB_PRESENCE__, sheetPlayer) || (window.__PB_PRESENCE__[sheetPlayer] = { start: 1, end: total });
     let start = parseInt(elSheetStart.value, 10);
     let end = parseInt(elSheetEnd.value, 10);
     if (isNaN(start) || isNaN(end)) return; // saisie en cours (champ vidé)

@@ -89,86 +89,15 @@ function updateRankings() {
   const result = window.__PB_LAST_RESULT__;
   if (!result) return;
   
-  const playersStats = {};
-  const allPlayers = parsePlayers(elPlayers.value);
-  
-  allPlayers.forEach(p => {
-    playersStats[p] = { w: 0, l: 0, pf: 0, pa: 0, m: 0, maxWin: 0, maxLoss: 0, streak: 0, closeWins: 0, closeLosses: 0, results: [] };
-  });
-  
-  let hasAnyScore = false;
-  let scoredMatches = 0;
-  let totalMatches = 0;
-  const pairWins = new Map();
+  const { sortedPlayers, pairWins, hasAnyScore, scoredMatches, totalMatches } =
+    computePlayerStats(parsePlayers(elPlayers.value), result.rounds, window.__PB_SCORES__);
 
-  result.rounds.forEach((matches, rIdx) => {
-    matches.forEach((match, mIdx) => {
-      totalMatches++;
-      const scores = readMatchScore(window.__PB_SCORES__, rIdx, mIdx, match);
-
-      // toScore (sanitize.js) : entiers 0-99 uniquement, quoi que contienne le stockage.
-      const s1 = toScore(scores?.['1']);
-      const s2 = toScore(scores?.['2']);
-      if (s1 !== null && s2 !== null) {
-        hasAnyScore = true;
-        scoredMatches++;
-        const [t1, t2] = match;
-        
-        const updateTeamStats = (team, ptsFor, ptsAgainst) => {
-          team.forEach(p => {
-            const stats = playersStats[p];
-            if (stats) {
-              stats.m++;
-              stats.pf += ptsFor;
-              stats.pa += ptsAgainst;
-              const margin = Math.abs(ptsFor - ptsAgainst);
-              if (ptsFor > ptsAgainst) {
-                stats.w++;
-                stats.maxWin = Math.max(stats.maxWin, ptsFor - ptsAgainst);
-                stats.streak = stats.streak >= 0 ? stats.streak + 1 : 1;
-                if (margin <= 2) stats.closeWins++;
-                stats.results.push("W");
-              } else if (ptsFor < ptsAgainst) {
-                stats.l++;
-                stats.maxLoss = Math.max(stats.maxLoss, ptsAgainst - ptsFor);
-                stats.streak = stats.streak <= 0 ? stats.streak - 1 : -1;
-                if (margin <= 2) stats.closeLosses++;
-                stats.results.push("L");
-              }
-            }
-          });
-        };
-
-        updateTeamStats(t1, s1, s2);
-        updateTeamStats(t2, s2, s1);
-
-        if (s1 > s2 && t1.length > 1) incCount(pairWins, pairKey(t1[0], t1[1]));
-        if (s2 > s1 && t2.length > 1) incCount(pairWins, pairKey(t2[0], t2[1]));
-      }
-    });
-  });
-  
   if (!hasAnyScore) {
     elRankingSection.hidden = true;
     return;
   }
   
   elRankingSection.hidden = false;
-
-  // Tri selon les règles de départage (Taux de victoire -> Différentiel moyen -> Victoires brutes).
-  // Le taux de victoire passe avant le nombre de victoires brutes pour ne pas
-  // défavoriser un joueur qui a simplement moins joué (rotation du banc) mais
-  // gagné dans les mêmes proportions (ex: 2V/2 ne doit pas être classé après
-  // 3V/3 uniquement parce qu'il totalise moins de victoires).
-  const sortedPlayers = Object.entries(playersStats).map(([name, stats]) => {
-    const winRate = stats.m > 0 ? stats.w / stats.m : 0;
-    const avgDiff = stats.m > 0 ? (stats.pf - stats.pa) / stats.m : 0;
-    return { name, ...stats, diff: stats.pf - stats.pa, winRate, avgDiff };
-  }).sort((a, b) => {
-    if (b.winRate !== a.winRate) return b.winRate - a.winRate; // 1. Taux de victoire
-    if (b.avgDiff !== a.avgDiff) return b.avgDiff - a.avgDiff; // 2. Différentiel moyen par match
-    return b.w - a.w;                                           // 3. Victoires brutes
-  });
 
   renderPodium(sortedPlayers);
   renderBadges(sortedPlayers, pairWins);

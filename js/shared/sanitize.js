@@ -58,11 +58,6 @@ function nullProtoDict() {
   return Object.create(null);
 }
 
-/** Valeur propre d'un objet (jamais une propriété héritée de Object.prototype). */
-function ownValue(obj, key) {
-  return obj != null && Object.prototype.hasOwnProperty.call(obj, key) ? obj[key] : undefined;
-}
-
 /**
  * Score de match : entier de 0 à 99, ou null pour toute autre valeur (texte,
  * objet, NaN, négatif...). Un nombre écrit en texte ("11") est accepté.

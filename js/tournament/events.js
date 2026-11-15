@@ -155,7 +155,7 @@ btnFormPairs.addEventListener("click", async () => {
   // sont réinitialisés avec le niveau moyen de chaque nouvelle paire (voir
   // autoPairPlayers) plutôt que de laisser d'anciennes valeurs désormais mal
   // associées, ou de perdre l'équilibrage déjà calculé lors de la formation.
-  window.__PT_TEAM_LEVELS__ = {};
+  window.__PT_TEAM_LEVELS__ = Object.create(null);
   pairLevels.forEach((level, idx) => { window.__PT_TEAM_LEVELS__[idx] = level; });
 
   clearTeamsMessages();

@@ -111,6 +111,15 @@ function incCount(map, key, amt = 1) {
 }
 
 /**
+ * Valeur PROPRE d'une table indexée par nom (niveaux, présences...) : jamais
+ * une propriété héritée de Object.prototype. Sans ça, un joueur nommé
+ * "constructor" ou "toString" lirait une fonction au lieu de son niveau.
+ */
+function ownValue(obj, key) {
+  return obj != null && Object.prototype.hasOwnProperty.call(obj, key) ? obj[key] : undefined;
+}
+
+/**
  * Échappe les caractères HTML sensibles d'une chaîne avant toute injection via innerHTML.
  * Indispensable pour toute donnée saisie par l'utilisateur (noms de joueurs, terrains, seed…)
  * afin d'éviter les failles XSS (ex: un nom de joueur du type "<img src=x onerror=...>").
@@ -230,6 +239,93 @@ function getFrozenRounds(previousResult, scoresStore) {
 }
 
 /**
+ * Statistiques individuelles de la session (classement, podium, badges), à
+ * partir du planning et des scores saisis. Indexées dans une Map par nom de
+ * joueur (et non un objet {}) : un joueur nommé "__proto__" ou "constructor"
+ * y est un joueur comme un autre, il a bien sa ligne au classement.
+ * Fonction pure (aucun accès au DOM), testée dans tests/security.test.js.
+ * @param {string[]} players
+ * @param {Array} rounds - result.rounds (voir scheduleRotations)
+ * @param {Object} scoresStore - window.__PB_SCORES__
+ * @returns {{sortedPlayers: Array, pairWins: Map<string,number>, hasAnyScore: boolean, scoredMatches: number, totalMatches: number}}
+ */
+function computePlayerStats(players, rounds, scoresStore) {
+  const playersStats = new Map();
+  players.forEach(p => {
+    playersStats.set(p, { w: 0, l: 0, pf: 0, pa: 0, m: 0, maxWin: 0, maxLoss: 0, streak: 0, closeWins: 0, closeLosses: 0, results: [] });
+  });
+
+  // Seuls des entiers 0-99 comptent comme score (voir toScore, sanitize.js).
+  const asScore = v => (typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 99 ? v : null);
+
+  let hasAnyScore = false;
+  let scoredMatches = 0;
+  let totalMatches = 0;
+  const pairWins = new Map();
+
+  rounds.forEach((matches, rIdx) => {
+    matches.forEach((match, mIdx) => {
+      totalMatches++;
+      const scores = readMatchScore(scoresStore, rIdx, mIdx, match);
+      const s1 = asScore(scores?.['1']);
+      const s2 = asScore(scores?.['2']);
+      if (s1 === null || s2 === null) return;
+
+      hasAnyScore = true;
+      scoredMatches++;
+      const [t1, t2] = match;
+
+      const updateTeamStats = (team, ptsFor, ptsAgainst) => {
+        team.forEach(p => {
+          const stats = playersStats.get(p);
+          if (!stats) return;
+          stats.m++;
+          stats.pf += ptsFor;
+          stats.pa += ptsAgainst;
+          const margin = Math.abs(ptsFor - ptsAgainst);
+          if (ptsFor > ptsAgainst) {
+            stats.w++;
+            stats.maxWin = Math.max(stats.maxWin, ptsFor - ptsAgainst);
+            stats.streak = stats.streak >= 0 ? stats.streak + 1 : 1;
+            if (margin <= 2) stats.closeWins++;
+            stats.results.push("W");
+          } else if (ptsFor < ptsAgainst) {
+            stats.l++;
+            stats.maxLoss = Math.max(stats.maxLoss, ptsAgainst - ptsFor);
+            stats.streak = stats.streak <= 0 ? stats.streak - 1 : -1;
+            if (margin <= 2) stats.closeLosses++;
+            stats.results.push("L");
+          }
+        });
+      };
+
+      updateTeamStats(t1, s1, s2);
+      updateTeamStats(t2, s2, s1);
+
+      if (s1 > s2 && t1.length > 1) incCount(pairWins, pairKey(t1[0], t1[1]));
+      if (s2 > s1 && t2.length > 1) incCount(pairWins, pairKey(t2[0], t2[1]));
+    });
+  });
+
+  // Tri selon les règles de départage (Taux de victoire -> Différentiel moyen -> Victoires brutes).
+  // Le taux de victoire passe avant le nombre de victoires brutes pour ne pas
+  // défavoriser un joueur qui a simplement moins joué (rotation du banc) mais
+  // gagné dans les mêmes proportions (ex: 2V/2 ne doit pas être classé après
+  // 3V/3 uniquement parce qu'il totalise moins de victoires).
+  const sortedPlayers = [...playersStats.entries()].map(([name, stats]) => {
+    const winRate = stats.m > 0 ? stats.w / stats.m : 0;
+    const avgDiff = stats.m > 0 ? (stats.pf - stats.pa) / stats.m : 0;
+    return { name, ...stats, diff: stats.pf - stats.pa, winRate, avgDiff };
+  }).sort((a, b) => {
+    if (b.winRate !== a.winRate) return b.winRate - a.winRate; // 1. Taux de victoire
+    if (b.avgDiff !== a.avgDiff) return b.avgDiff - a.avgDiff; // 2. Différentiel moyen par match
+    return b.w - a.w;                                           // 3. Victoires brutes
+  });
+
+  return { sortedPlayers, pairWins, hasAnyScore, scoredMatches, totalMatches };
+}
+
+/**
  * Extrait les N paires les plus fréquentes à partir d'une Map de statistiques.
  */
 function topPairs(map, limit = 15) {
@@ -279,7 +375,7 @@ function scoreOpponents(a, b, c, d, opponentCount, wO, squareRepeats) {
  */
 function levelGapPenalty(team1, team2, wBalance, levels) {
   if (!wBalance || !levels) return 0;
-  const lvl = p => levels[p] ?? 3;
+  const lvl = p => ownValue(levels, p) ?? 3;
   const sum1 = lvl(team1[0]) + lvl(team1[1]);
   const sum2 = lvl(team2[0]) + lvl(team2[1]);
   return wBalance * Math.abs(sum1 - sum2);
@@ -523,7 +619,7 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
   players = players.map(p => p.trim()).filter(Boolean);
   if (players.length < 4) throw new Error("Il faut au moins 4 joueurs.");
 
-  const lvl = p => levelsMap?.[p] ?? 3;
+  const lvl = p => ownValue(levelsMap, p) ?? 3;
 
   shuffleInPlace(players, rng);
   const benchQueue = [...players];
@@ -549,7 +645,7 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
     const roundNumber = r + 1;
 
     const activePlayers = players.filter(p => {
-      const pres = presenceMap[p];
+      const pres = ownValue(presenceMap, p);
       if (!pres) return true;
       return roundNumber >= pres.start && roundNumber <= pres.end;
     });

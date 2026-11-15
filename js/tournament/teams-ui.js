@@ -177,7 +177,7 @@ function onTeamSheetKeydown(e) {
 function removeTeamLine(lineIdx) {
   const lines = teamLines();
   lines.splice(lineIdx, 1);
-  const shifted = {};
+  const shifted = Object.create(null);
   Object.entries(window.__PT_TEAM_LEVELS__).forEach(([key, level]) => {
     const idx = parseInt(key, 10);
     if (idx < lineIdx) shifted[idx] = level;

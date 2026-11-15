@@ -80,13 +80,13 @@ function syncPresenceInputs() {
   const totalRounds = parseInt(elRounds.value || "8", 10);
 
   players.forEach(p => {
-    if (!window.__PB_PRESENCE__[p]) {
+    if (!ownValue(window.__PB_PRESENCE__, p)) {
       window.__PB_PRESENCE__[p] = { start: 1, end: totalRounds };
     }
     // 3 = valeur neutre par défaut (voir LEVEL_LABELS) : tant qu'elle n'est
     // pas changée, ce joueur n'a aucun impact sur l'équilibrage (voir
     // levelGapPenalty dans algorithm.js).
-    if (window.__PB_LEVELS__[p] == null) window.__PB_LEVELS__[p] = 3;
+    if (ownValue(window.__PB_LEVELS__, p) == null) window.__PB_LEVELS__[p] = 3;
   });
 
   updatePlayerCountBadge();

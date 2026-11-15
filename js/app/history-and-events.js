@@ -141,9 +141,9 @@ if (btnResetAll) {
     localStorage.removeItem(PAIR_MEMORY_KEY);
 
     // Réinitialise l'état en mémoire
-    window.__PB_SCORES__ = {};
-    window.__PB_PRESENCE__ = {};
-    window.__PB_LEVELS__ = {};
+    window.__PB_SCORES__ = Object.create(null);
+    window.__PB_PRESENCE__ = Object.create(null);
+    window.__PB_LEVELS__ = Object.create(null);
     window.__PB_HIDDEN_ROUNDS__ = [];
     window.__PB_LAST_RESULT__ = null;
     window.__PB_SESSION_ID__ = null;
@@ -242,8 +242,8 @@ if (btnNewSession) {
     );
     if (!confirmed) return;
 
-    window.__PB_SCORES__ = {};
-    window.__PB_PRESENCE__ = {};
+    window.__PB_SCORES__ = Object.create(null);
+    window.__PB_PRESENCE__ = Object.create(null);
     window.__PB_HIDDEN_ROUNDS__ = [];
     window.__PB_LAST_RESULT__ = null;
     window.__PB_SESSION_ID__ = null;
