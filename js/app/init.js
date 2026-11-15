@@ -29,9 +29,17 @@ window.addEventListener("DOMContentLoaded", () => {
       // Lien démesuré (bien au-delà d'une vraie session) : refusé d'emblée.
       if (sharedData.length > MAX_SHARED_DATA_LENGTH) throw new Error("Lien de partage trop long.");
       const jsonString = LZString.decompressFromEncodedURIComponent(sharedData);
-      const report = {};
-      loadState(JSON.parse(jsonString), report);
-      if (report.clamped) prependWarning(IMPORT_CLAMPED_MESSAGE);
+      // Réglages du mode expert du lien ignorés (on garde ceux de cet
+      // appareil), coût du planning vérifié : voir prepareSharedRotationState.
+      let recipient = null;
+      try {
+        recipient = JSON.parse(localStorage.getItem("pb_autosave") || "null");
+      } catch {
+        recipient = null;
+      }
+      const shared = prepareSharedRotationState(JSON.parse(jsonString), recipient);
+      loadState(shared.state);
+      if (shared.clamped) prependWarning(IMPORT_CLAMPED_MESSAGE);
       // Planning partagé : on garde sa graine (voir le bouton Générer).
       window.__PB_SEED_PINNED__ = true;
       autoSaveState();

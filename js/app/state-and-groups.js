@@ -248,8 +248,52 @@ const IMPORT_CLAMPED_MESSAGE = "Ce lien contenait des réglages hors limites ; i
  */
 function prependWarning(message) {
   if (!elWarning) return;
-  const existing = elWarning.hidden ? "" : elWarning.textContent;
-  elWarning.textContent = existing ? `${message} ${existing}` : message;
+  if (elWarning.hidden) {
+    elWarning.textContent = message;
+  } else {
+    // Nœud texte plutôt que textContent : garde un éventuel bouton déjà
+    // présent (voir showHeavyScheduleWarning).
+    elWarning.prepend(document.createTextNode(`${message} `));
+  }
+  elWarning.hidden = false;
+}
+
+/**
+ * Durée estimée (ms, PC de bureau) d'une génération avec les réglages
+ * actuels du formulaire, ramenés aux mêmes bornes que generateSession.
+ * @param {number} [frozenRounds] - tours déjà notés, qui ne seront pas recalculés
+ */
+function estimateFormScheduleCost(frozenRounds = 0) {
+  const players = Math.min(parsePlayers(elPlayers.value).length, SANITIZE_LIMITS.maxPlayers);
+  const courts = clampFormInt(elCourts.value, 1, 10, 1).value;
+  const rounds = clampFormInt(elRounds.value, 1, 50, 1).value - frozenRounds;
+  const beamWidth = clampFormInt(elBeamWidth.value, 10, 500, 80).value;
+  const partnerK = clampFormInt(elPartnerK.value, 4, 30, 10).value;
+  return estimateScheduleCost(players, courts, rounds, beamWidth, partnerK);
+}
+
+/** Durée lisible pour les messages : « environ 12 s », « environ 3 min ». */
+function formatScheduleCost(ms) {
+  const s = Math.max(3, Math.round(ms / 1000));
+  return s < 120 ? `environ ${s} s` : `environ ${Math.round(s / 60)} min`;
+}
+
+/**
+ * Planning trop lourd pour être généré automatiquement au chargement : avertit
+ * dans #warning (non bloquant) avec un bouton « Générer quand même ».
+ */
+function showHeavyScheduleWarning(costMs) {
+  if (!elWarning) return;
+  elWarning.textContent = `Ce planning est long à calculer (${formatScheduleCost(costMs)} sur un ordinateur, davantage sur un téléphone) : il n'a pas été généré automatiquement. `;
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "secondary";
+  btn.textContent = "Générer quand même";
+  btn.addEventListener("click", () => {
+    generateSession(true);
+    if (window.__PB_LAST_RESULT__ && (!elError || elError.hidden)) showScreen("jouer");
+  });
+  elWarning.append(btn);
   elWarning.hidden = false;
 }
 
@@ -259,6 +303,9 @@ function prependWarning(message) {
  * js/shared/sanitize.js) : il peut venir d'un lien partagé ou d'une
  * sauvegarde modifiée, donc jamais utilisé tel quel. Lève une exception s'il
  * est structurellement invalide.
+ * Le planning est ensuite régénéré automatiquement, sauf si son coût estimé
+ * dépasse SCHEDULE_COST_BUDGET_MS (lien piégé, ou sauvegarde issue d'un tel
+ * lien) : la page charge alors le formulaire et propose de générer.
  * @param {Object} rawState
  * @param {{clamped?: boolean}} [report] - voir sanitizeRotationState
  */
@@ -296,7 +343,13 @@ function loadState(rawState, report = {}) {
   syncSliderOutputs();
 
   if (state.p && parsePlayers(state.p).length >= 4) {
-    generateSession(true);
+    const cost = estimateFormScheduleCost();
+    if (cost > SCHEDULE_COST_BUDGET_MS) {
+      renderEmptyState();
+      showHeavyScheduleWarning(cost);
+    } else {
+      generateSession(true);
+    }
   } else {
     renderEmptyState();
   }

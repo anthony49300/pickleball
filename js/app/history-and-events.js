@@ -206,8 +206,22 @@ elSeed.addEventListener("input", () => {
   window.__PB_SEED_PINNED__ = true;
 });
 
-btnGenerate.addEventListener("click", () => {
+btnGenerate.addEventListener("click", async () => {
   const hasScores = Object.keys(window.__PB_SCORES__).length > 0;
+
+  // Planning long à calculer (beaucoup de joueurs, de terrains et de tours,
+  // recherche élargie) : la page serait figée pendant le calcul, on demande
+  // d'abord confirmation. Les tours déjà notés ne sont pas recalculés.
+  const frozen = hasScores ? getFrozenRounds(window.__PB_LAST_RESULT__, window.__PB_SCORES__).length : 0;
+  const cost = estimateFormScheduleCost(frozen);
+  if (cost > SCHEDULE_COST_BUDGET_MS) {
+    const confirmed = await confirmModal(
+      `Avec ces réglages, le calcul du planning peut bloquer l'application pendant ${formatScheduleCost(cost)} sur un ordinateur, et plus longtemps sur un téléphone.\n\nRéduire le nombre de tours ou de terrains (ou la précision du mode expert) accélère le calcul.`,
+      { title: "Planning long à calculer", confirmText: "Générer quand même", icon: "⏳" }
+    );
+    if (!confirmed) return;
+  }
+
   if (!hasScores) {
     // Nouvelle session (aucun score encore saisi) : nouvelle graine, sauf si
     // l'utilisateur en a fixé une, pour ne pas reproduire à l'identique le

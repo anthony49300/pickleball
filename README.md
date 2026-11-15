@@ -258,6 +258,7 @@ Chaque fichier est servi depuis le cache de l'appareil, et une version plus réc
 ## Sécurité
 
 - **Liens de partage validés** : un lien `?d=…` (comme une sauvegarde ou un historique relu sur l'appareil) n'est jamais utilisé tel quel. `js/shared/sanitize.js` en garde une copie propre : scores entiers de 0 à 99, identifiants au format attendu, textes tronqués, réglages ramenés aux limites des champs (10 terrains, 50 tours, 60 joueurs ; 64 équipes, 16 poules, 8 qualifiés, 16 terrains), clés inconnues retirées. Un lien hors limites s'ouvre avec un avertissement ; un lien illisible ou démesuré est refusé.
+- **Plannings trop lourds** : un lien de partage n'apporte jamais ses réglages du mode expert (ceux de l'appareil sont conservés). Si le planning d'un lien ou d'une sauvegarde est estimé à plus de 2 secondes de calcul, il n'est pas généré automatiquement : un avertissement propose « Générer quand même ». Le bouton **Générer les matchs** demande lui aussi confirmation au-delà de ce seuil.
 - **Affichage** : tout texte venant de l'état (noms, terrains, identifiants) est échappé avant d'être inséré dans la page.
 - **Content-Security-Policy** : `index.html` et `tournoi.html` n'autorisent que les scripts du site, plus le petit script anti-flash de `<head>`, identifié par son empreinte SHA-256. **Si ce script en ligne change, son empreinte doit être mise à jour dans la balise CSP des deux pages** : `npm test` (`tests/security.test.js`) échoue tant qu'elle ne correspond pas, et affiche la nouvelle valeur à recopier.
 

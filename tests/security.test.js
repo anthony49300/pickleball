@@ -35,7 +35,8 @@ const {
   sanitizeRotationState, sanitizeTournamentState, sanitizeRotationHistory,
   sanitizeTournamentHistory, sanitizePlayerGroups, toScore, clampFormInt,
   buildMatchCard, buildTournamentMatchCard, wrapHideableMatch, renderBracketTreeLeaf,
-  scheduleRotations, writeMatchScore, computePlayerStats, escapeHtml
+  scheduleRotations, writeMatchScore, computePlayerStats, escapeHtml,
+  estimateScheduleCost, prepareSharedRotationState
 } = global;
 
 const fixture = (name) => JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", name), "utf8"));
@@ -292,7 +293,56 @@ test("niveaux et présences : un joueur nommé comme une propriété d'Object.pr
 });
 
 // ---------------------------------------------------------------------------
-// 6. Content-Security-Policy
+// 6. Coût de génération et liens partagés (déni de service)
+// ---------------------------------------------------------------------------
+
+// Budget de SCHEDULE_COST_BUDGET_MS (constante de sanitize.js, non exposée
+// sur global) : 2 s estimées sur un PC de bureau.
+const BUDGET_MS = 2000;
+const names = (n) => Array.from({ length: n }, (_, i) => `Joueur ${i + 1}`).join("\n");
+
+test("estimateScheduleCost : petit planning sous le budget, 40 joueurs / 10 terrains / 50 tours très au-dessus", () => {
+  assert.ok(estimateScheduleCost(10, 2, 8, 80, 10) < BUDGET_MS / 10);
+  assert.ok(estimateScheduleCost(40, 10, 50, 80, 10) > 20 * BUDGET_MS);
+  assert.ok(estimateScheduleCost(40, 10, 50, 500, 30) > estimateScheduleCost(40, 10, 50, 80, 10), "croît avec la largeur du faisceau");
+  assert.strictEqual(estimateScheduleCost(3, 2, 8), 0, "moins de 4 joueurs : rien à calculer");
+});
+
+test("lien 40 joueurs / 10 terrains / 50 tours avec bw: 500 : pas de génération automatique", () => {
+  const { state, autoGenerate, cost } = prepareSharedRotationState({ p: names(40), c: 10, r: 50, s: "x", bw: 500, pk: 30 });
+  assert.strictEqual(autoGenerate, false);
+  assert.ok(cost > BUDGET_MS);
+  assert.strictEqual(state.c, 10);
+  assert.strictEqual(state.r, 50);
+});
+
+test("lien partagé : les réglages du mode expert du lien sont ignorés", () => {
+  const link = { p: names(12), c: 3, r: 6, s: "x", wt: 20, wo: 20, wp: 10, wbal: 20, bw: 500, pk: 30, sq: false };
+  const expert = ["wt", "wo", "wp", "wbal", "bw", "pk", "sq"];
+
+  // Sans sauvegarde sur l'appareil : réglages par défaut de la page.
+  const fresh = prepareSharedRotationState(link).state;
+  for (const k of expert) assert.ok(!(k in fresh), `${k} du lien ignoré`);
+
+  // Avec une sauvegarde : ceux de l'appareil.
+  const recipient = { p: "A", wt: "7", wo: "1", wp: "0.5", wbal: "4", bw: "120", pk: "12", sq: true };
+  const mine = prepareSharedRotationState(link, recipient).state;
+  for (const k of expert) assert.deepStrictEqual(mine[k], recipient[k], `${k} de l'appareil conservé`);
+  assert.strictEqual(mine.p, link.p, "les joueurs viennent bien du lien");
+  assert.strictEqual(mine.c, 3);
+  assert.strictEqual(mine.r, 6);
+});
+
+test("lien normal (10 joueurs, 2 terrains, 8 tours) : génération automatique, rapide en vrai", () => {
+  const { state, autoGenerate } = prepareSharedRotationState({ p: names(10), c: 2, r: 8, s: "x" });
+  assert.strictEqual(autoGenerate, true);
+  const t0 = Date.now();
+  scheduleRotations(state.p.split("\n"), 2, 8, "x", { wT: 5, wO: 2, wP: 1, wBalance: 3, beamWidth: 80, partnerK: 10, squareRepeats: true, avoidB2B: true }, {});
+  assert.ok(Date.now() - t0 < BUDGET_MS, "la génération réelle tient dans le budget");
+});
+
+// ---------------------------------------------------------------------------
+// 7. Content-Security-Policy
 // ---------------------------------------------------------------------------
 
 for (const page of ["index.html", "tournoi.html"]) {

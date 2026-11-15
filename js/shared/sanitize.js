@@ -259,6 +259,100 @@ function sanitizeRotationState(raw, report = {}) {
   return out;
 }
 
+// -----------------------------------------------------------------------------
+// COÛT D'UNE GÉNÉRATION (mode Rotation)
+// -----------------------------------------------------------------------------
+// La génération (scheduleRotations, algorithm.js) tourne sur le fil principal :
+// un planning démesuré, même dans les bornes des champs, peut figer la page
+// pendant des minutes (40 joueurs, 10 terrains, 50 tours : ~1 min au réglage
+// par défaut, plusieurs avec une recherche élargie). Le coût suit le nombre
+// d'affiches évaluées par la recherche en faisceau (beamSearchRound) : pour
+// chaque terrain d'un tour, (états du faisceau) × (partenaires) × (paires
+// d'adversaires), le faisceau étant plafonné à beamWidth.
+//
+// Étalonnage (Node 24, PC de bureau récent, novembre 2026) : ~3 µs par
+// affiche évaluée, de 16 joueurs/4 terrains (1,3 s pour 8 tours) à
+// 40 joueurs/10 terrains (10,6 s pour 10 tours). Un téléphone est en général
+// 3 à 5 fois plus lent.
+const SCHEDULE_COST_NS_PER_UNIT = 3000;
+/** Au-delà (estimation sur un PC de bureau), pas de génération sans accord. */
+const SCHEDULE_COST_BUDGET_MS = 2000;
+
+/** Réglages du mode expert : ceux d'un lien partagé sont ignorés (voir prepareSharedRotationState). */
+const ROTATION_EXPERT_KEYS = ["wt", "wo", "wp", "wbal", "bw", "pk", "sq"];
+const ROTATION_DEFAULTS = { c: 2, r: 8, bw: 80, pk: 10 };
+
+/**
+ * Durée estimée (ms, PC de bureau) d'une génération complète.
+ * @param {number} players - joueurs dans la liste
+ * @param {number} courts - terrains demandés
+ * @param {number} rounds - tours à calculer
+ * @param {number} [beamWidth]
+ * @param {number} [partnerK]
+ * @returns {number}
+ */
+function estimateScheduleCost(players, courts, rounds, beamWidth = ROTATION_DEFAULTS.bw, partnerK = ROTATION_DEFAULTS.pk) {
+  const courtsUsed = Math.min(Math.max(1, courts), Math.floor(players / 4));
+  if (!(courtsUsed > 0) || !(rounds > 0)) return 0;
+  const playing = courtsUsed * 4;
+  let units = 0;
+  let beam = 1;
+  for (let step = 0; step < courtsUsed; step++) {
+    const remaining = playing - 4 * step;
+    const partners = Math.min(Math.max(2, Math.min(partnerK, playing - 1)), remaining - 1);
+    const shortlist = Math.min(12, remaining - 2);
+    const candidates = beam * partners * (shortlist * (shortlist - 1)) / 2;
+    units += candidates;
+    beam = Math.min(beamWidth, candidates);
+  }
+  return (units * rounds * SCHEDULE_COST_NS_PER_UNIT) / 1e6;
+}
+
+/** Nombre de joueurs distincts d'une liste saisie (même règle que parsePlayers). */
+function countPlayerNames(text) {
+  if (typeof text !== "string") return 0;
+  const seen = new Set();
+  for (const raw of text.split(/[\n,]/)) {
+    const name = raw.trim().replace(/\s+/g, " ");
+    if (name) seen.add(name.toLowerCase());
+  }
+  return seen.size;
+}
+
+/**
+ * Prépare un état reçu par lien de partage (?d=) :
+ * - nettoyé comme tout état importé (sanitizeRotationState) ;
+ * - réglages du mode expert du lien ignorés : on garde ceux de l'appareil
+ *   (`recipient`, sa sauvegarde) ou, à défaut, ceux par défaut de la page ;
+ * - génération automatique seulement si son coût estimé tient dans le
+ *   budget (sinon, la page charge le formulaire et propose de générer).
+ * @param {*} raw - état décompressé du lien
+ * @param {Object|null} [recipient] - état sauvegardé de l'appareil, s'il existe
+ * @returns {{state: Object, clamped: boolean, cost: number, autoGenerate: boolean}}
+ */
+function prepareSharedRotationState(raw, recipient = null) {
+  const report = {};
+  const state = sanitizeRotationState(raw, report);
+  let own = {};
+  try {
+    own = recipient ? sanitizeRotationState(recipient) : {};
+  } catch {
+    own = {};
+  }
+  for (const key of ROTATION_EXPERT_KEYS) {
+    if (own[key] !== undefined) state[key] = own[key];
+    else delete state[key];
+  }
+  const cost = estimateScheduleCost(
+    countPlayerNames(state.p),
+    Number(state.c ?? ROTATION_DEFAULTS.c),
+    Number(state.r ?? ROTATION_DEFAULTS.r),
+    Number(state.bw ?? ROTATION_DEFAULTS.bw),
+    Number(state.pk ?? ROTATION_DEFAULTS.pk)
+  );
+  return { state, clamped: !!report.clamped, cost, autoGenerate: cost <= SCHEDULE_COST_BUDGET_MS };
+}
+
 /**
  * Historique des sessions (pb_history) : écarte les entrées illisibles,
  * régénère un identifiant invalide et nettoie l'état de chaque session.
