@@ -75,8 +75,7 @@ const PAIR_MEMORY_MAX = 6;
 
 function getPairMemory() {
   try {
-    const list = JSON.parse(localStorage.getItem(PAIR_MEMORY_KEY) || "[]");
-    return Array.isArray(list) ? list : [];
+    return sanitizePairMemory(JSON.parse(localStorage.getItem(PAIR_MEMORY_KEY) || "[]"));
   } catch {
     return [];
   }
@@ -220,10 +219,31 @@ function generateSession(preserveScores = true) {
   }
 }
 
+/** Message affiché quand un lien importé a dû être ramené dans les limites. */
+const IMPORT_CLAMPED_MESSAGE = "Ce lien contenait des réglages hors limites ; ils ont été ramenés aux valeurs maximales.";
+
+/**
+ * Affiche un avertissement non bloquant dans #warning, avant celui
+ * éventuellement déjà présent (doublons, terrains en trop...).
+ */
+function prependWarning(message) {
+  if (!elWarning) return;
+  const existing = elWarning.hidden ? "" : elWarning.textContent;
+  elWarning.textContent = existing ? `${message} ${existing}` : message;
+  elWarning.hidden = false;
+}
+
 /**
  * Restaure un état complet préenregistré (depuis l'historique, l'URL ou le stockage).
+ * L'état est d'abord nettoyé (voir sanitizeRotationState dans
+ * js/shared/sanitize.js) : il peut venir d'un lien partagé ou d'une
+ * sauvegarde modifiée, donc jamais utilisé tel quel. Lève une exception s'il
+ * est structurellement invalide.
+ * @param {Object} rawState
+ * @param {{clamped?: boolean}} [report] - voir sanitizeRotationState
  */
-function loadState(state) {
+function loadState(rawState, report = {}) {
+  const state = sanitizeRotationState(rawState, report);
   if (state.p !== undefined) elPlayers.value = state.p;
   if (state.c !== undefined) elCourts.value = state.c;
   if (state.r !== undefined) elRounds.value = state.r;
@@ -244,16 +264,12 @@ function loadState(state) {
   window.__PB_SESSION_ID__ = state.sid
     || (state.sc && Object.keys(state.sc).length ? newSessionId() : null);
   if (state.pr) window.__PB_PRESENCE__ = state.pr;
-  window.__PB_LEVELS__ = state.lv && typeof state.lv === "object" ? state.lv : {};
-  window.__PB_HIDDEN_ROUNDS__ = Array.isArray(state.hr) ? state.hr : [];
+  window.__PB_LEVELS__ = state.lv || Object.create(null);
+  window.__PB_HIDDEN_ROUNDS__ = state.hr || [];
 
   syncPresenceInputs();
 
-  if (state.sc) {
-    window.__PB_SCORES__ = state.sc;
-  } else {
-    window.__PB_SCORES__ = {};
-  }
+  window.__PB_SCORES__ = state.sc || Object.create(null);
 
   // Curseurs réécrits ci-dessus sans événement "input" : on resynchronise
   // les valeurs affichées à côté (voir navigation.js).
@@ -276,7 +292,7 @@ function loadState(state) {
 
 function getPlayerGroups() {
   try {
-    return JSON.parse(localStorage.getItem("pb_player_groups") || "[]");
+    return sanitizePlayerGroups(JSON.parse(localStorage.getItem("pb_player_groups") || "[]"));
   } catch {
     return [];
   }
@@ -299,11 +315,11 @@ function renderPlayerGroups() {
     <div class="group-card">
       <div>
         <h4>${escapeHtml(g.name)}</h4>
-        <div class="hint">${g.players.length} joueur${g.players.length > 1 ? "s" : ""}</div>
+        <div class="hint">${Number(g.players.length)} joueur${g.players.length > 1 ? "s" : ""}</div>
       </div>
       <div class="group-actions">
-        <button type="button" class="load-group-btn" data-id="${g.id}">Charger</button>
-        <button type="button" class="secondary danger del-group-btn" data-id="${g.id}" aria-label="Supprimer le groupe ${escapeHtml(g.name)}">Supprimer</button>
+        <button type="button" class="load-group-btn" data-id="${escapeHtml(g.id)}">Charger</button>
+        <button type="button" class="secondary danger del-group-btn" data-id="${escapeHtml(g.id)}" aria-label="Supprimer le groupe ${escapeHtml(g.name)}">Supprimer</button>
       </div>
     </div>
   `).join('');

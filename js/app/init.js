@@ -26,9 +26,12 @@ window.addEventListener("DOMContentLoaded", () => {
     window.history.replaceState({}, "", window.location.origin + window.location.pathname);
 
     try {
+      // Lien démesuré (bien au-delà d'une vraie session) : refusé d'emblée.
+      if (sharedData.length > MAX_SHARED_DATA_LENGTH) throw new Error("Lien de partage trop long.");
       const jsonString = LZString.decompressFromEncodedURIComponent(sharedData);
-      const state = JSON.parse(jsonString);
-      loadState(state);
+      const report = {};
+      loadState(JSON.parse(jsonString), report);
+      if (report.clamped) prependWarning(IMPORT_CLAMPED_MESSAGE);
       // Planning partagé : on garde sa graine (voir le bouton Générer).
       window.__PB_SEED_PINNED__ = true;
       autoSaveState();

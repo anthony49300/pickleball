@@ -6,7 +6,8 @@
 
 function getHistory() {
   try {
-    return JSON.parse(localStorage.getItem("pb_history") || "[]");
+    // Relu depuis localStorage : nettoyé comme un lien de partage (voir sanitize.js).
+    return sanitizeRotationHistory(JSON.parse(localStorage.getItem("pb_history") || "[]"));
   } catch {
     return [];
   }
@@ -62,10 +63,10 @@ function renderHistory(history = getHistory()) {
         <span class="h-name">${escapeHtml(item.date)}</span>
         <span class="h-date">n° ${escapeHtml(item.seed)}</span>
       </div>
-      <div class="h-meta"><span><b>${item.playersCount}</b> joueurs</span><span><b>${escapeHtml(item.roundsCount)}</b> tours</span></div>
+      <div class="h-meta"><span><b>${Number(item.playersCount)}</b> joueurs</span><span><b>${escapeHtml(item.roundsCount)}</b> tours</span></div>
       <div class="history-actions">
-        <button type="button" class="secondary load-hist-btn" data-id="${item.id}">Charger</button>
-        <button type="button" class="secondary danger del-hist-btn" data-id="${item.id}">Supprimer</button>
+        <button type="button" class="secondary load-hist-btn" data-id="${escapeHtml(item.id)}">Charger</button>
+        <button type="button" class="secondary danger del-hist-btn" data-id="${escapeHtml(item.id)}">Supprimer</button>
       </div>
     </article>
   `).join('');

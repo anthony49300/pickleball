@@ -1,6 +1,11 @@
 <!doctype html>
 <html lang="fr">
 <head>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-p55uKwqehb0NFGSX4OOiegNWAsxe+Cv/DEKiZa0/WJI='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <!-- Content-Security-Policy : seuls les scripts du site (et le petit script
+       anti-flash ci-dessous, autorisé par son empreinte SHA-256) peuvent
+       s'exécuter. Si ce script en ligne change, l'empreinte doit être mise à
+       jour : tests/security.test.js échoue tant qu'elle ne correspond pas. -->
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>JF Pickleball — Rotation</title>
@@ -456,6 +461,7 @@
        générique, thème/identité visuelle, steppers/sliders et toast. Chargés
        avant js/app/ car plusieurs de ses fichiers les utilisent. -->
   <script src="js/shared/version.js"></script>
+  <script src="js/shared/sanitize.js"></script>
   <script src="js/shared/modal.js"></script>
   <script src="js/shared/theme.js"></script>
   <script src="js/shared/ui-controls.js"></script>
@@ -466,6 +472,7 @@
        sans serveur. L'ordre est important : chaque fichier peut s'appuyer sur les
        déclarations des fichiers chargés avant lui. -->
   <script src="js/app/algorithm.js"></script>
+  <script src="js/app/templates.js"></script>
   <script src="js/app/dom-elements.js"></script>
   <script src="js/app/form-and-render.js"></script>
   <script src="js/app/stats-visualizations.js"></script>

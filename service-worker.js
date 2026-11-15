@@ -53,6 +53,7 @@ const PRECACHE_URLS = [
   "js/vendor/html2canvas.min.js",
 
   "js/shared/version.js",
+  "js/shared/sanitize.js",
   "js/shared/modal.js",
   "js/shared/theme.js",
   "js/shared/ui-controls.js",
@@ -60,6 +61,7 @@ const PRECACHE_URLS = [
   "js/shared/shell.js",
 
   "js/app/algorithm.js",
+  "js/app/templates.js",
   "js/app/dom-elements.js",
   "js/app/form-and-render.js",
   "js/app/stats-visualizations.js",

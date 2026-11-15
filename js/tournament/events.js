@@ -94,7 +94,7 @@ btnImportGroup.addEventListener("click", async () => {
 
   let groups = [];
   try {
-    groups = JSON.parse(localStorage.getItem("pb_player_groups") || "[]");
+    groups = sanitizePlayerGroups(JSON.parse(localStorage.getItem("pb_player_groups") || "[]"));
   } catch {
     groups = [];
   }

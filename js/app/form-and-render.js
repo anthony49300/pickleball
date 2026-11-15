@@ -174,39 +174,6 @@ function updateSessionStepper(rounds, viewedIdx) {
 }
 
 /**
- * Carte d'un match : bandeau "terrain", puis une ligne par équipe avec ses
- * boutons −/+ autour du champ de score (.score-input, écouté dans
- * history-and-events.js). L'état visuel (gagnant, égalité...) est posé par
- * refreshMatchCard.
- */
-function buildMatchCard(match, rIdx, mIdx, courtLabel) {
-  const savedScore = readMatchScore(window.__PB_SCORES__, rIdx, mIdx, match);
-  const teamRow = (team, teamNo) => {
-    const label = escapeHtml(team.join(" et "));
-    const value = savedScore?.[teamNo] ?? "";
-    return `
-      <div class="team-row" data-team="${teamNo}">
-        <div class="team-names"><span>${team.map(escapeHtml).join("<br>")}</span><span class="win-tag">Gagnant</span></div>
-        <div class="score-ctl">
-          <button type="button" class="score-step" data-delta="-1" tabindex="-1" aria-label="Retirer un point à ${label}">−</button>
-          <input type="number" class="score-input" data-round="${rIdx}" data-match="${mIdx}" data-team="${teamNo}" min="0" max="99" inputmode="numeric" placeholder="–" value="${value}" aria-label="Score de ${label}, tour ${rIdx + 1}" />
-          <button type="button" class="score-step" data-delta="1" tabindex="-1" aria-label="Ajouter un point à ${label}">+</button>
-        </div>
-      </div>`;
-  };
-
-  const [t1, t2] = match;
-  return `
-    <article class="match-card" data-round="${rIdx}" data-match="${mIdx}">
-      <header class="court-strip"><span class="court-name">${escapeHtml(courtLabel)}</span><span class="court-state"></span></header>
-      ${teamRow(t1, "1")}
-      <div class="net"><span>contre</span></div>
-      ${teamRow(t2, "2")}
-      <p class="tie-warning" hidden>Égalité : aucun vainqueur enregistré. Une partie de pickleball ne se termine pas à égalité, vérifiez le score.</p>
-    </article>`;
-}
-
-/**
  * Met à jour l'état visuel d'une carte de match à partir des scores en mémoire.
  */
 function refreshMatchCard(card) {
@@ -262,7 +229,7 @@ function render(result, players, numCourts, numRounds) {
       </div>`;
 
     const courtsHtml = matches.length
-      ? matches.map((m, mIdx) => buildMatchCard(m, idx, mIdx, courtLabel(mIdx))).join("")
+      ? matches.map((m, mIdx) => buildMatchCard(m, idx, mIdx, courtLabel(mIdx), readMatchScore(window.__PB_SCORES__, idx, mIdx, m))).join("")
       : `<p class="subtle">Pas assez de joueurs disponibles pour un match ce tour-ci.</p>`;
 
     const next = rounds[idx + 1];

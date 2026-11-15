@@ -69,8 +69,12 @@ function autoSaveTournamentState() {
  * la section HISTORIQUE DES TOURNOIS plus bas).
  * @param {Object} state - voir getTournamentState pour la forme exacte
  */
-function applyTournamentState(state) {
-  if (!state) return;
+function applyTournamentState(rawState, report = {}) {
+  if (!rawState) return;
+  // Jamais utilisé tel quel : lien de partage, sauvegarde ou historique
+  // peuvent avoir été modifiés (voir sanitizeTournamentState, sanitize.js).
+  // Lève une exception si l'état est structurellement invalide.
+  const state = sanitizeTournamentState(rawState, report);
 
   if (state.teamsText != null) elTeams.value = state.teamsText;
   if (state.individualPlayersText != null) elIndividualPlayers.value = state.individualPlayersText;
@@ -80,10 +84,10 @@ function applyTournamentState(state) {
   if (state.poolAssignMode != null) elPoolAssignMode.value = state.poolAssignMode;
   if (state.courtNamesText != null) elCourtNames.value = state.courtNamesText;
 
-  window.__PT_TEAM_LEVELS__ = state.teamLevels && typeof state.teamLevels === "object" ? state.teamLevels : {};
+  window.__PT_TEAM_LEVELS__ = state.teamLevels || Object.create(null);
   updateTeamCountBadge();
 
-  window.__PT_PLAYER_LEVELS__ = state.playerLevels && typeof state.playerLevels === "object" ? state.playerLevels : {};
+  window.__PT_PLAYER_LEVELS__ = state.playerLevels || Object.create(null);
   renderIndividualPlayerLevels();
 
   window.__PT_TOURNAMENT__ = state.tournament || null;
@@ -134,6 +138,17 @@ function applyTournamentState(state) {
 }
 
 /**
+ * Lien de partage ramené dans les limites (voir sanitizeTournamentState) :
+ * avertissement non bloquant dans #teamsWarning, l'équivalent de #warning
+ * du mode Rotation.
+ */
+function showTournamentImportClampedWarning() {
+  if (!elTeamsWarning) return;
+  elTeamsWarning.textContent = "Ce lien contenait des réglages hors limites ; ils ont été ramenés aux valeurs maximales.";
+  elTeamsWarning.hidden = false;
+}
+
+/**
  * Recharge l'état sauvegardé (s'il existe) au chargement de la page : formulaire
  * et, le cas échéant, poules déjà générées avec leurs scores.
  */
@@ -145,7 +160,17 @@ function loadTournamentState() {
     state = null;
   }
   if (!state) return;
-  applyTournamentState(state);
+  try {
+    applyTournamentState(state);
+  } catch {
+    // Tournoi illisible (sauvegarde corrompue ou empoisonnée) : on garde au
+    // moins le formulaire, sans le tournoi généré.
+    try {
+      applyTournamentState({ ...state, tournament: null });
+    } catch {
+      // Rien de récupérable : la page repart vide.
+    }
+  }
 }
 
 // =============================================================================
@@ -156,7 +181,8 @@ function loadTournamentState() {
 
 function getTournamentHistory() {
   try {
-    return JSON.parse(localStorage.getItem(TOURNAMENT_HISTORY_KEY) || "[]");
+    // Relu depuis localStorage : nettoyé comme un lien de partage (voir sanitize.js).
+    return sanitizeTournamentHistory(JSON.parse(localStorage.getItem(TOURNAMENT_HISTORY_KEY) || "[]"));
   } catch {
     return [];
   }
@@ -220,10 +246,10 @@ function renderTournamentHistory(history = getTournamentHistory()) {
   elTournamentHistoryList.innerHTML = history.map(item => `
     <article class="history-card">
       <div class="h-top"><span class="h-name">${escapeHtml(item.date)}</span></div>
-      <div class="h-meta"><span><b>${item.teamsCount}</b> équipe${item.teamsCount > 1 ? "s" : ""}</span><span><b>${item.numPools}</b> poule${item.numPools > 1 ? "s" : ""}</span></div>
+      <div class="h-meta"><span><b>${Number(item.teamsCount)}</b> équipe${item.teamsCount > 1 ? "s" : ""}</span><span><b>${Number(item.numPools)}</b> poule${item.numPools > 1 ? "s" : ""}</span></div>
       <div class="history-actions">
-        <button type="button" class="secondary load-tournament-hist-btn" data-id="${item.id}">Charger</button>
-        <button type="button" class="secondary danger del-tournament-hist-btn" data-id="${item.id}">Supprimer</button>
+        <button type="button" class="secondary load-tournament-hist-btn" data-id="${escapeHtml(item.id)}">Charger</button>
+        <button type="button" class="secondary danger del-tournament-hist-btn" data-id="${escapeHtml(item.id)}">Supprimer</button>
       </div>
     </article>
   `).join("");

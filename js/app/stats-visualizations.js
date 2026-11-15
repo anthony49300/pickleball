@@ -53,7 +53,7 @@ function renderHeatmap() {
         const pct = count > 0 ? Math.round((count / maxVal) * 80 + 15) : 0;
         const bg = count > 0 ? `color-mix(in srgb, var(--accent) ${pct}%, var(--surface-2))` : "var(--surface-2)";
         const color = pct > 55 ? "var(--on-accent)" : "var(--text)";
-        html += `<td class="heatmap-cell" style="background: ${bg}; color: ${color};">${count}</td>`;
+        html += `<td class="heatmap-cell" style="background: ${bg}; color: ${color};">${Number(count)}</td>`;
       }
     });
     html += `</tr>`;
@@ -106,12 +106,13 @@ function updateRankings() {
       totalMatches++;
       const scores = readMatchScore(window.__PB_SCORES__, rIdx, mIdx, match);
 
-      if (scores && scores['1'] != null && scores['2'] != null) {
+      // toScore (sanitize.js) : entiers 0-99 uniquement, quoi que contienne le stockage.
+      const s1 = toScore(scores?.['1']);
+      const s2 = toScore(scores?.['2']);
+      if (s1 !== null && s2 !== null) {
         hasAnyScore = true;
         scoredMatches++;
         const [t1, t2] = match;
-        const s1 = scores['1'];
-        const s2 = scores['2'];
         
         const updateTeamStats = (team, ptsFor, ptsAgainst) => {
           team.forEach(p => {
@@ -210,19 +211,19 @@ function updateRankings() {
   // Tableau complet (affiché sur grand écran)
   elRankingTableBody.innerHTML = rows.map(r => `
       <tr>
-        <td>${r.rank}</td>
+        <td>${Number(r.rank)}</td>
         <td>${r.name}</td>
-        <td>${r.p.m}</td>
-        <td>${r.p.w}</td>
-        <td>${r.p.l}</td>
-        <td>${r.winPct} %</td>
-        <td>${r.p.pf}</td>
-        <td>${r.p.pa}</td>
-        <td class="${r.diffClass}">${r.diff}</td>
-        <td>${r.avgPf} / ${r.avgPa}</td>
-        <td class="${r.p.maxWin > 0 ? "diff-positive" : ""}">${r.bestWin}</td>
-        <td class="${r.p.maxLoss > 0 ? "diff-negative" : ""}">${r.worstLoss}</td>
-        <td class="${r.streakClass}">${r.streakLabel}</td>
+        <td>${Number(r.p.m)}</td>
+        <td>${Number(r.p.w)}</td>
+        <td>${Number(r.p.l)}</td>
+        <td>${Number(r.winPct)} %</td>
+        <td>${Number(r.p.pf)}</td>
+        <td>${Number(r.p.pa)}</td>
+        <td class="${r.diffClass}">${escapeHtml(r.diff)}</td>
+        <td>${escapeHtml(r.avgPf)} / ${escapeHtml(r.avgPa)}</td>
+        <td class="${r.p.maxWin > 0 ? "diff-positive" : ""}">${escapeHtml(r.bestWin)}</td>
+        <td class="${r.p.maxLoss > 0 ? "diff-negative" : ""}">${escapeHtml(r.worstLoss)}</td>
+        <td class="${r.streakClass}">${escapeHtml(r.streakLabel)}</td>
       </tr>
     `).join('');
 
@@ -234,18 +235,18 @@ function updateRankings() {
       <li class="rk">
         <details>
           <summary>
-            <span class="rk-pos">${r.rank}</span>
-            <span class="rk-name">${r.name}<small>${r.p.w} V · ${r.p.l} D · ${r.p.m} match${r.p.m > 1 ? "s" : ""}</small></span>
-            <span class="diff ${r.diffClass}">${r.diff}</span>
+            <span class="rk-pos">${Number(r.rank)}</span>
+            <span class="rk-name">${r.name}<small>${Number(r.p.w)} V · ${Number(r.p.l)} D · ${Number(r.p.m)} match${r.p.m > 1 ? "s" : ""}</small></span>
+            <span class="diff ${r.diffClass}">${escapeHtml(r.diff)}</span>
             <svg class="rk-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 12 15 18 9"/></svg>
           </summary>
           <div class="rk-detail">
-            <div><span>% victoires</span><b>${r.winPct} %</b></div>
-            <div><span>Points pour</span><b>${r.p.pf}</b></div>
-            <div><span>Points contre</span><b>${r.p.pa}</b></div>
-            <div><span>Moy. pour / contre</span><b>${r.avgPf} / ${r.avgPa}</b></div>
-            <div><span>Meilleure V</span><b class="${r.p.maxWin > 0 ? "diff-positive" : ""}">${r.bestWin}</b></div>
-            <div><span>Série en cours</span><b class="${r.streakClass}">${r.streakLabel}</b></div>
+            <div><span>% victoires</span><b>${Number(r.winPct)} %</b></div>
+            <div><span>Points pour</span><b>${Number(r.p.pf)}</b></div>
+            <div><span>Points contre</span><b>${Number(r.p.pa)}</b></div>
+            <div><span>Moy. pour / contre</span><b>${escapeHtml(r.avgPf)} / ${escapeHtml(r.avgPa)}</b></div>
+            <div><span>Meilleure V</span><b class="${r.p.maxWin > 0 ? "diff-positive" : ""}">${escapeHtml(r.bestWin)}</b></div>
+            <div><span>Série en cours</span><b class="${r.streakClass}">${escapeHtml(r.streakLabel)}</b></div>
           </div>
         </details>
       </li>
@@ -262,7 +263,7 @@ function renderPodium(sorted) {
   const step = (p, cls, place) => `
     <div class="pod ${cls}">
       <span class="pod-name">${escapeHtml(p.name)}</span>
-      <span class="pod-sub">${p.w} V · ${p.diff > 0 ? "+" : ""}${p.diff}</span>
+      <span class="pod-sub">${Number(p.w)} V · ${p.diff > 0 ? "+" : ""}${Number(p.diff)}</span>
       <div class="pod-bar" aria-label="${place}e place">${place}</div>
     </div>`;
 
@@ -372,7 +373,7 @@ function renderBadges(sorted, pairWins) {
 
   elBadgesContainer.innerHTML = badges.map(b => `
     <div class="badge-card">
-      <span class="eyebrow">${b.title}</span>
+      <span class="eyebrow">${escapeHtml(b.title)}</span>
       <span class="badge-player">${escapeHtml(b.player)}</span>
       <span class="badge-desc">${escapeHtml(b.desc)}</span>
     </div>

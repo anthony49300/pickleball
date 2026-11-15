@@ -52,7 +52,7 @@ function renderTeamLevelsList(teams, levels) {
     return `
       <div class="manual-assign-row">
         <span class="team-name">${escapeHtml(team.name)}</span>
-        <select class="team-level-select" data-team-id="${team.id}">${options}</select>
+        <select class="team-level-select" data-team-id="${escapeHtml(team.id)}">${options}</select>
       </div>
     `;
   }).join("");
@@ -91,13 +91,13 @@ function renderIndividualPlayerLevels() {
 function renderImportGroupOptions() {
   let groups = [];
   try {
-    groups = JSON.parse(localStorage.getItem("pb_player_groups") || "[]");
+    groups = sanitizePlayerGroups(JSON.parse(localStorage.getItem("pb_player_groups") || "[]"));
   } catch {
     groups = [];
   }
 
   const options = groups
-    .map(g => `<option value="${g.id}">${escapeHtml(g.name)} (${g.players.length} joueur${g.players.length > 1 ? "s" : ""})</option>`)
+    .map(g => `<option value="${escapeHtml(g.id)}">${escapeHtml(g.name)} (${Number(g.players.length)} joueur${g.players.length > 1 ? "s" : ""})</option>`)
     .join("");
 
   elImportGroupSelect.innerHTML = `<option value="">— Importer depuis un groupe enregistré —</option>${options}`;
@@ -119,7 +119,7 @@ function renderManualAssignList(teams, numPools, currentAssignment) {
     return `
       <div class="manual-assign-row">
         <span class="team-name">${escapeHtml(team.name)}</span>
-        <select class="manual-pool-select" data-team-id="${team.id}">${options}</select>
+        <select class="manual-pool-select" data-team-id="${escapeHtml(team.id)}">${options}</select>
       </div>
     `;
   }).join("");
@@ -144,7 +144,7 @@ function wrapHideableMatch(hideKey, label, innerHtml, hiddenMatchKeys) {
   const isHidden = !!hiddenMatchKeys?.has(hideKey);
   return `
     <div class="match-wrapper ${isHidden ? "match-hidden" : ""}">
-      <button type="button" class="match-hide-btn" tabindex="-1" data-hide-key="${hideKey}" title="${isHidden ? "Afficher ce match" : "Masquer ce match"}" aria-label="${isHidden ? "Afficher" : "Masquer"} le match ${label}">${isHidden ? ICON_EYE_SVG : ICON_EYE_OFF_SVG}</button>
+      <button type="button" class="match-hide-btn" tabindex="-1" data-hide-key="${escapeHtml(hideKey)}" title="${isHidden ? "Afficher ce match" : "Masquer ce match"}" aria-label="${isHidden ? "Afficher" : "Masquer"} le match ${label}">${isHidden ? ICON_EYE_SVG : ICON_EYE_OFF_SVG}</button>
       <div class="match-hidden-label">${label}</div>
       <div class="match-hideable-content">${innerHtml}</div>
     </div>
@@ -179,7 +179,7 @@ function buildTournamentMatchCard({ courtLabel, nameA, nameB, scoreA, scoreB, in
         <div class="team-names"><span>${label}</span><span class="win-tag">Gagnant</span></div>
         <div class="score-ctl${readonly ? " is-readonly" : ""}">
           ${minus}
-          <input type="number" class="${inputClass}" min="0" max="99" inputmode="numeric" placeholder="–" ${dataAttrs} data-side="${side}" ${readonly ? "readonly" : ""} value="${value ?? ""}" aria-label="Score de ${label}" />
+          <input type="number" class="${inputClass}" min="0" max="99" inputmode="numeric" placeholder="–" ${dataAttrs} data-side="${side}" ${readonly ? "readonly" : ""} value="${scoreInputValue(value)}" aria-label="Score de ${label}" />
           ${plus}
         </div>
       </div>`;
@@ -312,22 +312,22 @@ function renderPoolStandings(pools, qualifiersPerPool, forfeitedTeamIds = new Se
       const diffClass = s.diff > 0 ? "diff-positive" : s.diff < 0 ? "diff-negative" : "";
       return `
         <tr class="${qualified ? "qualified" : ""} ${forfeited ? "forfeited" : ""}">
-          <td>${i + 1}</td>
+          <td>${Number(i + 1)}</td>
           <td>
             <span class="team-cell">
               <span class="team-name-text">${teamNameEscaped}</span>
               <span class="team-name-actions">
-                <button type="button" class="icon-btn team-rename-btn" data-team-id="${s.team.id}" title="Renommer l'équipe" aria-label="Renommer ${teamNameEscaped}">${ICON_EDIT_SVG}</button>
-                <button type="button" class="icon-btn team-forfeit-btn ${forfeited ? "active" : ""}" data-team-id="${s.team.id}" data-team-name="${teamNameEscaped}" title="${forfeited ? "Annuler le forfait" : "Déclarer forfait"}" aria-label="${forfeited ? "Annuler le forfait de" : "Déclarer forfait pour"} ${teamNameEscaped}" aria-pressed="${forfeited}">${ICON_FORFEIT_SVG}</button>
+                <button type="button" class="icon-btn team-rename-btn" data-team-id="${escapeHtml(s.team.id)}" title="Renommer l'équipe" aria-label="Renommer ${teamNameEscaped}">${ICON_EDIT_SVG}</button>
+                <button type="button" class="icon-btn team-forfeit-btn ${forfeited ? "active" : ""}" data-team-id="${escapeHtml(s.team.id)}" data-team-name="${teamNameEscaped}" title="${forfeited ? "Annuler le forfait" : "Déclarer forfait"}" aria-label="${forfeited ? "Annuler le forfait de" : "Déclarer forfait pour"} ${teamNameEscaped}" aria-pressed="${forfeited}">${ICON_FORFEIT_SVG}</button>
               </span>
             </span>
           </td>
-          <td>${s.m}</td>
-          <td>${s.w}</td>
-          <td>${s.l}</td>
-          <td>${s.pf}</td>
-          <td>${s.pa}</td>
-          <td class="${diffClass}">${diffSign}${s.diff}</td>
+          <td>${Number(s.m)}</td>
+          <td>${Number(s.w)}</td>
+          <td>${Number(s.l)}</td>
+          <td>${Number(s.pf)}</td>
+          <td>${Number(s.pa)}</td>
+          <td class="${diffClass}">${diffSign}${Number(s.diff)}</td>
         </tr>
       `;
     }).join("");
@@ -455,7 +455,7 @@ function renderBracketPairs(pairs, scores, editable, segmentId, courtNames = [],
       scoreA: score.a,
       scoreB: score.b,
       inputClass: "score-input bracket-score-input",
-      dataAttrs: editable ? `data-segment="${segmentId}" data-match="${idx}"` : "",
+      dataAttrs: editable ? `data-segment="${escapeHtml(segmentId)}" data-match="${Number(idx)}"` : "",
       readonly: !editable,
     });
     const hideKey = `bracket:${phaseIdx}:${segmentId}:${idx}`;
@@ -519,7 +519,7 @@ function renderBracketTreeLeaf(node) {
     : `<span class="muted">à déterminer</span>`;
   return `
     <div class="bracket-tree-node bracket-tree-leaf">
-      <span class="bracket-tree-rank">Place ${node.rankStart}</span>
+      <span class="bracket-tree-rank">Place ${Number(node.rankStart)}</span>
       <strong class="bracket-tree-leaf-team">${content}</strong>
     </div>
   `;
@@ -840,7 +840,7 @@ function renderFinalPodium(combined, statsByTeamId) {
   const statLine = r => {
     const s = statsByTeamId.get(r.team.id) || { w: 0, pf: 0, pa: 0 };
     const diff = s.pf - s.pa;
-    return `${s.w}V · ${diff > 0 ? "+" : ""}${diff}`;
+    return `${Number(s.w)}V · ${diff > 0 ? "+" : ""}${Number(diff)}`;
   };
 
   // Même podium que le mode Rotation (voir renderPodium, js/app/stats-visualizations.js).
@@ -914,14 +914,14 @@ function renderFinalRanking(tournament) {
     const diffSign = diff > 0 ? "+" : "";
     return `
       <tr>
-        <td>${r.rank}</td>
+        <td>${Number(r.rank)}</td>
         <td>${escapeHtml(r.team.name)}</td>
-        <td>${s.m}</td>
-        <td>${s.w}</td>
-        <td>${s.l}</td>
-        <td>${s.pf}</td>
-        <td>${s.pa}</td>
-        <td class="${diffClass}">${diffSign}${diff}</td>
+        <td>${Number(s.m)}</td>
+        <td>${Number(s.w)}</td>
+        <td>${Number(s.l)}</td>
+        <td>${Number(s.pf)}</td>
+        <td>${Number(s.pa)}</td>
+        <td class="${diffClass}">${diffSign}${Number(diff)}</td>
       </tr>
     `;
   }).join("") + forfeitedBeforeBracket.map((team, i) => {
@@ -930,14 +930,14 @@ function renderFinalRanking(tournament) {
     const diffSign = diff > 0 ? "+" : "";
     return `
       <tr class="forfeited">
-        <td>${combined.length + i + 1}</td>
+        <td>${Number(combined.length + i + 1)}</td>
         <td>${escapeHtml(team.name)} <span class="forfeit-badge-inline">Forfait</span></td>
-        <td>${s.m}</td>
-        <td>${s.w}</td>
-        <td>${s.l}</td>
-        <td>${s.pf}</td>
-        <td>${s.pa}</td>
-        <td>${diffSign}${diff}</td>
+        <td>${Number(s.m)}</td>
+        <td>${Number(s.w)}</td>
+        <td>${Number(s.l)}</td>
+        <td>${Number(s.pf)}</td>
+        <td>${Number(s.pa)}</td>
+        <td>${diffSign}${Number(diff)}</td>
       </tr>
     `;
   }).join("");
