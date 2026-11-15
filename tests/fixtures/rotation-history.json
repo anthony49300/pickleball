@@ -1,0 +1,109 @@
+[
+  {
+    "id": 1794768743211,
+    "date": "15 nov., 19:52",
+    "seed": "95ycd9gi",
+    "playersCount": 9,
+    "roundsCount": "4",
+    "state": {
+      "p": "Antoine\nJulien\nMarc\nSophie\nClaire\nThomas\nLéa\nHugo\nZoé",
+      "c": "2",
+      "r": "4",
+      "s": "95ycd9gi",
+      "cn": "",
+      "wt": "5",
+      "wo": "2",
+      "wp": "1",
+      "wbal": "3",
+      "bw": "80",
+      "pk": "10",
+      "sq": true,
+      "b2b": true,
+      "mem": true,
+      "sp": false,
+      "sid": "mwi6yx33-voqj8",
+      "sc": {
+        "0::Claire|Julien|Sophie|Thomas": {
+          "1": 11,
+          "2": 7,
+          "teamA": "Claire|Thomas"
+        },
+        "0::Antoine|Hugo|Léa|Marc": {
+          "1": 11,
+          "2": 7,
+          "teamA": "Antoine|Léa"
+        },
+        "1::Antoine|Julien|Marc|Zoé": {
+          "1": 11,
+          "2": 7,
+          "teamA": "Antoine|Marc"
+        },
+        "1::Hugo|Léa|Sophie|Thomas": {
+          "1": 11,
+          "2": 7,
+          "teamA": "Hugo|Léa"
+        },
+        "2::Antoine|Claire|Léa|Zoé": {
+          "1": 11,
+          "2": 7,
+          "teamA": "Antoine|Zoé"
+        },
+        "2::Hugo|Julien|Marc|Thomas": {
+          "1": 11,
+          "2": 7,
+          "teamA": "Hugo|Thomas"
+        }
+      },
+      "pr": {
+        "Antoine": {
+          "start": 1,
+          "end": 8
+        },
+        "Julien": {
+          "start": 1,
+          "end": 8
+        },
+        "Marc": {
+          "start": 1,
+          "end": 8
+        },
+        "Sophie": {
+          "start": 1,
+          "end": 8
+        },
+        "Claire": {
+          "start": 1,
+          "end": 8
+        },
+        "Thomas": {
+          "start": 1,
+          "end": 8
+        },
+        "Léa": {
+          "start": 1,
+          "end": 8
+        },
+        "Hugo": {
+          "start": 1,
+          "end": 8
+        },
+        "Zoé": {
+          "start": 2,
+          "end": 4
+        }
+      },
+      "lv": {
+        "Antoine": 3,
+        "Julien": 3,
+        "Marc": 5,
+        "Sophie": 3,
+        "Claire": 3,
+        "Thomas": 3,
+        "Léa": 3,
+        "Hugo": 3,
+        "Zoé": 3
+      },
+      "hr": []
+    }
+  }
+]
