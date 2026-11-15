@@ -145,9 +145,16 @@ function generateSession(preserveScores = true) {
   }
 
   try {
-    const players = parsePlayers(elPlayers.value);
-    const numCourts = Math.max(1, parseInt(elCourts.value || "1", 10));
-    const numRounds = Math.max(1, parseInt(elRounds.value || "1", 10));
+    // Bornes revérifiées ici (en plus de sanitizeRotationState) : le
+    // formulaire peut aussi être modifié à la main, et un planning démesuré
+    // gèlerait la page (calcul de chaque tour par recherche en faisceau).
+    let players = parsePlayers(elPlayers.value);
+    const courts = clampFormInt(elCourts.value, 1, 10, 1);
+    const roundsInput = clampFormInt(elRounds.value, 1, 50, 1);
+    const numCourts = courts.value;
+    const numRounds = roundsInput.value;
+    if (courts.clamped) elCourts.value = numCourts;
+    if (roundsInput.clamped) elRounds.value = numRounds;
     let seedText = (elSeed.value || "").trim();
 
     if (!seedText) {
@@ -160,12 +167,20 @@ function generateSession(preserveScores = true) {
     }
 
     const warnings = [];
+    if (courts.clamped || roundsInput.clamped) {
+      warnings.push("Réglages hors limites ramenés au maximum autorisé (10 terrains, 50 tours).");
+    }
 
     // Signale les doublons de joueurs (même nom, éventuellement casse différente) ignorés au parsing
     const rawCount = countRawPlayerEntries(elPlayers.value);
     if (rawCount > players.length) {
       const duplicates = rawCount - players.length;
       warnings.push(`${duplicates} doublon(s) de joueur ignoré(s).`);
+    }
+
+    if (players.length > SANITIZE_LIMITS.maxPlayers) {
+      warnings.push(`Seuls les ${SANITIZE_LIMITS.maxPlayers} premiers joueurs sont pris en compte.`);
+      players = players.slice(0, SANITIZE_LIMITS.maxPlayers);
     }
 
     // Prendre en compte les 2 terrains possibles à 6 joueurs (1 double + 1 simple)
@@ -179,13 +194,18 @@ function generateSession(preserveScores = true) {
       elWarning.textContent = `Attention : ${warnings.join(" ")}`;
     }
 
+    // Curseurs : mêmes bornes que leurs attributs min/max (voir index.html).
+    const slider = (el, min, max, fallback) => {
+      const n = parseFloat(el.value);
+      return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
+    };
     const options = {
-      wT: parseFloat(elwT.value || "5"),
-      wO: parseFloat(elwO.value || "2"),
-      wP: parseFloat(elwP.value || "1"),
-      wBalance: parseFloat(elwBalance.value || "3"),
-      beamWidth: parseInt(elBeamWidth.value || "80", 10),
-      partnerK: parseInt(elPartnerK.value || "10", 10),
+      wT: slider(elwT, 0, 20, 5),
+      wO: slider(elwO, 0, 20, 2),
+      wP: slider(elwP, 0, 10, 1),
+      wBalance: slider(elwBalance, 0, 20, 3),
+      beamWidth: Math.round(slider(elBeamWidth, 10, 500, 80)),
+      partnerK: Math.round(slider(elPartnerK, 4, 30, 10)),
       squareRepeats: !!elSquare.checked,
       avoidB2B: !!elAvoidB2B.checked,
     };

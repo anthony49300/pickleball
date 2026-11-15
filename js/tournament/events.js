@@ -180,12 +180,48 @@ btnFormPairs.addEventListener("click", async () => {
 // GENERATION DES POULES
 // --------------------------------------------------
 
+/**
+ * Réglages du formulaire au moment de générer, ramenés dans les bornes des
+ * champs (voir tournoi.html) : un <input type="number"> n'impose pas son max
+ * à une valeur saisie au clavier ou posée par script, et un tournoi démesuré
+ * gèlerait la page. Les valeurs corrigées sont réécrites dans le formulaire.
+ * @returns {{numPools: number, qualifiersPerPool: number, numCourts: number, clamped: boolean}}
+ */
+function readTournamentSettings() {
+  const pools = clampFormInt(elNumPools.value, 1, 16, 1);
+  const qualifiers = clampFormInt(elQualifiersPerPool.value, 1, 8, 1);
+  const courts = clampFormInt(elNumCourts.value, 1, 16, 1);
+  if (pools.clamped) elNumPools.value = pools.value;
+  if (qualifiers.clamped) elQualifiersPerPool.value = qualifiers.value;
+  if (courts.clamped) elNumCourts.value = courts.value;
+  return {
+    numPools: pools.value,
+    qualifiersPerPool: qualifiers.value,
+    numCourts: courts.value,
+    clamped: pools.clamped || qualifiers.clamped || courts.clamped
+  };
+}
+
+/** Équipes valides du formulaire, limitées à SANITIZE_LIMITS.maxTeams. */
+function readTournamentTeams() {
+  const parsed = parseTeams(elTeams.value);
+  const tooMany = parsed.teams.length > SANITIZE_LIMITS.maxTeams;
+  return { ...parsed, teams: parsed.teams.slice(0, SANITIZE_LIMITS.maxTeams), tooMany };
+}
+
 btnGeneratePools.addEventListener("click", async () => {
   clearTeamsMessages();
 
-  const { teams, invalidLines, duplicatePlayers } = parseTeams(elTeams.value);
+  const { teams, invalidLines, duplicatePlayers, tooMany } = readTournamentTeams();
+  const settings = readTournamentSettings();
 
   const warnings = [];
+  if (settings.clamped) {
+    warnings.push("Réglages hors limites ramenés au maximum autorisé (16 poules, 8 qualifiés par poule, 16 terrains).");
+  }
+  if (tooMany) {
+    warnings.push(`Seules les ${SANITIZE_LIMITS.maxTeams} premières équipes sont prises en compte.`);
+  }
   if (invalidLines.length) {
     warnings.push(`${invalidLines.length} ligne(s) ignorée(s) (format attendu : "Joueur A & Joueur B") : ${invalidLines.join(" / ")}`);
   }
@@ -203,8 +239,7 @@ btnGeneratePools.addEventListener("click", async () => {
     return;
   }
 
-  const numPools = Math.max(1, parseInt(elNumPools.value || "1", 10));
-  const qualifiersPerPool = Math.max(1, parseInt(elQualifiersPerPool.value || "1", 10));
+  const { numPools, qualifiersPerPool, numCourts } = settings;
   const mode = elPoolAssignMode.value;
 
   if (numPools > teams.length) {
@@ -238,7 +273,6 @@ btnGeneratePools.addEventListener("click", async () => {
   }
 
   const pools = buildPools(teams, numPools, mode, null, window.__PT_TEAM_LEVELS__);
-  const numCourts = Math.max(1, parseInt(elNumCourts.value || "1", 10));
   const courtNames = parseCourtNames(elCourtNames.value);
   const courtAllocation = allocateCourtsToPools(pools, numCourts);
   window.__PT_TOURNAMENT__ = { tournamentId: Date.now(), teams, numPools, qualifiersPerPool, poolAssignMode: mode, numCourts, courtNames, courtAllocation, pools, forfeitedTeamIds: [], hiddenPoolIndices: [], hiddenMatchKeys: [] };
@@ -265,9 +299,8 @@ btnGeneratePools.addEventListener("click", async () => {
 // --------------------------------------------------
 
 btnConfirmManualAssign.addEventListener("click", () => {
-  const { teams } = parseTeams(elTeams.value);
-  const numPools = Math.max(1, parseInt(elNumPools.value || "1", 10));
-  const qualifiersPerPool = Math.max(1, parseInt(elQualifiersPerPool.value || "1", 10));
+  const { teams } = readTournamentTeams();
+  const { numPools, qualifiersPerPool, numCourts } = readTournamentSettings();
 
   const manualPoolIndexByTeamId = {};
   elManualAssignList.querySelectorAll(".manual-pool-select").forEach(select => {
@@ -276,7 +309,6 @@ btnConfirmManualAssign.addEventListener("click", () => {
   });
 
   const pools = buildPools(teams, numPools, "manual", manualPoolIndexByTeamId);
-  const numCourts = Math.max(1, parseInt(elNumCourts.value || "1", 10));
   const courtNames = parseCourtNames(elCourtNames.value);
   const courtAllocation = allocateCourtsToPools(pools, numCourts);
   window.__PT_TOURNAMENT__ = { tournamentId: Date.now(), teams, numPools, qualifiersPerPool, poolAssignMode: "manual", numCourts, courtNames, courtAllocation, pools, forfeitedTeamIds: [], hiddenPoolIndices: [], hiddenMatchKeys: [] };
@@ -304,7 +336,7 @@ function refreshCourtsOnExistingTournament() {
   const tournament = window.__PT_TOURNAMENT__;
   if (!tournament) return;
 
-  tournament.numCourts = Math.max(1, parseInt(elNumCourts.value || "1", 10));
+  tournament.numCourts = clampFormInt(elNumCourts.value, 1, 16, 1).value;
   tournament.courtNames = parseCourtNames(elCourtNames.value);
   tournament.courtAllocation = allocateCourtsToPools(tournament.pools, tournament.numCourts);
   renderPools(tournament.pools, tournament.courtNames, tournament.courtAllocation, tournament.hiddenPoolIndices || [], new Set(tournament.hiddenMatchKeys || []));

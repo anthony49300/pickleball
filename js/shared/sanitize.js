@@ -114,6 +114,19 @@ function cleanInt(v, min, max) {
   return v;
 }
 
+/**
+ * Lecture d'un champ numérique du formulaire au moment de générer : entier
+ * ramené dans [min, max] (un <input type="number"> n'impose pas son max quand
+ * la valeur est posée par script ou saisie au clavier).
+ * @returns {{value: number, clamped: boolean}}
+ */
+function clampFormInt(raw, min, max, fallback) {
+  const n = parseInt(raw, 10);
+  if (!Number.isFinite(n)) return { value: fallback, clamped: false };
+  const value = Math.min(max, Math.max(min, n));
+  return { value, clamped: value !== n };
+}
+
 function cleanBool(v) {
   return typeof v === "boolean" ? v : undefined;
 }
