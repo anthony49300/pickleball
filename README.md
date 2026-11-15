@@ -258,3 +258,11 @@ Chaque fichier est servi depuis le cache de l'appareil, et une version plus réc
 
 - **Mode hors ligne** : `service-worker.js` (à la racine) met en cache tous les fichiers listés dans `PRECACHE_URLS`. **Tout nouveau fichier du site doit y être ajouté**, sinon il ne sera disponible hors ligne qu'après avoir été chargé une première fois. Le service worker n'est enregistré qu'en http(s) (pas en `file://`) et pas dans l'APK Android, qui embarque déjà ses fichiers (voir `js/shared/pwa.js`).
 - **Polices** : fichiers woff2 dans `fonts/`, déclarés dans `css/fonts.css`, sous licence SIL Open Font License 1.1 (voir `fonts/OFL.txt`).
+- **Dépendances de build** : versions figées par `package-lock.json` et installées avec `npm ci` dans les workflows GitHub. Les actions GitHub sont épinglées sur un SHA de commit (la version n'est qu'un commentaire) et les workflows n'ont qu'un accès en lecture au dépôt (`permissions: contents: read`). Pour mettre à jour une action : `git ls-remote https://github.com/actions/<action> refs/tags/<version>`, puis remplacer le SHA et le commentaire.
+- **APK signé (optionnel)** : le workflow *Build Android APK* produit par défaut un APK de debug. Pour obtenir un APK de release signé, ajoutez ces quatre secrets dans *Settings > Secrets and variables > Actions* du dépôt :
+  - `ANDROID_KEYSTORE_BASE64` : le fichier keystore encodé en base64 (`base64 -w0 release.keystore`) ;
+  - `ANDROID_KEYSTORE_PASSWORD` : le mot de passe du keystore ;
+  - `ANDROID_KEY_ALIAS` : l'alias de la clé ;
+  - `ANDROID_KEY_PASSWORD` : le mot de passe de la clé.
+
+  Un keystore se crée une fois pour toutes avec `keytool -genkeypair -v -keystore release.keystore -alias jfpickleball -keyalg RSA -keysize 2048 -validity 10000`, à conserver précieusement hors du dépôt : sans lui, impossible de publier une mise à jour signée par la même clé. Dès que `ANDROID_KEYSTORE_BASE64` existe, le workflow compile la release (`npx cap build android`) et publie l'artefact `jf-pickleball-release-apk` à la place de l'APK de debug.

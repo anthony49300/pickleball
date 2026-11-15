@@ -9,21 +9,28 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+# Jeton GITHUB_TOKEN en lecture seule : ces workflows n'écrivent rien dans le dépôt.
+permissions:
+  contents: read
+
+# Actions tierces épinglées sur un commit précis (le tag n'est qu'un
+# commentaire) : un tag peut être déplacé, un SHA non. Pour mettre à jour :
+#   git ls-remote https://github.com/actions/<action> refs/tags/<version>
 jobs:
   test:
     runs-on: ubuntu-24.04
 
     steps:
       - name: Récupérer le code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Installer Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
 
       - name: Installer les dépendances
-        run: npm install
+        run: npm ci
 
       - name: Lancer les tests unitaires (moteur de rotation)
         run: npm test
