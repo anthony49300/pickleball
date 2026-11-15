@@ -9,4 +9,7 @@
 // ensemble de fichiers statiques, ouvrables sans rien compiler) : cette
 // constante est donc à incrémenter manuellement à chaque lot de travail
 // mergé, en cohérence avec le champ "version" de package.json.
-const APP_VERSION = "2.0.0";
+// Le service worker (service-worker.js) l'importe aussi : chaque nouvelle
+// version renomme le cache hors ligne et force le rechargement de tous les
+// fichiers.
+const APP_VERSION = "2.0.1";

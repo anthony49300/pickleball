@@ -20,11 +20,14 @@
 // l'ajouter à PRECACHE_URLS ci-dessous. Un oubli n'empêche rien en ligne (le
 // fichier est mis en cache à sa première utilisation), mais il manquerait
 // hors ligne tant qu'il n'a jamais été chargé. Changer la liste ou le contenu
-// de ce fichier suffit à déclencher la mise à jour du service worker ; pensez
-// alors à incrémenter CACHE_VERSION pour repartir d'un cache propre.
+// de ce fichier suffit à déclencher la mise à jour du service worker.
+//
+// Le nom du cache suit la version de l'app (APP_VERSION, js/shared/version.js,
+// importé ci-dessous) : changer de version repart d'un cache propre, l'ancien
+// étant supprimé à l'activation.
 
-const CACHE_VERSION = 4;
-const CACHE_NAME = `pb-app-v${CACHE_VERSION}`;
+importScripts("js/shared/version.js");
+const CACHE_NAME = `pb-app-v${APP_VERSION}`;
 
 const PRECACHE_URLS = [
   "./",
