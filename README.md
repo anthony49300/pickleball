@@ -24,6 +24,7 @@ Fonctionne entièrement dans le navigateur, sans compte ni connexion internet re
 - [Apparence : identité visuelle et thème](#apparence--identité-visuelle-et-thème)
 - [Installer l'application](#installer-lapplication)
 - [Questions fréquentes](#questions-fréquentes)
+- [Sécurité](#sécurité)
 
 ---
 
@@ -254,7 +255,24 @@ Chaque fichier est servi depuis le cache de l'appareil, et une version plus réc
 
 ---
 
+## Sécurité
+
+- **Liens de partage validés** : un lien `?d=…` (comme une sauvegarde ou un historique relu sur l'appareil) n'est jamais utilisé tel quel. `js/shared/sanitize.js` en garde une copie propre : scores entiers de 0 à 99, identifiants au format attendu, textes tronqués, réglages ramenés aux limites des champs (10 terrains, 50 tours, 60 joueurs ; 64 équipes, 16 poules, 8 qualifiés, 16 terrains), clés inconnues retirées. Un lien hors limites s'ouvre avec un avertissement ; un lien illisible ou démesuré est refusé.
+- **Plannings trop lourds** : un lien de partage n'apporte jamais ses réglages du mode expert (ceux de l'appareil sont conservés). Si le planning d'un lien ou d'une sauvegarde est estimé à plus de 2 secondes de calcul, il n'est pas généré automatiquement : un avertissement propose « Générer quand même ». Le bouton **Générer les matchs** demande lui aussi confirmation au-delà de ce seuil.
+- **Affichage** : tout texte venant de l'état (noms, terrains, identifiants) est échappé avant d'être inséré dans la page.
+- **Content-Security-Policy** : `index.html` et `tournoi.html` n'autorisent que les scripts du site, plus le petit script anti-flash de `<head>`, identifié par son empreinte SHA-256. **Si ce script en ligne change, son empreinte doit être mise à jour dans la balise CSP des deux pages** : `npm test` (`tests/security.test.js`) échoue tant qu'elle ne correspond pas, et affiche la nouvelle valeur à recopier.
+
+---
+
 ## Notes techniques
 
 - **Mode hors ligne** : `service-worker.js` (à la racine) met en cache tous les fichiers listés dans `PRECACHE_URLS`. **Tout nouveau fichier du site doit y être ajouté**, sinon il ne sera disponible hors ligne qu'après avoir été chargé une première fois. Le service worker n'est enregistré qu'en http(s) (pas en `file://`) et pas dans l'APK Android, qui embarque déjà ses fichiers (voir `js/shared/pwa.js`).
 - **Polices** : fichiers woff2 dans `fonts/`, déclarés dans `css/fonts.css`, sous licence SIL Open Font License 1.1 (voir `fonts/OFL.txt`).
+- **Dépendances de build** : versions figées par `package-lock.json` et installées avec `npm ci` dans les workflows GitHub. Les actions GitHub sont épinglées sur un SHA de commit (la version n'est qu'un commentaire) et les workflows n'ont qu'un accès en lecture au dépôt (`permissions: contents: read`). Pour mettre à jour une action : `git ls-remote https://github.com/actions/<action> refs/tags/<version>`, puis remplacer le SHA et le commentaire.
+- **APK signé (optionnel)** : le workflow *Build Android APK* produit par défaut un APK de debug. Pour obtenir un APK de release signé, ajoutez ces quatre secrets dans *Settings > Secrets and variables > Actions* du dépôt :
+  - `ANDROID_KEYSTORE_BASE64` : le fichier keystore encodé en base64 (`base64 -w0 release.keystore`) ;
+  - `ANDROID_KEYSTORE_PASSWORD` : le mot de passe du keystore ;
+  - `ANDROID_KEY_ALIAS` : l'alias de la clé ;
+  - `ANDROID_KEY_PASSWORD` : le mot de passe de la clé.
+
+  Un keystore se crée une fois pour toutes avec `keytool -genkeypair -v -keystore release.keystore -alias jfpickleball -keyalg RSA -keysize 2048 -validity 10000`, à conserver précieusement hors du dépôt : sans lui, impossible de publier une mise à jour signée par la même clé. Dès que `ANDROID_KEYSTORE_BASE64` existe, le workflow compile la release (`npx cap build android`) et publie l'artefact `jf-pickleball-release-apk` à la place de l'APK de debug.

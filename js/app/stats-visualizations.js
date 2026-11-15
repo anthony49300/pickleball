@@ -53,7 +53,7 @@ function renderHeatmap() {
         const pct = count > 0 ? Math.round((count / maxVal) * 80 + 15) : 0;
         const bg = count > 0 ? `color-mix(in srgb, var(--accent) ${pct}%, var(--surface-2))` : "var(--surface-2)";
         const color = pct > 55 ? "var(--on-accent)" : "var(--text)";
-        html += `<td class="heatmap-cell" style="background: ${bg}; color: ${color};">${count}</td>`;
+        html += `<td class="heatmap-cell" style="background: ${bg}; color: ${color};">${Number(count)}</td>`;
       }
     });
     html += `</tr>`;
@@ -89,85 +89,15 @@ function updateRankings() {
   const result = window.__PB_LAST_RESULT__;
   if (!result) return;
   
-  const playersStats = {};
-  const allPlayers = parsePlayers(elPlayers.value);
-  
-  allPlayers.forEach(p => {
-    playersStats[p] = { w: 0, l: 0, pf: 0, pa: 0, m: 0, maxWin: 0, maxLoss: 0, streak: 0, closeWins: 0, closeLosses: 0, results: [] };
-  });
-  
-  let hasAnyScore = false;
-  let scoredMatches = 0;
-  let totalMatches = 0;
-  const pairWins = new Map();
+  const { sortedPlayers, pairWins, hasAnyScore, scoredMatches, totalMatches } =
+    computePlayerStats(parsePlayers(elPlayers.value), result.rounds, window.__PB_SCORES__);
 
-  result.rounds.forEach((matches, rIdx) => {
-    matches.forEach((match, mIdx) => {
-      totalMatches++;
-      const scores = readMatchScore(window.__PB_SCORES__, rIdx, mIdx, match);
-
-      if (scores && scores['1'] != null && scores['2'] != null) {
-        hasAnyScore = true;
-        scoredMatches++;
-        const [t1, t2] = match;
-        const s1 = scores['1'];
-        const s2 = scores['2'];
-        
-        const updateTeamStats = (team, ptsFor, ptsAgainst) => {
-          team.forEach(p => {
-            const stats = playersStats[p];
-            if (stats) {
-              stats.m++;
-              stats.pf += ptsFor;
-              stats.pa += ptsAgainst;
-              const margin = Math.abs(ptsFor - ptsAgainst);
-              if (ptsFor > ptsAgainst) {
-                stats.w++;
-                stats.maxWin = Math.max(stats.maxWin, ptsFor - ptsAgainst);
-                stats.streak = stats.streak >= 0 ? stats.streak + 1 : 1;
-                if (margin <= 2) stats.closeWins++;
-                stats.results.push("W");
-              } else if (ptsFor < ptsAgainst) {
-                stats.l++;
-                stats.maxLoss = Math.max(stats.maxLoss, ptsAgainst - ptsFor);
-                stats.streak = stats.streak <= 0 ? stats.streak - 1 : -1;
-                if (margin <= 2) stats.closeLosses++;
-                stats.results.push("L");
-              }
-            }
-          });
-        };
-
-        updateTeamStats(t1, s1, s2);
-        updateTeamStats(t2, s2, s1);
-
-        if (s1 > s2 && t1.length > 1) incCount(pairWins, pairKey(t1[0], t1[1]));
-        if (s2 > s1 && t2.length > 1) incCount(pairWins, pairKey(t2[0], t2[1]));
-      }
-    });
-  });
-  
   if (!hasAnyScore) {
     elRankingSection.hidden = true;
     return;
   }
   
   elRankingSection.hidden = false;
-
-  // Tri selon les règles de départage (Taux de victoire -> Différentiel moyen -> Victoires brutes).
-  // Le taux de victoire passe avant le nombre de victoires brutes pour ne pas
-  // défavoriser un joueur qui a simplement moins joué (rotation du banc) mais
-  // gagné dans les mêmes proportions (ex: 2V/2 ne doit pas être classé après
-  // 3V/3 uniquement parce qu'il totalise moins de victoires).
-  const sortedPlayers = Object.entries(playersStats).map(([name, stats]) => {
-    const winRate = stats.m > 0 ? stats.w / stats.m : 0;
-    const avgDiff = stats.m > 0 ? (stats.pf - stats.pa) / stats.m : 0;
-    return { name, ...stats, diff: stats.pf - stats.pa, winRate, avgDiff };
-  }).sort((a, b) => {
-    if (b.winRate !== a.winRate) return b.winRate - a.winRate; // 1. Taux de victoire
-    if (b.avgDiff !== a.avgDiff) return b.avgDiff - a.avgDiff; // 2. Différentiel moyen par match
-    return b.w - a.w;                                           // 3. Victoires brutes
-  });
 
   renderPodium(sortedPlayers);
   renderBadges(sortedPlayers, pairWins);
@@ -210,19 +140,19 @@ function updateRankings() {
   // Tableau complet (affiché sur grand écran)
   elRankingTableBody.innerHTML = rows.map(r => `
       <tr>
-        <td>${r.rank}</td>
+        <td>${Number(r.rank)}</td>
         <td>${r.name}</td>
-        <td>${r.p.m}</td>
-        <td>${r.p.w}</td>
-        <td>${r.p.l}</td>
-        <td>${r.winPct} %</td>
-        <td>${r.p.pf}</td>
-        <td>${r.p.pa}</td>
-        <td class="${r.diffClass}">${r.diff}</td>
-        <td>${r.avgPf} / ${r.avgPa}</td>
-        <td class="${r.p.maxWin > 0 ? "diff-positive" : ""}">${r.bestWin}</td>
-        <td class="${r.p.maxLoss > 0 ? "diff-negative" : ""}">${r.worstLoss}</td>
-        <td class="${r.streakClass}">${r.streakLabel}</td>
+        <td>${Number(r.p.m)}</td>
+        <td>${Number(r.p.w)}</td>
+        <td>${Number(r.p.l)}</td>
+        <td>${Number(r.winPct)} %</td>
+        <td>${Number(r.p.pf)}</td>
+        <td>${Number(r.p.pa)}</td>
+        <td class="${r.diffClass}">${escapeHtml(r.diff)}</td>
+        <td>${escapeHtml(r.avgPf)} / ${escapeHtml(r.avgPa)}</td>
+        <td class="${r.p.maxWin > 0 ? "diff-positive" : ""}">${escapeHtml(r.bestWin)}</td>
+        <td class="${r.p.maxLoss > 0 ? "diff-negative" : ""}">${escapeHtml(r.worstLoss)}</td>
+        <td class="${r.streakClass}">${escapeHtml(r.streakLabel)}</td>
       </tr>
     `).join('');
 
@@ -234,18 +164,18 @@ function updateRankings() {
       <li class="rk">
         <details>
           <summary>
-            <span class="rk-pos">${r.rank}</span>
-            <span class="rk-name">${r.name}<small>${r.p.w} V · ${r.p.l} D · ${r.p.m} match${r.p.m > 1 ? "s" : ""}</small></span>
-            <span class="diff ${r.diffClass}">${r.diff}</span>
+            <span class="rk-pos">${Number(r.rank)}</span>
+            <span class="rk-name">${r.name}<small>${Number(r.p.w)} V · ${Number(r.p.l)} D · ${Number(r.p.m)} match${r.p.m > 1 ? "s" : ""}</small></span>
+            <span class="diff ${r.diffClass}">${escapeHtml(r.diff)}</span>
             <svg class="rk-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 12 15 18 9"/></svg>
           </summary>
           <div class="rk-detail">
-            <div><span>% victoires</span><b>${r.winPct} %</b></div>
-            <div><span>Points pour</span><b>${r.p.pf}</b></div>
-            <div><span>Points contre</span><b>${r.p.pa}</b></div>
-            <div><span>Moy. pour / contre</span><b>${r.avgPf} / ${r.avgPa}</b></div>
-            <div><span>Meilleure V</span><b class="${r.p.maxWin > 0 ? "diff-positive" : ""}">${r.bestWin}</b></div>
-            <div><span>Série en cours</span><b class="${r.streakClass}">${r.streakLabel}</b></div>
+            <div><span>% victoires</span><b>${Number(r.winPct)} %</b></div>
+            <div><span>Points pour</span><b>${Number(r.p.pf)}</b></div>
+            <div><span>Points contre</span><b>${Number(r.p.pa)}</b></div>
+            <div><span>Moy. pour / contre</span><b>${escapeHtml(r.avgPf)} / ${escapeHtml(r.avgPa)}</b></div>
+            <div><span>Meilleure V</span><b class="${r.p.maxWin > 0 ? "diff-positive" : ""}">${escapeHtml(r.bestWin)}</b></div>
+            <div><span>Série en cours</span><b class="${r.streakClass}">${escapeHtml(r.streakLabel)}</b></div>
           </div>
         </details>
       </li>
@@ -262,7 +192,7 @@ function renderPodium(sorted) {
   const step = (p, cls, place) => `
     <div class="pod ${cls}">
       <span class="pod-name">${escapeHtml(p.name)}</span>
-      <span class="pod-sub">${p.w} V · ${p.diff > 0 ? "+" : ""}${p.diff}</span>
+      <span class="pod-sub">${Number(p.w)} V · ${p.diff > 0 ? "+" : ""}${Number(p.diff)}</span>
       <div class="pod-bar" aria-label="${place}e place">${place}</div>
     </div>`;
 
@@ -372,7 +302,7 @@ function renderBadges(sorted, pairWins) {
 
   elBadgesContainer.innerHTML = badges.map(b => `
     <div class="badge-card">
-      <span class="eyebrow">${b.title}</span>
+      <span class="eyebrow">${escapeHtml(b.title)}</span>
       <span class="badge-player">${escapeHtml(b.player)}</span>
       <span class="badge-desc">${escapeHtml(b.desc)}</span>
     </div>

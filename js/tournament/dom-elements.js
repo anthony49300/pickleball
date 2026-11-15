@@ -66,8 +66,8 @@ window.__PT_TOURNAMENT__ = null;
 // Niveau (1-5) par équipe, indexé par team.id (voir parseTeams) — entièrement
 // optionnel (voir buildPools, mode "balanced") : une équipe absente de cette
 // table compte comme niveau 3 (neutre).
-window.__PT_TEAM_LEVELS__ = {};
+window.__PT_TEAM_LEVELS__ = Object.create(null);
 // Niveau (1-5) par joueur INDIVIDUEL (clé = nom, voir la liste "Niveaux des
 // Joueurs" sous #individualPlayers) — entièrement optionnel, sert uniquement
 // à équilibrer la formation automatique des paires (voir autoPairPlayers).
-window.__PT_PLAYER_LEVELS__ = {};
+window.__PT_PLAYER_LEVELS__ = Object.create(null);

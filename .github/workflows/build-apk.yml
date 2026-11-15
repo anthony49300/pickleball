@@ -5,27 +5,36 @@ name: Build Android APK
 on:
   workflow_dispatch:
 
+# Jeton GITHUB_TOKEN en lecture seule : ces workflows n'écrivent rien dans le dépôt.
+permissions:
+  contents: read
+
+# Actions tierces épinglées sur un commit précis : voir la note dans test.yml.
 jobs:
   build-apk:
     runs-on: ubuntu-24.04
+    # APK de release signé seulement si le keystore est configuré dans les
+    # secrets du dépôt (voir README, « APK signé ») ; sinon APK de debug.
+    env:
+      HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
 
     steps:
       - name: Récupérer le code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Installer Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
 
       - name: Installer le JDK (requis par Gradle/Android)
-        uses: actions/setup-java@v6
+        uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
         with:
           distribution: 'temurin'
           java-version: '17'
 
       - name: Mettre en cache les dépendances Gradle
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/.gradle/caches
@@ -34,7 +43,7 @@ jobs:
           restore-keys: gradle-${{ runner.os }}-
 
       - name: Installer les dépendances Capacitor
-        run: npm install
+        run: npm ci
 
       # Capacitor interdit webDir="." (racine du dépôt) pour ne pas risquer d'embarquer
       # node_modules/.git/etc. dans l'APK. On copie donc uniquement les fichiers du site
@@ -81,12 +90,46 @@ jobs:
         run: chmod +x android/gradlew
 
       - name: Compiler l'APK (debug, non signé)
+        if: env.HAS_KEYSTORE != 'true'
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon
 
-      - name: Publier l'APK en téléchargement
-        uses: actions/upload-artifact@v7
+      - name: Publier l'APK de debug en téléchargement
+        if: env.HAS_KEYSTORE != 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: jf-pickleball-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      # Release signée : le keystore n'existe que le temps du build, dans le
+      # dossier temporaire du runner, et les mots de passe passent par des
+      # variables d'environnement (masquées dans les journaux).
+      - name: Compiler et signer l'APK de release
+        if: env.HAS_KEYSTORE == 'true'
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          KEYSTORE="$RUNNER_TEMP/release.keystore"
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE"
+          # apksigner (utilisé par « cap build ») vient des build-tools du SDK
+          # Android préinstallé sur le runner, absents du PATH par défaut.
+          export PATH="$PATH:$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)"
+          npx cap build android \
+            --keystorepath "$KEYSTORE" \
+            --keystorepass "$ANDROID_KEYSTORE_PASSWORD" \
+            --keystorealias "$ANDROID_KEY_ALIAS" \
+            --keystorealiaspass "$ANDROID_KEY_PASSWORD" \
+            --androidreleasetype APK
+          rm -f "$KEYSTORE"
+
+      - name: Publier l'APK signé en téléchargement
+        if: env.HAS_KEYSTORE == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: jf-pickleball-release-apk
+          path: android/app/build/outputs/apk/release/app-release-signed.apk
           if-no-files-found: error

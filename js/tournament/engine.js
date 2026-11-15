@@ -8,6 +8,15 @@
 // pour ce qui est réellement commun (modale, thème).
 
 /**
+ * Valeur PROPRE d'une table indexée par nom (niveaux, présences...) : jamais
+ * une propriété héritée de Object.prototype. Sans ça, un joueur nommé
+ * "constructor" ou "toString" lirait une fonction au lieu de son niveau.
+ */
+function ownValue(obj, key) {
+  return obj != null && Object.prototype.hasOwnProperty.call(obj, key) ? obj[key] : undefined;
+}
+
+/**
  * Échappe les caractères HTML sensibles avant toute injection via innerHTML.
  */
 function escapeHtml(str) {
@@ -104,7 +113,7 @@ function parsePlayerList(text) {
  *   de la paire i, utilisable pour préremplir window.__PT_TEAM_LEVELS__.
  */
 function autoPairPlayers(players, playerLevels = {}) {
-  const lvl = p => playerLevels[p] ?? 3;
+  const lvl = p => ownValue(playerLevels, p) ?? 3;
   const hasCustomLevels = players.some(p => lvl(p) !== 3);
   const pairs = [];
   let leftover;

@@ -75,8 +75,7 @@ const PAIR_MEMORY_MAX = 6;
 
 function getPairMemory() {
   try {
-    const list = JSON.parse(localStorage.getItem(PAIR_MEMORY_KEY) || "[]");
-    return Array.isArray(list) ? list : [];
+    return sanitizePairMemory(JSON.parse(localStorage.getItem(PAIR_MEMORY_KEY) || "[]"));
   } catch {
     return [];
   }
@@ -140,15 +139,22 @@ function generateSession(preserveScores = true) {
   btnCopy.disabled = true;
 
   if (!preserveScores) {
-    window.__PB_SCORES__ = {};
+    window.__PB_SCORES__ = Object.create(null);
     window.__PB_HIDDEN_ROUNDS__ = [];
     if (elRankingSection) elRankingSection.hidden = true;
   }
 
   try {
-    const players = parsePlayers(elPlayers.value);
-    const numCourts = Math.max(1, parseInt(elCourts.value || "1", 10));
-    const numRounds = Math.max(1, parseInt(elRounds.value || "1", 10));
+    // Bornes revérifiées ici (en plus de sanitizeRotationState) : le
+    // formulaire peut aussi être modifié à la main, et un planning démesuré
+    // gèlerait la page (calcul de chaque tour par recherche en faisceau).
+    let players = parsePlayers(elPlayers.value);
+    const courts = clampFormInt(elCourts.value, 1, 10, 1);
+    const roundsInput = clampFormInt(elRounds.value, 1, 50, 1);
+    const numCourts = courts.value;
+    const numRounds = roundsInput.value;
+    if (courts.clamped) elCourts.value = numCourts;
+    if (roundsInput.clamped) elRounds.value = numRounds;
     let seedText = (elSeed.value || "").trim();
 
     if (!seedText) {
@@ -161,12 +167,20 @@ function generateSession(preserveScores = true) {
     }
 
     const warnings = [];
+    if (courts.clamped || roundsInput.clamped) {
+      warnings.push("Réglages hors limites ramenés au maximum autorisé (10 terrains, 50 tours).");
+    }
 
     // Signale les doublons de joueurs (même nom, éventuellement casse différente) ignorés au parsing
     const rawCount = countRawPlayerEntries(elPlayers.value);
     if (rawCount > players.length) {
       const duplicates = rawCount - players.length;
       warnings.push(`${duplicates} doublon(s) de joueur ignoré(s).`);
+    }
+
+    if (players.length > SANITIZE_LIMITS.maxPlayers) {
+      warnings.push(`Seuls les ${SANITIZE_LIMITS.maxPlayers} premiers joueurs sont pris en compte.`);
+      players = players.slice(0, SANITIZE_LIMITS.maxPlayers);
     }
 
     // Prendre en compte les 2 terrains possibles à 6 joueurs (1 double + 1 simple)
@@ -180,13 +194,18 @@ function generateSession(preserveScores = true) {
       elWarning.textContent = `Attention : ${warnings.join(" ")}`;
     }
 
+    // Curseurs : mêmes bornes que leurs attributs min/max (voir index.html).
+    const slider = (el, min, max, fallback) => {
+      const n = parseFloat(el.value);
+      return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
+    };
     const options = {
-      wT: parseFloat(elwT.value || "5"),
-      wO: parseFloat(elwO.value || "2"),
-      wP: parseFloat(elwP.value || "1"),
-      wBalance: parseFloat(elwBalance.value || "3"),
-      beamWidth: parseInt(elBeamWidth.value || "80", 10),
-      partnerK: parseInt(elPartnerK.value || "10", 10),
+      wT: slider(elwT, 0, 20, 5),
+      wO: slider(elwO, 0, 20, 2),
+      wP: slider(elwP, 0, 10, 1),
+      wBalance: slider(elwBalance, 0, 20, 3),
+      beamWidth: Math.round(slider(elBeamWidth, 10, 500, 80)),
+      partnerK: Math.round(slider(elPartnerK, 4, 30, 10)),
       squareRepeats: !!elSquare.checked,
       avoidB2B: !!elAvoidB2B.checked,
     };
@@ -220,10 +239,78 @@ function generateSession(preserveScores = true) {
   }
 }
 
+/** Message affiché quand un lien importé a dû être ramené dans les limites. */
+const IMPORT_CLAMPED_MESSAGE = "Ce lien contenait des réglages hors limites ; ils ont été ramenés aux valeurs maximales.";
+
+/**
+ * Affiche un avertissement non bloquant dans #warning, avant celui
+ * éventuellement déjà présent (doublons, terrains en trop...).
+ */
+function prependWarning(message) {
+  if (!elWarning) return;
+  if (elWarning.hidden) {
+    elWarning.textContent = message;
+  } else {
+    // Nœud texte plutôt que textContent : garde un éventuel bouton déjà
+    // présent (voir showHeavyScheduleWarning).
+    elWarning.prepend(document.createTextNode(`${message} `));
+  }
+  elWarning.hidden = false;
+}
+
+/**
+ * Durée estimée (ms, PC de bureau) d'une génération avec les réglages
+ * actuels du formulaire, ramenés aux mêmes bornes que generateSession.
+ * @param {number} [frozenRounds] - tours déjà notés, qui ne seront pas recalculés
+ */
+function estimateFormScheduleCost(frozenRounds = 0) {
+  const players = Math.min(parsePlayers(elPlayers.value).length, SANITIZE_LIMITS.maxPlayers);
+  const courts = clampFormInt(elCourts.value, 1, 10, 1).value;
+  const rounds = clampFormInt(elRounds.value, 1, 50, 1).value - frozenRounds;
+  const beamWidth = clampFormInt(elBeamWidth.value, 10, 500, 80).value;
+  const partnerK = clampFormInt(elPartnerK.value, 4, 30, 10).value;
+  return estimateScheduleCost(players, courts, rounds, beamWidth, partnerK);
+}
+
+/** Durée lisible pour les messages : « environ 12 s », « environ 3 min ». */
+function formatScheduleCost(ms) {
+  const s = Math.max(3, Math.round(ms / 1000));
+  return s < 120 ? `environ ${s} s` : `environ ${Math.round(s / 60)} min`;
+}
+
+/**
+ * Planning trop lourd pour être généré automatiquement au chargement : avertit
+ * dans #warning (non bloquant) avec un bouton « Générer quand même ».
+ */
+function showHeavyScheduleWarning(costMs) {
+  if (!elWarning) return;
+  elWarning.textContent = `Ce planning est long à calculer (${formatScheduleCost(costMs)} sur un ordinateur, davantage sur un téléphone) : il n'a pas été généré automatiquement. `;
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "secondary";
+  btn.textContent = "Générer quand même";
+  btn.addEventListener("click", () => {
+    generateSession(true);
+    if (window.__PB_LAST_RESULT__ && (!elError || elError.hidden)) showScreen("jouer");
+  });
+  elWarning.append(btn);
+  elWarning.hidden = false;
+}
+
 /**
  * Restaure un état complet préenregistré (depuis l'historique, l'URL ou le stockage).
+ * L'état est d'abord nettoyé (voir sanitizeRotationState dans
+ * js/shared/sanitize.js) : il peut venir d'un lien partagé ou d'une
+ * sauvegarde modifiée, donc jamais utilisé tel quel. Lève une exception s'il
+ * est structurellement invalide.
+ * Le planning est ensuite régénéré automatiquement, sauf si son coût estimé
+ * dépasse SCHEDULE_COST_BUDGET_MS (lien piégé, ou sauvegarde issue d'un tel
+ * lien) : la page charge alors le formulaire et propose de générer.
+ * @param {Object} rawState
+ * @param {{clamped?: boolean}} [report] - voir sanitizeRotationState
  */
-function loadState(state) {
+function loadState(rawState, report = {}) {
+  const state = sanitizeRotationState(rawState, report);
   if (state.p !== undefined) elPlayers.value = state.p;
   if (state.c !== undefined) elCourts.value = state.c;
   if (state.r !== undefined) elRounds.value = state.r;
@@ -244,23 +331,25 @@ function loadState(state) {
   window.__PB_SESSION_ID__ = state.sid
     || (state.sc && Object.keys(state.sc).length ? newSessionId() : null);
   if (state.pr) window.__PB_PRESENCE__ = state.pr;
-  window.__PB_LEVELS__ = state.lv && typeof state.lv === "object" ? state.lv : {};
-  window.__PB_HIDDEN_ROUNDS__ = Array.isArray(state.hr) ? state.hr : [];
+  window.__PB_LEVELS__ = state.lv || Object.create(null);
+  window.__PB_HIDDEN_ROUNDS__ = state.hr || [];
 
   syncPresenceInputs();
 
-  if (state.sc) {
-    window.__PB_SCORES__ = state.sc;
-  } else {
-    window.__PB_SCORES__ = {};
-  }
+  window.__PB_SCORES__ = state.sc || Object.create(null);
 
   // Curseurs réécrits ci-dessus sans événement "input" : on resynchronise
   // les valeurs affichées à côté (voir navigation.js).
   syncSliderOutputs();
 
   if (state.p && parsePlayers(state.p).length >= 4) {
-    generateSession(true);
+    const cost = estimateFormScheduleCost();
+    if (cost > SCHEDULE_COST_BUDGET_MS) {
+      renderEmptyState();
+      showHeavyScheduleWarning(cost);
+    } else {
+      generateSession(true);
+    }
   } else {
     renderEmptyState();
   }
@@ -276,7 +365,7 @@ function loadState(state) {
 
 function getPlayerGroups() {
   try {
-    return JSON.parse(localStorage.getItem("pb_player_groups") || "[]");
+    return sanitizePlayerGroups(JSON.parse(localStorage.getItem("pb_player_groups") || "[]"));
   } catch {
     return [];
   }
@@ -299,11 +388,11 @@ function renderPlayerGroups() {
     <div class="group-card">
       <div>
         <h4>${escapeHtml(g.name)}</h4>
-        <div class="hint">${g.players.length} joueur${g.players.length > 1 ? "s" : ""}</div>
+        <div class="hint">${Number(g.players.length)} joueur${g.players.length > 1 ? "s" : ""}</div>
       </div>
       <div class="group-actions">
-        <button type="button" class="load-group-btn" data-id="${g.id}">Charger</button>
-        <button type="button" class="secondary danger del-group-btn" data-id="${g.id}" aria-label="Supprimer le groupe ${escapeHtml(g.name)}">Supprimer</button>
+        <button type="button" class="load-group-btn" data-id="${escapeHtml(g.id)}">Charger</button>
+        <button type="button" class="secondary danger del-group-btn" data-id="${escapeHtml(g.id)}" aria-label="Supprimer le groupe ${escapeHtml(g.name)}">Supprimer</button>
       </div>
     </div>
   `).join('');

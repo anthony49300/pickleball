@@ -75,7 +75,7 @@ function renderTeamChips() {
     const level = window.__PT_TEAM_LEVELS__[team.id] ?? 3;
     const dots = [1, 2, 3, 4, 5].map(k => `<i class="${k <= level ? "on" : ""}"></i>`).join("");
     const label = `${team.name}, niveau ${level} ${TEAM_LEVEL_LABELS[level] || ""}. Modifier`;
-    return `<button type="button" class="chip" data-team-id="${team.id}" aria-label="${escapeHtml(label)}">${escapeHtml(team.name)}<span class="lv" aria-hidden="true">${dots}</span></button>`;
+    return `<button type="button" class="chip" data-team-id="${escapeHtml(team.id)}" aria-label="${escapeHtml(label)}">${escapeHtml(team.name)}<span class="lv" aria-hidden="true">${dots}</span></button>`;
   }).join("");
 
   // Lignes qui ne forment pas une équipe de 2 : signalées (elles seront
@@ -165,7 +165,7 @@ function closeTeamSheet() {
   document.removeEventListener("keydown", onTeamSheetKeydown);
   sheetTeamId = null;
   renderTeamChips();
-  const again = teamId != null ? elTeamChips.querySelector(`.chip[data-team-id="${teamId}"]`) : null;
+  const again = teamId != null ? elTeamChips.querySelector(`.chip[data-team-id="${CSS.escape(String(teamId))}"]`) : null;
   (again || elAddTeamInput)?.focus();
 }
 
@@ -177,7 +177,7 @@ function onTeamSheetKeydown(e) {
 function removeTeamLine(lineIdx) {
   const lines = teamLines();
   lines.splice(lineIdx, 1);
-  const shifted = {};
+  const shifted = Object.create(null);
   Object.entries(window.__PT_TEAM_LEVELS__).forEach(([key, level]) => {
     const idx = parseInt(key, 10);
     if (idx < lineIdx) shifted[idx] = level;

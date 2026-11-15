@@ -1,0 +1,534 @@
+{
+  "teamsText": "Alice & Bob\nChloé & David\nÉmilie & Farid\nGaël & Hana\nInès & Jules\nKarim & Lou\nMia & Noé",
+  "individualPlayersText": "",
+  "numPools": "2",
+  "qualifiersPerPool": "2",
+  "numCourts": "2",
+  "poolAssignMode": "random",
+  "courtNamesText": "",
+  "teamLevels": {},
+  "playerLevels": {},
+  "tournament": {
+    "tournamentId": 1794768743951,
+    "teams": [
+      {
+        "id": 0,
+        "players": [
+          "Alice",
+          "Bob"
+        ],
+        "name": "Alice & Bob"
+      },
+      {
+        "id": 1,
+        "players": [
+          "Chloé",
+          "David"
+        ],
+        "name": "Chloé & David"
+      },
+      {
+        "id": 2,
+        "players": [
+          "Émilie",
+          "Farid"
+        ],
+        "name": "Émilie & Farid"
+      },
+      {
+        "id": 3,
+        "players": [
+          "Gaël",
+          "Hana"
+        ],
+        "name": "Gaël & Hana"
+      },
+      {
+        "id": 4,
+        "players": [
+          "Inès",
+          "Jules"
+        ],
+        "name": "Inès & Jules"
+      },
+      {
+        "id": 5,
+        "players": [
+          "Karim",
+          "Lou"
+        ],
+        "name": "Karim & Lou"
+      },
+      {
+        "id": 6,
+        "players": [
+          "Mia",
+          "Noé"
+        ],
+        "name": "Mia & Noé"
+      }
+    ],
+    "numPools": 2,
+    "qualifiersPerPool": 2,
+    "poolAssignMode": "random",
+    "numCourts": 2,
+    "courtNames": [],
+    "courtAllocation": [
+      [
+        0
+      ],
+      [
+        1
+      ]
+    ],
+    "pools": [
+      {
+        "name": "Poule A",
+        "teams": [
+          {
+            "id": 5,
+            "players": [
+              "Karim",
+              "Lou"
+            ],
+            "name": "Karim & Lou"
+          },
+          {
+            "id": 3,
+            "players": [
+              "Gaël",
+              "Hana"
+            ],
+            "name": "Gaël & Hana"
+          },
+          {
+            "id": 2,
+            "players": [
+              "Émilie",
+              "Farid"
+            ],
+            "name": "Émilie & Farid"
+          },
+          {
+            "id": 4,
+            "players": [
+              "Inès",
+              "Jules"
+            ],
+            "name": "Inès & Jules"
+          }
+        ],
+        "rounds": [
+          [
+            {
+              "a": {
+                "id": 5,
+                "players": [
+                  "Karim",
+                  "Lou"
+                ],
+                "name": "Karim & Lou"
+              },
+              "b": {
+                "id": 4,
+                "players": [
+                  "Inès",
+                  "Jules"
+                ],
+                "name": "Inès & Jules"
+              }
+            },
+            {
+              "a": {
+                "id": 3,
+                "players": [
+                  "Gaël",
+                  "Hana"
+                ],
+                "name": "Gaël & Hana"
+              },
+              "b": {
+                "id": 2,
+                "players": [
+                  "Émilie",
+                  "Farid"
+                ],
+                "name": "Émilie & Farid"
+              }
+            }
+          ],
+          [
+            {
+              "a": {
+                "id": 4,
+                "players": [
+                  "Inès",
+                  "Jules"
+                ],
+                "name": "Inès & Jules"
+              },
+              "b": {
+                "id": 3,
+                "players": [
+                  "Gaël",
+                  "Hana"
+                ],
+                "name": "Gaël & Hana"
+              }
+            },
+            {
+              "a": {
+                "id": 5,
+                "players": [
+                  "Karim",
+                  "Lou"
+                ],
+                "name": "Karim & Lou"
+              },
+              "b": {
+                "id": 2,
+                "players": [
+                  "Émilie",
+                  "Farid"
+                ],
+                "name": "Émilie & Farid"
+              }
+            }
+          ],
+          [
+            {
+              "a": {
+                "id": 5,
+                "players": [
+                  "Karim",
+                  "Lou"
+                ],
+                "name": "Karim & Lou"
+              },
+              "b": {
+                "id": 3,
+                "players": [
+                  "Gaël",
+                  "Hana"
+                ],
+                "name": "Gaël & Hana"
+              }
+            },
+            {
+              "a": {
+                "id": 2,
+                "players": [
+                  "Émilie",
+                  "Farid"
+                ],
+                "name": "Émilie & Farid"
+              },
+              "b": {
+                "id": 4,
+                "players": [
+                  "Inès",
+                  "Jules"
+                ],
+                "name": "Inès & Jules"
+              }
+            }
+          ]
+        ],
+        "scores": {
+          "0-0": {
+            "a": 11,
+            "b": 6
+          },
+          "0-1": {
+            "a": 11,
+            "b": 6
+          },
+          "1-0": {
+            "a": 11,
+            "b": 6
+          },
+          "1-1": {
+            "a": 11,
+            "b": 6
+          },
+          "2-0": {
+            "a": 11,
+            "b": 6
+          },
+          "2-1": {
+            "a": 11,
+            "b": 6
+          }
+        }
+      },
+      {
+        "name": "Poule B",
+        "teams": [
+          {
+            "id": 0,
+            "players": [
+              "Alice",
+              "Bob"
+            ],
+            "name": "Alice & Bob"
+          },
+          {
+            "id": 1,
+            "players": [
+              "Chloé",
+              "David"
+            ],
+            "name": "Chloé & David"
+          },
+          {
+            "id": 6,
+            "players": [
+              "Mia",
+              "Noé"
+            ],
+            "name": "Mia & Noé"
+          }
+        ],
+        "rounds": [
+          [
+            {
+              "bye": true,
+              "team": {
+                "id": 0,
+                "players": [
+                  "Alice",
+                  "Bob"
+                ],
+                "name": "Alice & Bob"
+              }
+            },
+            {
+              "a": {
+                "id": 1,
+                "players": [
+                  "Chloé",
+                  "David"
+                ],
+                "name": "Chloé & David"
+              },
+              "b": {
+                "id": 6,
+                "players": [
+                  "Mia",
+                  "Noé"
+                ],
+                "name": "Mia & Noé"
+              }
+            }
+          ],
+          [
+            {
+              "bye": true,
+              "team": {
+                "id": 1,
+                "players": [
+                  "Chloé",
+                  "David"
+                ],
+                "name": "Chloé & David"
+              }
+            },
+            {
+              "a": {
+                "id": 0,
+                "players": [
+                  "Alice",
+                  "Bob"
+                ],
+                "name": "Alice & Bob"
+              },
+              "b": {
+                "id": 6,
+                "players": [
+                  "Mia",
+                  "Noé"
+                ],
+                "name": "Mia & Noé"
+              }
+            }
+          ],
+          [
+            {
+              "a": {
+                "id": 0,
+                "players": [
+                  "Alice",
+                  "Bob"
+                ],
+                "name": "Alice & Bob"
+              },
+              "b": {
+                "id": 1,
+                "players": [
+                  "Chloé",
+                  "David"
+                ],
+                "name": "Chloé & David"
+              }
+            },
+            {
+              "bye": true,
+              "team": {
+                "id": 6,
+                "players": [
+                  "Mia",
+                  "Noé"
+                ],
+                "name": "Mia & Noé"
+              }
+            }
+          ]
+        ],
+        "scores": {
+          "0-1": {
+            "a": 11,
+            "b": 6
+          },
+          "1-1": {
+            "a": 11,
+            "b": 6
+          },
+          "2-0": {
+            "a": 11,
+            "b": 6
+          }
+        }
+      }
+    ],
+    "forfeitedTeamIds": [],
+    "hiddenPoolIndices": [],
+    "hiddenMatchKeys": [],
+    "finalPhase": {
+      "bracketSize": 4,
+      "rankOffset": 0,
+      "segments": [
+        {
+          "id": "seg-1-w",
+          "rankStart": 1,
+          "rankSize": 2,
+          "slots": [
+            {
+              "team": {
+                "id": 5,
+                "players": [
+                  "Karim",
+                  "Lou"
+                ],
+                "name": "Karim & Lou"
+              }
+            },
+            {
+              "team": {
+                "id": 0,
+                "players": [
+                  "Alice",
+                  "Bob"
+                ],
+                "name": "Alice & Bob"
+              }
+            }
+          ],
+          "scores": {}
+        },
+        {
+          "id": "seg-1-l",
+          "rankStart": 3,
+          "rankSize": 2,
+          "slots": [
+            {
+              "team": {
+                "id": 3,
+                "players": [
+                  "Gaël",
+                  "Hana"
+                ],
+                "name": "Gaël & Hana"
+              }
+            },
+            {
+              "team": {
+                "id": 1,
+                "players": [
+                  "Chloé",
+                  "David"
+                ],
+                "name": "Chloé & David"
+              }
+            }
+          ],
+          "scores": {}
+        }
+      ],
+      "rounds": [
+        {
+          "segmentId": "seg-1",
+          "rankStart": 1,
+          "rankSize": 4,
+          "label": "Places 1 à 4",
+          "pairs": [
+            [
+              {
+                "team": {
+                  "id": 5,
+                  "players": [
+                    "Karim",
+                    "Lou"
+                  ],
+                  "name": "Karim & Lou"
+                }
+              },
+              {
+                "team": {
+                  "id": 3,
+                  "players": [
+                    "Gaël",
+                    "Hana"
+                  ],
+                  "name": "Gaël & Hana"
+                }
+              }
+            ],
+            [
+              {
+                "team": {
+                  "id": 0,
+                  "players": [
+                    "Alice",
+                    "Bob"
+                  ],
+                  "name": "Alice & Bob"
+                }
+              },
+              {
+                "team": {
+                  "id": 1,
+                  "players": [
+                    "Chloé",
+                    "David"
+                  ],
+                  "name": "Chloé & David"
+                }
+              }
+            ]
+          ],
+          "scores": {
+            "0": {
+              "a": 11,
+              "b": 6
+            },
+            "1": {
+              "a": 11,
+              "b": 6
+            }
+          }
+        }
+      ],
+      "finalRanking": null
+    }
+  }
+}

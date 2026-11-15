@@ -1,13 +1,13 @@
 {
   "name": "jf-pickleball",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "private": true,
   "description": "JF Pickleball - Générateur de rotations de matchs de pickleball",
   "scripts": {
     "android:add": "npx cap add android",
     "android:sync": "npx cap sync android",
     "android:build": "npx cap sync android && cd android && gradlew.bat assembleDebug",
-    "test": "node tests/algorithm.test.js && node tests/tournament.test.js",
+    "test": "node tests/algorithm.test.js && node tests/tournament.test.js && node tests/security.test.js",
     "lint": "eslint js/app js/shared js/tournament",
     "format": "prettier --write \"js/app/**/*.js\" \"js/shared/**/*.js\" \"js/tournament/**/*.js\" \"*.html\" \"css/**/*.css\"",
     "format:check": "prettier --check \"js/app/**/*.js\" \"js/shared/**/*.js\" \"js/tournament/**/*.js\" \"*.html\" \"css/**/*.css\""

@@ -30,8 +30,12 @@ window.addEventListener("DOMContentLoaded", () => {
     window.history.replaceState({}, "", window.location.origin + window.location.pathname);
 
     try {
+      // Lien démesuré (bien au-delà d'un vrai tournoi) : refusé d'emblée.
+      if (sharedData.length > MAX_SHARED_DATA_LENGTH) throw new Error("Lien de partage trop long.");
       const jsonString = LZString.decompressFromEncodedURIComponent(sharedData);
-      applyTournamentState(JSON.parse(jsonString));
+      const report = {};
+      applyTournamentState(JSON.parse(jsonString), report);
+      if (report.clamped) showTournamentImportClampedWarning();
       autoSaveTournamentState();
     } catch (e) {
       console.error(e);
