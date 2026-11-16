@@ -7,15 +7,17 @@
     "android:add": "npx cap add android",
     "android:sync": "npx cap sync android",
     "android:build": "npx cap sync android && cd android && gradlew.bat assembleDebug",
-    "test": "node tests/algorithm.test.js && node tests/tournament.test.js && node tests/security.test.js",
+    "test": "node tests/algorithm.test.js && node tests/tournament.test.js && node tests/security.test.js && node tests/properties.test.js",
+    "test:e2e": "playwright test",
     "lint": "eslint js/app js/shared js/tournament",
     "format": "prettier --write \"js/app/**/*.js\" \"js/shared/**/*.js\" \"js/tournament/**/*.js\" \"*.html\" \"css/**/*.css\"",
     "format:check": "prettier --check \"js/app/**/*.js\" \"js/shared/**/*.js\" \"js/tournament/**/*.js\" \"*.html\" \"css/**/*.css\""
   },
   "devDependencies": {
-    "@capacitor/core": "^6.1.2",
-    "@capacitor/cli": "^6.1.2",
     "@capacitor/android": "^6.1.2",
+    "@capacitor/cli": "^6.1.2",
+    "@capacitor/core": "^6.1.2",
+    "@playwright/test": "1.64.1",
     "eslint": "^8.57.0",
     "prettier": "^3.3.3"
   }
