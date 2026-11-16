@@ -31,7 +31,7 @@ let sheetPlayer = null;
 let sheetReturnFocus = null;
 
 function totalRoundsValue() {
-  return Math.max(1, parseInt(elRounds.value || "8", 10) || 8);
+  return Math.max(1, parseInt(elRounds.value || "10", 10) || 10);
 }
 
 /** Réécrit la liste (source de vérité) et prévient le reste de l'app. */

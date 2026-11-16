@@ -152,7 +152,8 @@ if (btnResetAll) {
     // Réinitialise les champs du formulaire à leurs valeurs par défaut
     elPlayers.value = "";
     elCourts.value = "2";
-    elRounds.value = "8";
+    elRounds.value = "10";
+    presenceRoundsBaseline = null;
     elSeed.value = generateSeed();
     elCourtNames.value = "";
     elwT.value = "5";

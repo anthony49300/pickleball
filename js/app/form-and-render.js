@@ -75,9 +75,16 @@ function updatePlayerCountBadge() {
  * puis rafraîchit la liste des joueurs (pastilles, voir players-ui.js).
  * Les réglages individuels se font dans la fiche joueur.
  */
+// Nombre de tours auquel les plages de présence sont actuellement calées (voir
+// adaptPresenceToRounds) : mis à jour quand le nombre de tours est validé
+// (événement "change", pour ignorer les valeurs intermédiaires d'une saisie
+// au clavier, ex. "1" en tapant "10"), remis à zéro au chargement d'un état.
+let presenceRoundsBaseline = null;
+
 function syncPresenceInputs() {
   const players = parsePlayers(elPlayers.value);
-  const totalRounds = parseInt(elRounds.value || "8", 10);
+  const totalRounds = parseInt(elRounds.value || "10", 10);
+  if (presenceRoundsBaseline === null) presenceRoundsBaseline = totalRounds;
 
   players.forEach(p => {
     if (!ownValue(window.__PB_PRESENCE__, p)) {
@@ -101,6 +108,15 @@ elPlayers.addEventListener("input", () => {
 
 elRounds.addEventListener("input", () => {
   clearMessages();
+  syncPresenceInputs();
+  autoSaveState();
+});
+
+elRounds.addEventListener("change", () => {
+  const totalRounds = parseInt(elRounds.value, 10);
+  if (!(totalRounds > 0)) return;
+  adaptPresenceToRounds(window.__PB_PRESENCE__, presenceRoundsBaseline, totalRounds);
+  presenceRoundsBaseline = totalRounds;
   syncPresenceInputs();
   autoSaveState();
 });

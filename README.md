@@ -77,7 +77,7 @@ L'écran **Préparer** contient deux blocs.
 
 **Format**
 - **Terrains** : combien de terrains sont disponibles simultanément.
-- **Tours** : combien de rotations seront jouées dans la session.
+- **Tours** : combien de rotations seront jouées dans la session (10 par défaut).
 - Un rappel indique combien de joueurs jouent et combien sont en pause à chaque tour.
 - **Noms des terrains** *(optionnel)* : par défaut « Terrain 1 », « Terrain 2 »… ; vous pouvez les nommer (ex. « Court central, Court 2 »).
 - **Pas de pause deux fois de suite** : un joueur n'est jamais en pause sur deux tours consécutifs.
