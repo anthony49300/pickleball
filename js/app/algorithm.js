@@ -504,6 +504,74 @@ function pickBenchesByQueue(availablePlayers, benchesNeeded, benchQueue, lastBen
 }
 
 /**
+ * Sélection des joueurs en pause, version 2 (sessions créées à partir de la
+ * version 2.0.2 ; les sessions plus anciennes gardent pickBenchesByQueue
+ * ci-dessus, voir le paramètre benchVersion de scheduleRotations).
+ *
+ * pickBenchesByQueue renvoyait en fin de file tout joueur écarté (pause au
+ * tour précédent, duo déjà vu en pause) : l'ordre de la file se dérèglait,
+ * et sa boucle bornée pouvait s'arrêter avant d'avoir trouvé assez de
+ * joueurs, les places restantes étant alors complétées au hasard. D'où des
+ * pauses mal réparties (de 1 à 4 selon les joueurs sur une même session) et
+ * des pauses deux tours de suite pourtant évitables.
+ *
+ * Ici, l'ordre de choix est explicite, par priorité décroissante :
+ * 1. pas de pause deux tours de suite (option avoidB2B), dès qu'il y a
+ *    assez d'autres joueurs disponibles : contrainte stricte ;
+ * 2. le moins de pauses jusqu'ici (équité) ;
+ * 3. le plus longtemps sans pause (ordre de la file) ;
+ * 4. éviter de remettre ensemble en pause un duo qui l'a déjà été, mais
+ *    seulement entre joueurs à égalité sur les points 2 et 3 : jamais au
+ *    détriment de l'équité.
+ * @param {Map<string,number>} benchCount - pauses de chaque joueur jusqu'ici
+ */
+function pickBenchesFair(availablePlayers, benchesNeeded, benchQueue, lastBenchedSet, avoidB2B = true, benchPairCounts = new Map(), benchCount = new Map()) {
+  if (benchesNeeded <= 0) return [];
+  for (const p of availablePlayers) {
+    if (!benchQueue.includes(p)) benchQueue.push(p);
+  }
+  const queueIndex = new Map(benchQueue.map((p, i) => [p, i]));
+  const byPriority = (a, b) =>
+    (benchCount.get(a) ?? 0) - (benchCount.get(b) ?? 0) || queueIndex.get(a) - queueIndex.get(b);
+
+  const fresh = availablePlayers.filter(p => !(avoidB2B && lastBenchedSet.has(p))).sort(byPriority);
+  // Pas assez de joueurs « frais » : on complète avec ceux en pause au tour
+  // précédent, les moins souvent en pause d'abord (pause consécutive inévitable).
+  const pools = [fresh];
+  if (fresh.length < benchesNeeded) pools.push(availablePlayers.filter(p => !fresh.includes(p)).sort(byPriority));
+
+  const benched = [];
+  const hasBenchedWith = (p) => benched.some(b => (benchPairCounts?.get(pairKey(p, b)) ?? 0) > 0);
+  for (const pool of pools) {
+    const remaining = [...pool];
+    while (benched.length < benchesNeeded && remaining.length) {
+      // Candidats à égalité de pauses avec le premier de la liste : parmi eux,
+      // le premier sans duo déjà vu en pause, à défaut le premier tout court.
+      const tier = benchCount.get(remaining[0]) ?? 0;
+      const tierCandidates = remaining.filter(p => (benchCount.get(p) ?? 0) === tier);
+      const choice = tierCandidates.find(p => !hasBenchedWith(p)) ?? tierCandidates[0];
+      benched.push(choice);
+      remaining.splice(remaining.indexOf(choice), 1);
+    }
+  }
+
+  // File : les joueurs mis en pause repartent en fin de file (même mise à jour
+  // que pickBenchesByQueue, rejouée telle quelle pour les tours figés).
+  for (const p of benched) {
+    benchQueue.splice(benchQueue.indexOf(p), 1);
+    benchQueue.push(p);
+  }
+  if (benchPairCounts) {
+    for (let i = 0; i < benched.length; i++) {
+      for (let j = i + 1; j < benched.length; j++) {
+        incCount(benchPairCounts, pairKey(benched[i], benched[j]));
+      }
+    }
+  }
+  return benched;
+}
+
+/**
  * Recherche par faisceau (Beam Search) pour composer les rencontres optimales d'un tour.
  * @param {Object<string,number>} [levelsMap] - voir levelGapPenalty (optionnel)
  */
@@ -811,7 +879,9 @@ function scheduleRotations(players, numCourts, numRounds, seedText, options, pre
 
       matches = [...doublesMatches, [[singlesPlayers[0]], [singlesPlayers[1]]]];
     } else {
-      benched = pickBenchesByQueue(activePlayers, benchesNeeded, benchQueue, lastBenched, options.avoidB2B, benchPairCounts);
+      benched = options.benchVersion === 1
+        ? pickBenchesByQueue(activePlayers, benchesNeeded, benchQueue, lastBenched, options.avoidB2B, benchPairCounts)
+        : pickBenchesFair(activePlayers, benchesNeeded, benchQueue, lastBenched, options.avoidB2B, benchPairCounts, benchCount);
       let playing = activePlayers.filter(p => !benched.includes(p));
 
       matches = beamSearchRound(

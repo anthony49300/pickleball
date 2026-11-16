@@ -148,6 +148,7 @@ if (btnResetAll) {
     window.__PB_LAST_RESULT__ = null;
     window.__PB_SESSION_ID__ = null;
     window.__PB_SEED_PINNED__ = false;
+    window.__PB_BENCH_VERSION__ = 2;
 
     // Réinitialise les champs du formulaire à leurs valeurs par défaut
     elPlayers.value = "";
@@ -231,6 +232,8 @@ btnGenerate.addEventListener("click", async () => {
     // sont conservées : les tours notés restent figés (voir generateSession).
     if (!window.__PB_SEED_PINNED__) elSeed.value = generateSeed();
     window.__PB_SESSION_ID__ = newSessionId();
+    // Nouvelle session : sélection des pauses la plus récente.
+    window.__PB_BENCH_VERSION__ = 2;
   }
   generateSession(hasScores);
   // Planning prêt (pas d'erreur affichée) : on passe directement à l'écran Jouer.
@@ -263,6 +266,7 @@ if (btnNewSession) {
     window.__PB_LAST_RESULT__ = null;
     window.__PB_SESSION_ID__ = null;
     window.__PB_SEED_PINNED__ = false;
+    window.__PB_BENCH_VERSION__ = 2;
     elSeed.value = generateSeed();
 
     clearMessages();

@@ -25,6 +25,7 @@ function getCurrentState() {
     mem: elPairMemory ? elPairMemory.checked : true,
     sp: !!window.__PB_SEED_PINNED__,
     sid: window.__PB_SESSION_ID__ || null,
+    bv: window.__PB_BENCH_VERSION__,
     sc: window.__PB_SCORES__ || {},
     pr: window.__PB_PRESENCE__ || {},
     lv: window.__PB_LEVELS__ || {},
@@ -208,6 +209,7 @@ function generateSession(preserveScores = true) {
       partnerK: Math.round(slider(elPartnerK, 4, 30, 10)),
       squareRepeats: !!elSquare.checked,
       avoidB2B: !!elAvoidB2B.checked,
+      benchVersion: window.__PB_BENCH_VERSION__,
     };
 
     // Gèle les tours déjà notés (voir getFrozenRounds) plutôt que de les
@@ -326,6 +328,7 @@ function loadState(rawState, report = {}) {
   if (state.b2b !== undefined) elAvoidB2B.checked = state.b2b;
   if (elPairMemory) elPairMemory.checked = state.mem !== false;
   window.__PB_SEED_PINNED__ = !!state.sp;
+  window.__PB_BENCH_VERSION__ = state.bv === 2 ? 2 : 1;
   // Session enregistrée avant l'introduction de l'identifiant de session : on
   // lui en donne un si elle a des scores (c'est bien une session en cours).
   window.__PB_SESSION_ID__ = state.sid

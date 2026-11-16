@@ -157,12 +157,10 @@ test("planning : même graine et mêmes réglages = même planning (100 configur
   }
 });
 
-// Écart de pauses toléré : même borne que le test historique de
-// tests/algorithm.test.js (« répartition raisonnablement équitable »). En
-// novembre 2026, ~14 % des configurations dépassent 1 (ex. 11 joueurs,
-// 2 terrains, 10 tours : de 1 à 4 pauses selon les joueurs) : piste
-// d'amélioration de l'algorithme, à resserrer ici une fois corrigée.
-const MAX_BENCH_SPREAD = 4;
+// Écart de pauses maximal entre deux joueurs d'une même session (sélection
+// des pauses v2, voir pickBenchesFair). Avec l'ancienne sélection (v1),
+// ~14 % des configurations dépassaient 1, jusqu'à 4.
+const MAX_BENCH_SPREAD = 1;
 
 test("planning : pauses réparties avec un écart borné (200 configurations sans arrivée ni départ)", () => {
   const rnd = makeRandom(42);
@@ -177,11 +175,11 @@ test("planning : pauses réparties avec un écart borné (200 configurations san
   }
 });
 
-knownIssue("« Pas de pause deux fois de suite » : jamais deux pauses d'affilée quand c'est évitable (200 configurations)", () => {
+test("« Pas de pause deux fois de suite » : jamais deux pauses d'affilée quand c'est évitable (200 configurations)", () => {
   // Évitable dès qu'au moins autant de joueurs jouent qu'il y en a en pause :
   // les joueurs en pause au tour suivant peuvent tous être pris parmi ceux
-  // qui viennent de jouer. Novembre 2026 : ~8 % des configurations le
-  // violent malgré l'option (ex. 13 joueurs, 2 terrains, 8 tours et plus).
+  // qui viennent de jouer. Avec l'ancienne sélection (v1), ~8 % des
+  // configurations le violaient (ex. 13 joueurs, 2 terrains, 8 tours et plus).
   const rnd = makeRandom(42);
   const failures = [];
   for (let i = 0; i < 200; i++) {
