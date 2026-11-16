@@ -1,0 +1,50 @@
+name: Tests navigateur
+
+# Parcours complets dans un vrai navigateur (Playwright, voir
+# playwright.config.js et tests/e2e/), en vue ordinateur et téléphone.
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+# Jeton GITHUB_TOKEN en lecture seule : ce workflow n'écrit rien dans le dépôt.
+permissions:
+  contents: read
+
+# Actions tierces épinglées sur un commit précis : voir la note dans test.yml.
+jobs:
+  e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Installer Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Installer Chromium pour Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Lancer les tests navigateur
+        run: npx playwright test
+
+      # Captures, vidéos et traces pas à pas des tests en échec, à ouvrir avec
+      # « npx playwright show-trace » ou depuis le rapport HTML.
+      - name: Publier le rapport en cas d'échec
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rapport-tests-navigateur
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
