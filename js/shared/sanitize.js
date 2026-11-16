@@ -280,7 +280,7 @@ const SCHEDULE_COST_BUDGET_MS = 2000;
 
 /** Réglages du mode expert : ceux d'un lien partagé sont ignorés (voir prepareSharedRotationState). */
 const ROTATION_EXPERT_KEYS = ["wt", "wo", "wp", "wbal", "bw", "pk", "sq"];
-const ROTATION_DEFAULTS = { c: 2, r: 8, bw: 80, pk: 10 };
+const ROTATION_DEFAULTS = { c: 2, r: 10, bw: 80, pk: 10 };
 
 /**
  * Durée estimée (ms, PC de bureau) d'une génération complète.

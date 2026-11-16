@@ -83,7 +83,7 @@ let presenceRoundsBaseline = null;
 
 function syncPresenceInputs() {
   const players = parsePlayers(elPlayers.value);
-  const totalRounds = parseInt(elRounds.value || "8", 10);
+  const totalRounds = parseInt(elRounds.value || "10", 10);
   if (presenceRoundsBaseline === null) presenceRoundsBaseline = totalRounds;
 
   players.forEach(p => {
