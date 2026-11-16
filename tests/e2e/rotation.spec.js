@@ -140,16 +140,39 @@ test("lien démesuré : la page reste réactive et propose de générer", async 
 });
 
 test("frise des tours : un seul appui suffit juste après la saisie d'un score", async ({ page }) => {
-  // Problème connu (novembre 2026) : la frise est redessinée quand le champ
-  // de score perd le focus, entre l'appui et le relâchement, et le premier
-  // appui est perdu. Retirer test.fail() une fois corrigé.
-  test.fail(true, "Problème connu : premier appui sur la frise perdu après une saisie");
+  // Régression : la frise était recréée quand le champ de score perdait le
+  // focus, entre l'appui et le relâchement, et ce premier appui était perdu.
   await addPlayers(page, PLAYERS);
   await generate(page);
   const inputs = page.locator('#schedule .round[data-round="0"] .score-input');
   for (let i = 0; i < await inputs.count(); i++) await inputs.nth(i).fill("11");
   await page.locator('#sessionStepper .dot[data-round="1"]').click();
   await expect(page.locator('#schedule .round[data-round="1"]')).toBeVisible({ timeout: 2000 });
+});
+
+test("sauvegarde de la version 2.0.1 : scores retrouvés, puis nouvelle session avec la sélection des pauses v2", async ({ page }) => {
+  // Vraie sauvegarde d'avant la sélection des pauses v2 (pas de clé "bv").
+  const saved = JSON.parse(require("fs").readFileSync(require("path").join(__dirname, "..", "fixtures", "rotation-state.json"), "utf8"));
+  // Injectée au chargement suivant, AVANT les scripts de l'app : en quittant
+  // la page actuelle, l'app réenregistre son propre état (beforeunload).
+  await page.addInitScript(state => {
+    if (sessionStorage.getItem("fixture-injectee")) return;
+    sessionStorage.setItem("fixture-injectee", "1");
+    localStorage.setItem("pb_autosave", JSON.stringify(state));
+  }, saved);
+  await page.reload();
+  await goTo(page, "jouer");
+  const filled = await page.locator("#schedule .score-input").evaluateAll(els => els.filter(e => e.value !== "").length);
+  expect(filled).toBe(Object.keys(saved.sc).length * 2);
+  expect(await page.evaluate(() => window.__PB_BENCH_VERSION__)).toBe(1);
+
+  await goTo(page, "preparer");
+  await page.locator("#newSessionBtn").click();
+  await confirmModal(page);
+  await generate(page);
+  expect(await page.evaluate(() => window.__PB_BENCH_VERSION__)).toBe(2);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("pb_autosave")).bv)).toBe(2);
+  expectNoProblems(problems);
 });
 
 test("chaque écran : aucune erreur, rien ne dépasse en largeur", async ({ page }) => {

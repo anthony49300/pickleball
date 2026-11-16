@@ -77,6 +77,12 @@ window.__PB_LEVELS__ = Object.create(null);
 // n'utilise plus cette liste, mais elle est conservée dans l'état sauvegardé
 // ("hr") pour rester compatible avec les sessions et liens partagés existants.
 window.__PB_HIDDEN_ROUNDS__ = [];
+// Version de la sélection des joueurs en pause (voir pickBenchesFair dans
+// algorithm.js) : 2 pour toute nouvelle session ; une session enregistrée
+// avant son introduction (sans clé "bv") garde la version 1, pour que son
+// planning, recalculé à chaque chargement, reste celui sur lequel ses
+// scores ont été saisis.
+window.__PB_BENCH_VERSION__ = 2;
 let currentHeatmapMode = "teammates";
 
 // Le câblage des steppers numériques (+/-) et des sliders est dans

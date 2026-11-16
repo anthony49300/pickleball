@@ -80,13 +80,8 @@ async function scheduleText(page) {
     rounds.map(r => [...r.querySelectorAll(".match-card .team-names span:first-child")].map(s => s.textContent).join(" / ")));
 }
 
-/**
- * Affiche le tour `r` (0-based) via la frise, puis saisit ses scores (11 à x).
- * Le champ en cours est d'abord quitté : sinon le premier appui sur la frise
- * est perdu (problème connu, voir le test dédié dans rotation.spec.js).
- */
+/** Affiche le tour `r` (0-based) via la frise, puis saisit ses scores (11 à x). */
 async function scoreRound(page, r) {
-  await page.evaluate(() => document.activeElement?.blur());
   await page.locator(`#sessionStepper .dot[data-round="${r}"]`).click();
   await expect(page.locator(`#schedule .round[data-round="${r}"]`)).toBeVisible();
   const inputs = page.locator(`#schedule .round[data-round="${r}"] .score-input`);

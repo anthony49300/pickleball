@@ -422,6 +422,26 @@ test("adaptPresenceToRounds : un joueur présent jusqu'au bout suit le nombre de
   assert.ok(result.rounds.every(matches => matches.length === 1), "un match à chaque tour");
 });
 
+test("sessions enregistrées avant la sélection des pauses v2 : planning et scores retrouvés avec benchVersion 1", () => {
+  // Fixture : vraie session de la version 2.0.1 (sans clé "bv"), scores
+  // saisis sur son planning d'origine. Rechargée, elle doit retrouver
+  // exactement ce planning pour que chaque score retombe sur son match.
+  const state = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "rotation-state.json"), "utf8"));
+  assert.strictEqual(state.bv, undefined);
+  const players = state.p.split("\n");
+  const options = {
+    wT: Number(state.wt), wO: Number(state.wo), wP: Number(state.wp), wBalance: Number(state.wbal),
+    beamWidth: Number(state.bw), partnerK: Number(state.pk), squareRepeats: state.sq, avoidB2B: state.b2b, benchVersion: 1
+  };
+  const result = scheduleRotations(players, Number(state.c), Number(state.r), state.s, options, state.pr, [], state.lv);
+  let found = 0;
+  result.rounds.forEach((matches, r) => matches.forEach((match, m) => {
+    const sc = readMatchScore(state.sc, r, m, match);
+    if (sc && sc["1"] != null && sc["2"] != null) found++;
+  }));
+  assert.strictEqual(found, Object.keys(state.sc).length, "chaque score enregistré retrouve son match");
+});
+
 // ---------------------------------------------------------------------------
 
 console.log(`\n${passed} test(s) réussi(s), ${failed} échoué(s).`);

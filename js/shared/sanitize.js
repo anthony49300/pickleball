@@ -214,6 +214,9 @@ function sanitizeRotationState(raw, report = {}) {
   // loadState s'il est absent.
   if (raw.sid === null || isSafeId(raw.sid)) out.sid = raw.sid;
 
+  // Version de la sélection des pauses (voir pickBenchesFair, algorithm.js).
+  if (raw.bv === 1 || raw.bv === 2) out.bv = raw.bv;
+
   if (raw.sc !== undefined) {
     const sc = nullProtoDict();
     if (isPlainObject(raw.sc)) {

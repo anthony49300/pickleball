@@ -179,12 +179,27 @@ function updateSessionStepper(rounds, viewedIdx) {
   if (!elSessionStepper || !rounds || !rounds.length) return -1;
 
   const activeIdx = getActiveRoundIndex(rounds);
-  elSessionStepper.innerHTML = rounds.map((_, idx) => {
+
+  // Segments mis à jour SUR PLACE plutôt que recréés : la frise est rafraîchie
+  // à chaque saisie, y compris quand un champ de score perd le focus parce
+  // qu'on touche la frise. Recréer les boutons à ce moment-là remplaçait le
+  // segment entre l'appui et le relâchement, et ce premier appui était perdu.
+  let dots = elSessionStepper.querySelectorAll(".dot");
+  if (dots.length !== rounds.length) {
+    elSessionStepper.innerHTML = rounds.map((_, idx) => `<button type="button" class="dot" data-round="${Number(idx)}"></button>`).join("");
+    dots = elSessionStepper.querySelectorAll(".dot");
+  }
+  dots.forEach((dot, idx) => {
     const done = isRoundComplete(rounds, idx);
     const current = idx === activeIdx && !done;
-    const state = done ? ", scores saisis" : current ? ", en cours" : "";
-    return `<button type="button" class="dot${done ? " is-done" : ""}${current ? " is-current" : ""}${idx === viewedIdx ? " is-view" : ""}" data-round="${idx}" aria-label="Tour ${idx + 1}${state}"${idx === viewedIdx ? ' aria-current="step"' : ""}></button>`;
-  }).join("");
+    const viewed = idx === viewedIdx;
+    dot.classList.toggle("is-done", done);
+    dot.classList.toggle("is-current", current);
+    dot.classList.toggle("is-view", viewed);
+    dot.setAttribute("aria-label", `Tour ${idx + 1}${done ? ", scores saisis" : current ? ", en cours" : ""}`);
+    if (viewed) dot.setAttribute("aria-current", "step");
+    else dot.removeAttribute("aria-current");
+  });
 
   return activeIdx;
 }
