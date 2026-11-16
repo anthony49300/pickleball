@@ -334,6 +334,8 @@ function loadState(rawState, report = {}) {
   window.__PB_LEVELS__ = state.lv || Object.create(null);
   window.__PB_HIDDEN_ROUNDS__ = state.hr || [];
 
+  // Plages de présence telles qu'enregistrées : calées sur le nombre de tours chargé.
+  presenceRoundsBaseline = null;
   syncPresenceInputs();
 
   window.__PB_SCORES__ = state.sc || Object.create(null);

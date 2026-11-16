@@ -153,6 +153,7 @@ if (btnResetAll) {
     elPlayers.value = "";
     elCourts.value = "2";
     elRounds.value = "8";
+    presenceRoundsBaseline = null;
     elSeed.value = generateSeed();
     elCourtNames.value = "";
     elwT.value = "5";

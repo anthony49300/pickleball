@@ -33,6 +33,7 @@
   },
   "globals": {
     "activeScrollTarget": "writable",
+    "adaptPresenceToRounds": "readonly",
     "advanceSegment": "readonly",
     "alertModal": "readonly",
     "allocateCourtsToPools": "readonly",
@@ -214,6 +215,7 @@
     "poolCourtIndex": "readonly",
     "prepareSharedRotationState": "readonly",
     "prependWarning": "readonly",
+    "presenceRoundsBaseline": "writable",
     "progressFinalPhase": "readonly",
     "readMatchScore": "readonly",
     "recordPairMemory": "readonly",

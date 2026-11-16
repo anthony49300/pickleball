@@ -32,7 +32,7 @@ const assert = require("assert");
 const algoPath = path.join(__dirname, "..", "js", "app", "algorithm.js");
 const code = fs.readFileSync(algoPath, "utf8");
 vm.runInThisContext(code, { filename: algoPath });
-const { scheduleRotations, matchScoreKey, readMatchScore, writeMatchScore, getFrozenRounds, bestSplitForFour, levelGapPenalty, countSessionPairs, buildPriorCounts } = global;
+const { scheduleRotations, matchScoreKey, readMatchScore, writeMatchScore, getFrozenRounds, bestSplitForFour, levelGapPenalty, countSessionPairs, buildPriorCounts, adaptPresenceToRounds } = global;
 
 let passed = 0;
 let failed = 0;
@@ -398,6 +398,28 @@ test("mémoire des semaines précédentes : moins de duos répétés d'une semai
     }
   }
   assert.ok(withMemory < withoutMemory, `duos répétés avec mémoire (${withMemory}) devrait être < sans mémoire (${withoutMemory})`);
+});
+
+test("adaptPresenceToRounds : un joueur présent jusqu'au bout suit le nombre de tours, un départ prévu reste à son tour", () => {
+  // Repro : 4 joueurs ajoutés avec 3 tours, puis passage à 10 tours.
+  const presence = { A: { start: 1, end: 3 }, B: { start: 1, end: 3 }, C: { start: 2, end: 3 }, D: { start: 1, end: 2 } };
+  adaptPresenceToRounds(presence, 3, 10);
+  assert.deepStrictEqual(presence.A, { start: 1, end: 10 });
+  assert.deepStrictEqual(presence.C, { start: 2, end: 10 }, "arrivée tardive conservée");
+  assert.deepStrictEqual(presence.D, { start: 1, end: 2 }, "départ prévu au tour 2 conservé");
+
+  // Puis retour à 6 tours : les « jusqu'au bout » suivent, tout reste dans les bornes.
+  const e = { start: 8, end: 9 };
+  presence.E = e;
+  adaptPresenceToRounds(presence, 10, 6);
+  assert.deepStrictEqual(presence.A, { start: 1, end: 6 });
+  assert.deepStrictEqual(presence.E, { start: 6, end: 6 });
+
+  // Avec le planning : les 4 joueurs jouent bien les 10 tours.
+  const four = { A: { start: 1, end: 3 }, B: { start: 1, end: 3 }, C: { start: 1, end: 3 }, D: { start: 1, end: 3 } };
+  adaptPresenceToRounds(four, 3, 10);
+  const result = scheduleRotations(["A", "B", "C", "D"], 1, 10, "seed-presence", DEFAULT_OPTIONS, four);
+  assert.ok(result.rounds.every(matches => matches.length === 1), "un match à chaque tour");
 });
 
 // ---------------------------------------------------------------------------

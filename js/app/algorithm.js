@@ -239,6 +239,28 @@ function getFrozenRounds(previousResult, scoresStore) {
 }
 
 /**
+ * Adapte les plages de présence (arrivées/départs) à un nouveau nombre de
+ * tours. Un joueur présent jusqu'au dernier tour (end >= ancien total) le
+ * reste : sa fin suit le nouveau total. Un départ prévu plus tôt garde son
+ * tour, ramené dans les bornes si le nombre de tours diminue. Sans ça, un
+ * joueur ajouté quand la session comptait 3 tours restait « jusqu'à T3 »
+ * après être passé à 10 tours, et les tours suivants se retrouvaient vides.
+ * @param {Object<string,{start:number,end:number}>} presence - modifié en place
+ * @param {number} previousTotal
+ * @param {number} nextTotal
+ */
+function adaptPresenceToRounds(presence, previousTotal, nextTotal) {
+  if (!presence || !(previousTotal > 0) || !(nextTotal > 0) || previousTotal === nextTotal) return;
+  for (const name of Object.keys(presence)) {
+    const pr = presence[name];
+    if (!pr) continue;
+    const end = pr.end >= previousTotal ? nextTotal : Math.min(pr.end, nextTotal);
+    pr.start = Math.min(pr.start, nextTotal);
+    pr.end = Math.max(end, pr.start);
+  }
+}
+
+/**
  * Statistiques individuelles de la session (classement, podium, badges), à
  * partir du planning et des scores saisis. Indexées dans une Map par nom de
  * joueur (et non un objet {}) : un joueur nommé "__proto__" ou "constructor"
