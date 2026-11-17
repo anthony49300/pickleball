@@ -26,11 +26,31 @@ function getCurrentState() {
     sp: !!window.__PB_SEED_PINNED__,
     sid: window.__PB_SESSION_ID__ || null,
     bv: window.__PB_BENCH_VERSION__,
+    pl: savedPlanForState(),
     sc: window.__PB_SCORES__ || {},
     pr: window.__PB_PRESENCE__ || {},
     lv: window.__PB_LEVELS__ || {},
     hr: window.__PB_HIDDEN_ROUNDS__ || []
   };
+}
+
+/**
+ * Planning à enregistrer avec la session : tous les tours affichés (qui joue
+ * avec et contre qui, qui est en pause). Au chargement, il est rejoué tel
+ * quel (voir generateSession) au lieu d'être recalculé à partir de la graine :
+ * sans ça, le planning recalculé pouvait différer de celui sur lequel les
+ * scores avaient été saisis (mémoire « Varier d'une semaine à l'autre »
+ * différente d'un appareil à l'autre ou depuis les sessions plus récentes,
+ * changement de l'algorithme...) et les scores ne retrouvaient plus leurs
+ * matchs. Le même planning est aussi transmis par un lien partagé.
+ * @returns {{r: Array, b: Array}|undefined}
+ */
+function savedPlanForState() {
+  const result = window.__PB_LAST_RESULT__;
+  if (result?.rounds?.length) return { r: result.rounds, b: result.benches };
+  // Planning chargé mais pas encore affiché (calcul jugé trop long, voir
+  // loadState) : on le garde tel quel.
+  return window.__PB_SAVED_PLAN__ || undefined;
 }
 
 let saveBadgePulseTimer = null;
@@ -217,9 +237,17 @@ function generateSession(preserveScores = true) {
     // modification de la liste de joueurs (arrivée/départ) ou de la graine
     // change la séquence aléatoire dès le tour 1, y compris pour des tours
     // déjà joués et notés à l'écran.
-    const frozenRounds = preserveScores
-      ? getFrozenRounds(window.__PB_LAST_RESULT__, window.__PB_SCORES__)
-      : [];
+    //
+    // Juste après un chargement (aucun planning affiché), c'est le planning
+    // enregistré avec la session qui est rejoué, en entier : voir
+    // savedPlanForState.
+    let frozenRounds = [];
+    if (preserveScores && window.__PB_LAST_RESULT__) {
+      frozenRounds = getFrozenRounds(window.__PB_LAST_RESULT__, window.__PB_SCORES__);
+    } else if (preserveScores && window.__PB_SAVED_PLAN__) {
+      const plan = window.__PB_SAVED_PLAN__;
+      frozenRounds = plan.r.map((matches, i) => ({ matches, benched: plan.b[i] || [] }));
+    }
 
     // Mémoire des semaines précédentes (voir PAIR_MEMORY_KEY), si activée.
     const priorCounts = elPairMemory && elPairMemory.checked
@@ -228,6 +256,8 @@ function generateSession(preserveScores = true) {
 
     const result = scheduleRotations(players, numCourts, numRounds, seedText, options, window.__PB_PRESENCE__, frozenRounds, window.__PB_LEVELS__, priorCounts);
     window.__PB_LAST_RESULT__ = result;
+    // Le planning vit désormais dans __PB_LAST_RESULT__ (voir savedPlanForState).
+    window.__PB_SAVED_PLAN__ = null;
 
     render(result, players, numCourts, numRounds);
 
@@ -329,6 +359,12 @@ function loadState(rawState, report = {}) {
   if (elPairMemory) elPairMemory.checked = state.mem !== false;
   window.__PB_SEED_PINNED__ = !!state.sp;
   window.__PB_BENCH_VERSION__ = state.bv === 2 ? 2 : 1;
+  // Planning enregistré (clé "pl", absente des sessions plus anciennes) : rejoué tel
+  // quel. Le planning éventuellement affiché (autre session, ouverte avant de
+  // charger celle-ci depuis l'historique) est oublié : sinon generateSession
+  // repartirait de lui au lieu du planning enregistré.
+  window.__PB_SAVED_PLAN__ = state.pl || null;
+  window.__PB_LAST_RESULT__ = null;
   // Session enregistrée avant l'introduction de l'identifiant de session : on
   // lui en donne un si elle a des scores (c'est bien une session en cours).
   window.__PB_SESSION_ID__ = state.sid
@@ -348,7 +384,9 @@ function loadState(rawState, report = {}) {
   syncSliderOutputs();
 
   if (state.p && parsePlayers(state.p).length >= 4) {
-    const cost = estimateFormScheduleCost();
+    // Les tours du planning enregistré sont rejoués, pas recalculés : seuls
+    // les tours manquants comptent dans le coût estimé.
+    const cost = estimateFormScheduleCost(state.pl ? state.pl.r.length : 0);
     if (cost > SCHEDULE_COST_BUDGET_MS) {
       renderEmptyState();
       showHeavyScheduleWarning(cost);

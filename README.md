@@ -81,7 +81,7 @@ L'écran **Préparer** contient deux blocs.
 - Un rappel indique combien de joueurs jouent et combien sont en pause à chaque tour.
 - **Noms des terrains** *(optionnel)* : par défaut « Terrain 1 », « Terrain 2 »… ; vous pouvez les nommer (ex. « Court central, Court 2 »).
 - **Pas de pause deux fois de suite** : un joueur n'est jamais en pause sur deux tours consécutifs.
-- **Varier d'une semaine à l'autre** *(activé par défaut)* : l'application se souvient des duos et oppositions joués lors des dernières sessions sur cet appareil (tours notés uniquement) et évite de les refaire. La dernière session compte le plus, les 3 précédentes de moins en moins. Rien à enregistrer à la main : cette mémoire est indépendante de l'historique, et effacée par « Tout réinitialiser ».
+- **Varier d'une semaine à l'autre** *(activé par défaut)* : l'application se souvient des duos et oppositions joués lors des dernières sessions sur cet appareil (tours notés uniquement) et évite de les refaire. La dernière session compte le plus, les 3 précédentes de moins en moins. Rien à enregistrer à la main : cette mémoire est indépendante de l'historique, et effacée par « Tout réinitialiser ». Le planning d'une session est enregistré avec elle (sauvegarde, historique, lien de partage) : rouverte plus tard ou sur un autre appareil, elle retrouve exactement les mêmes tours et ses scores, quelle que soit la mémoire de l'appareil.
 
 **Nouvelle session ou mise à jour ?**
 - Sans aucun score saisi, **Générer les matchs** tire automatiquement un nouvel identifiant de session, pour ne jamais rejouer à l'identique le planning de la semaine passée avec la même liste de joueurs.

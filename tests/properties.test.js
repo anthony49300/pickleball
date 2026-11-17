@@ -243,6 +243,22 @@ test("adaptPresenceToRounds : plages toujours valides, « jusqu'au bout » suit 
   }
 });
 
+test("planning enregistré rejoué : identique quelles que soient la mémoire de l'appareil et la version de l'algorithme (150 configurations)", () => {
+  // Reproduit le chargement d'une session (voir generateSession) : tous les
+  // tours enregistrés sont passés comme tours figés.
+  const rnd = makeRandom(2026);
+  for (let i = 0; i < 150; i++) {
+    const cfg = randomRotationConfig(rnd);
+    const memoryA = [countSessionPairs(scheduleRotations([...cfg.players], cfg.courts, 4, `a${i}`, OPTIONS, {}).rounds.map(matches => ({ matches })))];
+    const original = scheduleRotations([...cfg.players], cfg.courts, cfg.rounds, cfg.seed, OPTIONS, cfg.presence, [], cfg.levels, buildPriorCounts(memoryA));
+    const frozen = original.rounds.map((matches, r) => ({ matches, benched: original.benches[r] }));
+    // Autre appareil : autre mémoire (ou aucune), ancienne sélection des pauses.
+    const replayed = scheduleRotations([...cfg.players], cfg.courts, cfg.rounds, cfg.seed, { ...OPTIONS, benchVersion: 1 }, cfg.presence, frozen, cfg.levels, null);
+    assert.strictEqual(JSON.stringify(replayed.rounds), JSON.stringify(original.rounds), describe(cfg));
+    assert.strictEqual(JSON.stringify(replayed.benches), JSON.stringify(original.benches), describe(cfg));
+  }
+});
+
 // ---------------------------------------------------------------------------
 // MODE ROTATION : d'une semaine à l'autre
 // ---------------------------------------------------------------------------

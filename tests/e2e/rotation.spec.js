@@ -175,6 +175,63 @@ test("sauvegarde de la version 2.0.1 : scores retrouvés, puis nouvelle session 
   expectNoProblems(problems);
 });
 
+test("ancienne session rechargée depuis l'historique après d'autres sessions : planning et scores intacts", async ({ page }) => {
+  // « Varier d'une semaine à l'autre » est activé par défaut : les sessions
+  // jouées ensuite enrichissent la mémoire de l'appareil. Le planning de la
+  // session rechargée ne doit pas en dépendre.
+  await addPlayers(page, PLAYERS);
+  await typeStepper(page, "rounds", 5);
+  await generate(page);
+  await scoreRound(page, 0);
+  await scoreRound(page, 1);
+  const planningA = await scheduleText(page);
+  await goTo(page, "historique");
+  await page.locator("#saveToHistory").click();
+
+  for (let week = 0; week < 2; week++) {
+    await goTo(page, "preparer");
+    await page.locator("#newSessionBtn").click();
+    await confirmModal(page);
+    await generate(page);
+    for (let r = 0; r < 5; r++) await scoreRound(page, r);
+  }
+
+  await goTo(page, "historique");
+  await page.locator(".load-hist-btn").first().click();
+  await expect(page.locator('[data-screen="jouer"]')).toBeVisible();
+  expect(await scheduleText(page)).toEqual(planningA);
+  const filled = await page.locator("#schedule .score-input").evaluateAll(els => els.filter(e => e.value !== "").length);
+  expect(filled).toBe(2 * 2 * 2); // 2 tours notés × 2 matchs × 2 scores
+  expectNoProblems(problems);
+});
+
+test("lien partagé ouvert sur un appareil qui a sa propre mémoire : planning complet identique", async ({ page, browser }) => {
+  await addPlayers(page, PLAYERS);
+  await typeStepper(page, "rounds", 6);
+  await generate(page);
+  await scoreRound(page, 0);
+  const planning = await scheduleText(page);
+  const url = await page.evaluate(() => buildShareableUrl());
+
+  // L'autre appareil a déjà joué ses propres sessions avec les mêmes joueurs.
+  const other = await browser.newContext();
+  const page2 = await other.newPage();
+  const problems2 = watchPage(page2);
+  await page2.goto("index.html");
+  await addPlayers(page2, PLAYERS);
+  await typeStepper(page2, "rounds", 6);
+  await generate(page2);
+  for (let r = 0; r < 6; r++) await scoreRound(page2, r);
+  expect(await page2.evaluate(() => JSON.parse(localStorage.getItem("pb_pair_memory") || "[]").length)).toBeGreaterThan(0);
+
+  await page2.goto(url);
+  await expect(page2.locator('[data-screen="jouer"]')).toBeVisible();
+  expect(await scheduleText(page2)).toEqual(planning); // tours joués ET tours à venir
+  expectNoProblems(problems2);
+  await other.close();
+  expectNoProblems(problems);
+});
+
 test("chaque écran : aucune erreur, rien ne dépasse en largeur", async ({ page }) => {
   await addPlayers(page, [...PLAYERS, "Inès", "Karim-Alexandre de la Fontaine"]);
   await generate(page);
