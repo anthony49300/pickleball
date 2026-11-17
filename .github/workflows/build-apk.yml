@@ -1,9 +1,15 @@
 name: Build Android APK
 
 # Ne se déclenche plus automatiquement sur push (build long, pas nécessaire à
-# chaque commit) : uniquement à la demande, depuis l'onglet "Actions" de GitHub.
+# chaque commit) : uniquement à la demande, depuis l'onglet "Actions" de GitHub,
+# ou appelé par le workflow « Publier une version » (release.yml).
 on:
   workflow_dispatch:
+  workflow_call:
+    outputs:
+      signed:
+        description: "true si l'APK est signé avec la clé permanente (secrets ANDROID_KEYSTORE_*)"
+        value: ${{ jobs.build-apk.outputs.signed }}
 
 # Jeton GITHUB_TOKEN en lecture seule : ces workflows n'écrivent rien dans le dépôt.
 permissions:
@@ -17,8 +23,14 @@ jobs:
     # secrets du dépôt (voir README, « APK signé ») ; sinon APK de debug.
     env:
       HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+    outputs:
+      signed: ${{ steps.mode.outputs.signed }}
 
     steps:
+      - name: APK signé ou de debug ?
+        id: mode
+        run: echo "signed=$HAS_KEYSTORE" >> "$GITHUB_OUTPUT"
+
       - name: Récupérer le code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -85,6 +97,19 @@ jobs:
 
       - name: Synchroniser le site web dans le projet Android
         run: npx cap sync android
+
+      # Version affichée par Android (versionName) = celle de package.json ;
+      # versionCode, qui doit augmenter à chaque version pour qu'une mise à jour
+      # s'installe par-dessus la précédente : 2.0.2 -> 20002.
+      - name: Numéro de version de l'APK (depuis package.json)
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          [[ "$VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]] || { echo "::error::Version invalide dans package.json : $VERSION"; exit 1; }
+          CODE=$(( BASH_REMATCH[1] * 10000 + BASH_REMATCH[2] * 100 + BASH_REMATCH[3] ))
+          GRADLE=android/app/build.gradle
+          sed -i -E "s/versionCode [0-9]+/versionCode $CODE/; s/versionName \"[^\"]*\"/versionName \"$VERSION\"/" "$GRADLE"
+          grep -q "versionCode $CODE" "$GRADLE" && grep -q "versionName \"$VERSION\"" "$GRADLE" || { echo "::error::Impossible de poser la version dans $GRADLE"; exit 1; }
+          echo "APK version $VERSION (versionCode $CODE)"
 
       - name: Rendre gradlew exécutable
         run: chmod +x android/gradlew
