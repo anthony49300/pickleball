@@ -453,9 +453,10 @@
   </div>
 
   <!-- Librairies embarquées localement (plutôt que via CDN) : l'app doit fonctionner
-       hors-ligne, notamment dans l'APK Android où l'accès réseau n'est pas garanti. -->
+       hors-ligne, notamment dans l'APK Android où l'accès réseau n'est pas garanti.
+       html2canvas (export en image) n'est chargé qu'au premier export : voir
+       loadHtml2Canvas dans js/shared/ui-controls.js. -->
   <script src="js/vendor/lz-string.min.js"></script>
-  <script src="js/vendor/html2canvas.min.js"></script>
 
   <!-- Modules partagés avec les autres pages du site (voir tournoi.html) : modale
        générique, thème/identité visuelle, steppers/sliders et toast. Chargés

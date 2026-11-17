@@ -55,6 +55,8 @@ test.describe("hors ligne", () => {
     await context.setOffline(true);
     await page.reload();
     await expect(page.locator("#generate")).toBeVisible();
+    // La librairie d'export, chargée à la demande, vient elle aussi du cache.
+    expect(await page.evaluate(() => loadHtml2Canvas().then(fn => typeof fn))).toBe("function");
     await page.goto("tournoi.html");
     await expect(page.locator("#generatePools")).toBeVisible();
     await context.setOffline(false);

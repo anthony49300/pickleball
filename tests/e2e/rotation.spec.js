@@ -232,6 +232,20 @@ test("lien partagé ouvert sur un appareil qui a sa propre mémoire : planning c
   expectNoProblems(problems);
 });
 
+test("export du classement en image : librairie chargée seulement au premier export", async ({ page }) => {
+  expect(await page.evaluate(() => typeof window.html2canvas)).toBe("undefined");
+  await addPlayers(page, PLAYERS);
+  await typeStepper(page, "rounds", 2);
+  await generate(page);
+  await scoreRound(page, 0);
+  await goTo(page, "classement");
+  await page.locator("#exportRankingsPng").click();
+  await expect(page.locator("#modalOverlay")).toBeVisible();
+  await expect(page.locator("#modalImagePreview")).toHaveAttribute("src", /^data:image\/png;base64,/);
+  expect(await page.evaluate(() => typeof window.html2canvas)).toBe("function");
+  expectNoProblems(problems);
+});
+
 test("chaque écran : aucune erreur, rien ne dépasse en largeur", async ({ page }) => {
   await addPlayers(page, [...PLAYERS, "Inès", "Karim-Alexandre de la Fontaine"]);
   await generate(page);
