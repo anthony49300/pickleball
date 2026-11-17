@@ -70,6 +70,13 @@ test("tournoi complet : poules, renommage, forfait, phase finale, consolante, cl
   await goTo(page, "classement");
   await expect(page.locator("#finalRankingContainer tbody tr")).toHaveCount(TEAMS.length);
   await expect(page.locator("#finalRankingContainer")).toContainText("Les Invincibles");
+
+  // Export en image (html2canvas chargé à ce moment-là seulement).
+  expect(await page.evaluate(() => typeof window.html2canvas)).toBe("undefined");
+  await page.locator("#exportFinalRankingPng").click();
+  await expect(page.locator("#modalImagePreview")).toHaveAttribute("src", /^data:image\/png;base64,/);
+  await page.locator("#modalOverlay").getByRole("button", { name: "Fermer" }).click();
+  await expect(page.locator("#modalOverlay")).toBeHidden();
   for (const screen of ["preparer", "jouer", "classement", "historique"]) {
     await goTo(page, screen);
     await expectNoHorizontalScroll(page);

@@ -195,6 +195,7 @@
     "isRoundComplete": "readonly",
     "isSegmentRoundComplete": "readonly",
     "LEVEL_LABELS": "readonly",
+    "loadHtml2Canvas": "readonly",
     "loadState": "readonly",
     "loadTournamentState": "readonly",
     "LZString": "readonly",

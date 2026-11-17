@@ -404,6 +404,7 @@ if (btnExportPng) {
     try {
       // Fond de l'image = fond de l'identité visuelle / du thème en cours.
       const pageBg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() || "#0b131d";
+      const html2canvas = await loadHtml2Canvas();
       const canvas = await html2canvas(targetArea, {
         backgroundColor: pageBg,
         scale: 2

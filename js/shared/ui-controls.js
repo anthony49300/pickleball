@@ -93,6 +93,35 @@ document.addEventListener("click", (e) => {
  * libellé des boutons, qui ne se voyait plus une fois le bouton rangé dans
  * un menu. L'élément est créé à la volée : rien à prévoir dans le HTML.
  */
+// =============================================================================
+// EXPORT EN IMAGE : html2canvas chargé à la demande
+// =============================================================================
+// html2canvas (~200 Ko, le plus gros fichier de l'app) ne sert qu'à exporter
+// un classement en image : il n'est plus chargé à l'ouverture de la page,
+// mais au premier export. Le fichier reste dans le cache hors ligne (voir
+// PRECACHE_URLS, service-worker.js) : l'export marche aussi sans réseau.
+let html2canvasLoading = null;
+
+/** @returns {Promise<Function>} la fonction html2canvas, une fois le script chargé */
+function loadHtml2Canvas() {
+  if (typeof window.html2canvas === "function") return Promise.resolve(window.html2canvas);
+  if (!html2canvasLoading) {
+    html2canvasLoading = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "js/vendor/html2canvas.min.js";
+      script.onload = () => (typeof window.html2canvas === "function"
+        ? resolve(window.html2canvas)
+        : reject(new Error("html2canvas introuvable après chargement")));
+      script.onerror = () => {
+        html2canvasLoading = null; // nouvel essai possible au prochain export
+        reject(new Error("Chargement de html2canvas impossible"));
+      };
+      document.head.append(script);
+    });
+  }
+  return html2canvasLoading;
+}
+
 let toastTimer = null;
 function showToast(message, duration = 2400) {
   let el = document.getElementById("appToast");

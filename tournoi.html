@@ -417,9 +417,10 @@
 
   <!-- Bibliothèques embarquées localement (voir index.html) : l'app doit
        fonctionner hors-ligne. lz-string sert au lien de partage (compresse
-       l'état dans l'URL), html2canvas à l'export du classement en image. -->
+       l'état dans l'URL). html2canvas (export du classement en image) n'est
+       chargé qu'au premier export : voir loadHtml2Canvas dans
+       js/shared/ui-controls.js. -->
   <script src="js/vendor/lz-string.min.js"></script>
-  <script src="js/vendor/html2canvas.min.js"></script>
 
   <!-- Modules partagés avec index.html : modale, thème/identité visuelle,
        steppers et boutons de score, toast, hors ligne, écrans et menus. -->

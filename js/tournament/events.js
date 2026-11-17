@@ -710,6 +710,7 @@ if (btnExportFinalRankingPng) {
     const pageBg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() || "#0b131d";
 
     try {
+      const html2canvas = await loadHtml2Canvas();
       const canvas = await html2canvas(elFinalRankingContainer, {
         backgroundColor: pageBg,
         scale: 2
