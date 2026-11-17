@@ -12,4 +12,4 @@
 // Le service worker (service-worker.js) l'importe aussi : chaque nouvelle
 // version renomme le cache hors ligne et force le rechargement de tous les
 // fichiers.
-const APP_VERSION = "2.0.1";
+const APP_VERSION = "2.0.2";
