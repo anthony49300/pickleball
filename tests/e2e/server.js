@@ -24,12 +24,24 @@ const TYPES = {
   ".txt": "text/plain; charset=utf-8"
 };
 
+// Simulation d'une nouvelle version publiée (tests de la bannière de mise à
+// jour) : GET /__test/sw-version?v=xxx ajoute un commentaire à la fin de
+// service-worker.js, ce qui suffit au navigateur pour y voir une mise à jour.
+let swTestMarker = "";
+
 http.createServer((req, res) => {
   let pathname;
+  let url;
   try {
-    pathname = decodeURIComponent(new URL(req.url, "http://localhost").pathname);
+    url = new URL(req.url, "http://localhost");
+    pathname = decodeURIComponent(url.pathname);
   } catch {
     res.writeHead(400).end();
+    return;
+  }
+  if (pathname === "/__test/sw-version") {
+    swTestMarker = (url.searchParams.get("v") || "").replace(/[^\w-]/g, "");
+    res.writeHead(204).end();
     return;
   }
   if (pathname.endsWith("/")) pathname += "index.html";
@@ -40,6 +52,9 @@ http.createServer((req, res) => {
     return;
   }
   fs.readFile(file, (err, data) => {
+    if (!err && pathname === "/service-worker.js" && swTestMarker) {
+      data = Buffer.concat([data, Buffer.from(`\n// version de test : ${swTestMarker}\n`)]);
+    }
     if (err) {
       res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("Introuvable");
       return;
