@@ -60,4 +60,42 @@ test.describe("hors ligne", () => {
     await context.setOffline(false);
     expectNoProblems(problems);
   });
+
+  test("nouvelle version publiée : bannière « Recharger », jamais de rechargement automatique", async ({ page }) => {
+    const problems = watchPage(page);
+    await page.goto("index.html");
+    await page.evaluate(() => navigator.serviceWorker.ready);
+    await page.reload();
+    await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller)).toBe(true);
+    // Première installation : pas de bannière.
+    await expect(page.locator("#updateBanner")).toHaveCount(0);
+
+    // Une saisie en cours, puis publication d'une nouvelle version.
+    await page.locator("#addPlayerInput").fill("Saisie en cours");
+    await page.evaluate(async (v) => {
+      await fetch(`/__test/sw-version?v=${v}`);
+      const reg = await navigator.serviceWorker.getRegistration();
+      await reg.update();
+    }, `t${Date.now()}`);
+
+    const banner = page.locator("#updateBanner");
+    await expect(banner).toContainText("Nouvelle version disponible");
+    // Pas de rechargement automatique : la saisie est toujours là.
+    await expect(page.locator("#addPlayerInput")).toHaveValue("Saisie en cours");
+
+    // « Plus tard » masque la bannière ; une nouvelle mise à jour la ramène.
+    await banner.getByRole("button", { name: "Plus tard" }).click();
+    await expect(banner).toHaveCount(0);
+    await page.evaluate(async (v) => {
+      await fetch(`/__test/sw-version?v=${v}`);
+      await (await navigator.serviceWorker.getRegistration()).update();
+    }, `u${Date.now()}`);
+    await expect(banner).toBeVisible();
+
+    // « Recharger » : la page se recharge sur la nouvelle version.
+    await Promise.all([page.waitForEvent("load"), banner.getByRole("button", { name: "Recharger" }).click()]);
+    await expect(page.locator("#updateBanner")).toHaveCount(0);
+    await expect(page.locator("#addPlayerInput")).toHaveValue("");
+    expectNoProblems(problems);
+  });
 });

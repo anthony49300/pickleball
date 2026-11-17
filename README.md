@@ -251,7 +251,7 @@ L'application conserve les tours déjà notés et ne recalcule que la suite. Si 
 Non. Tout (session en cours, historique, groupes de joueurs, apparence choisie) est stocké uniquement sur votre appareil, dans le navigateur. L'application ne charge aucune ressource externe : polices et bibliothèques sont embarquées.
 
 **Comment l'application se met-elle à jour si elle fonctionne hors ligne ?**
-Chaque fichier est servi depuis le cache de l'appareil, et une version plus récente est téléchargée en arrière-plan quand une connexion est disponible. Une mise à jour du site apparaît donc au chargement suivant.
+Chaque fichier est servi depuis le cache de l'appareil, et une version plus récente est téléchargée en arrière-plan quand une connexion est disponible. Quand une nouvelle version est prête, une bannière **« Nouvelle version disponible »** propose de **Recharger** : la page ne se recharge jamais toute seule (une saisie peut être en cours) ; avec **Plus tard**, la nouvelle version s'applique à la prochaine ouverture. L'APK Android, lui, se met à jour en installant le nouvel APK.
 
 ---
 
