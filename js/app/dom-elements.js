@@ -83,6 +83,10 @@ window.__PB_HIDDEN_ROUNDS__ = [];
 // planning, recalculé à chaque chargement, reste celui sur lequel ses
 // scores ont été saisis.
 window.__PB_BENCH_VERSION__ = 2;
+// Planning enregistré avec la session chargée ({ r: tours, b: pauses }, voir
+// savedPlanForState dans state-and-groups.js), rejoué tel quel au lieu d'être
+// recalculé. null pour une nouvelle session.
+window.__PB_SAVED_PLAN__ = null;
 let currentHeatmapMode = "teammates";
 
 // Le câblage des steppers numériques (+/-) et des sliders est dans

@@ -240,6 +240,21 @@ test("état structurellement invalide : exception", () => {
   assert.throws(() => sanitizeTournamentState({ tournament: { teams: "x", pools: [] } }), /Tournoi invalide/);
 });
 
+test("planning enregistré (pl) : conservé à l'identique, écarté en entier s'il est incohérent", () => {
+  const players = ["Antoine", "Julien", "Marc", "Sophie", "Claire", "Thomas"];
+  const res = scheduleRotations([...players], 2, 4, "plan", { wT: 5, wO: 2, wP: 1, beamWidth: 20, partnerK: 6, squareRepeats: true, avoidB2B: true }, {});
+  const pl = { r: res.rounds, b: res.benches };
+  const base = { p: players.join("\n"), c: 2, r: 4, s: "plan" };
+  assert.deepStrictEqual(plain(sanitizeRotationState({ ...base, pl })).pl, plain(pl));
+
+  const broken = (mutate) => { const copy = plain(pl); mutate(copy); return sanitizeRotationState({ ...base, pl: copy }).pl; };
+  assert.strictEqual(broken(c => { c.r[0][0][0][0] = c.r[0][0][1][0]; }), undefined, "joueur deux fois dans un tour");
+  assert.strictEqual(broken(c => { c.r[1][0][0][0] = PAYLOAD + "x".repeat(60); }), undefined, "nom trop long");
+  assert.strictEqual(broken(c => { c.r[0][0][0] = "Antoine"; }), undefined, "équipe qui n'est pas une liste");
+  assert.strictEqual(broken(c => { c.b.pop(); }), undefined, "pauses et tours désalignés");
+  assert.strictEqual(broken(c => { c.r = Array(51).fill(c.r[0]); c.b = Array(51).fill(c.b[0]); }), undefined, "plus de 50 tours");
+});
+
 // ---------------------------------------------------------------------------
 // 4. Gabarits HTML : aucune injection, quelles que soient les valeurs
 // ---------------------------------------------------------------------------

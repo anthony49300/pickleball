@@ -146,6 +146,7 @@ if (btnResetAll) {
     window.__PB_LEVELS__ = Object.create(null);
     window.__PB_HIDDEN_ROUNDS__ = [];
     window.__PB_LAST_RESULT__ = null;
+    window.__PB_SAVED_PLAN__ = null;
     window.__PB_SESSION_ID__ = null;
     window.__PB_SEED_PINNED__ = false;
     window.__PB_BENCH_VERSION__ = 2;
@@ -234,6 +235,7 @@ btnGenerate.addEventListener("click", async () => {
     window.__PB_SESSION_ID__ = newSessionId();
     // Nouvelle session : sélection des pauses la plus récente.
     window.__PB_BENCH_VERSION__ = 2;
+    window.__PB_SAVED_PLAN__ = null;
   }
   generateSession(hasScores);
   // Planning prêt (pas d'erreur affichée) : on passe directement à l'écran Jouer.
@@ -264,6 +266,7 @@ if (btnNewSession) {
     window.__PB_PRESENCE__ = Object.create(null);
     window.__PB_HIDDEN_ROUNDS__ = [];
     window.__PB_LAST_RESULT__ = null;
+    window.__PB_SAVED_PLAN__ = null;
     window.__PB_SESSION_ID__ = null;
     window.__PB_SEED_PINNED__ = false;
     window.__PB_BENCH_VERSION__ = 2;

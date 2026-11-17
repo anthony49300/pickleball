@@ -217,6 +217,11 @@ function sanitizeRotationState(raw, report = {}) {
   // Version de la sélection des pauses (voir pickBenchesFair, algorithm.js).
   if (raw.bv === 1 || raw.bv === 2) out.bv = raw.bv;
 
+  // Planning enregistré (voir savedPlanForState, state-and-groups.js) : écarté
+  // en entier au moindre défaut, la page recalcule alors le planning.
+  const pl = cleanSavedPlan(raw.pl);
+  if (pl) out.pl = pl;
+
   if (raw.sc !== undefined) {
     const sc = nullProtoDict();
     if (isPlainObject(raw.sc)) {
@@ -354,6 +359,45 @@ function prepareSharedRotationState(raw, recipient = null) {
     Number(state.pk ?? ROTATION_DEFAULTS.pk)
   );
   return { state, clamped: !!report.clamped, cost, autoGenerate: cost <= SCHEDULE_COST_BUDGET_MS };
+}
+
+/**
+ * Planning enregistré d'une session Rotation : { r: tours, b: pauses }, où
+ * chaque tour est une liste de matchs [[équipe1], [équipe2]] (équipes de 1 ou
+ * 2 noms) et chaque entrée de b la liste des joueurs en pause à ce tour.
+ * Renvoie une copie propre, ou null si quoi que ce soit est incohérent (un
+ * joueur deux fois dans un même tour, taille hors limites...).
+ */
+function cleanSavedPlan(raw) {
+  if (!isPlainObject(raw) || !Array.isArray(raw.r) || !Array.isArray(raw.b)) return null;
+  if (raw.r.length === 0 || raw.r.length > 50 || raw.b.length !== raw.r.length) return null;
+  const isName = (n) => typeof n === "string" && n.trim().length > 0 && n.length <= SANITIZE_LIMITS.nameLength;
+  const rounds = [];
+  const benches = [];
+  for (let i = 0; i < raw.r.length; i++) {
+    const matches = raw.r[i];
+    const benched = raw.b[i];
+    if (!Array.isArray(matches) || matches.length > 10 || !Array.isArray(benched) || benched.length > SANITIZE_LIMITS.maxPlayers) return null;
+    const seen = new Set();
+    const cleanMatches = [];
+    for (const match of matches) {
+      if (!Array.isArray(match) || match.length !== 2) return null;
+      const [t1, t2] = match;
+      if (!Array.isArray(t1) || !Array.isArray(t2) || t1.length !== t2.length || t1.length < 1 || t1.length > 2) return null;
+      for (const n of [...t1, ...t2]) {
+        if (!isName(n) || seen.has(n)) return null;
+        seen.add(n);
+      }
+      cleanMatches.push([[...t1], [...t2]]);
+    }
+    for (const n of benched) {
+      if (!isName(n) || seen.has(n)) return null;
+      seen.add(n);
+    }
+    rounds.push(cleanMatches);
+    benches.push([...benched]);
+  }
+  return { r: rounds, b: benches };
 }
 
 /**
